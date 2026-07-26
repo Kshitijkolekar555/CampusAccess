@@ -1,0 +1,34 @@
+# PICT Gate Security — .gitignore
+
+# ---- Secrets ----
+.env
+*.env
+!*.env.example
+
+# ---- Maven ----
+backend/target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+.project
+.classpath
+.settings/
+
+# ---- Node / Frontend (Phase 8) ----
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
+logs/

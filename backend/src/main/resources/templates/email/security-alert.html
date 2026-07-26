@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Alert</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:'Segoe UI',Arial,sans-serif;">
+<table role="presentation" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;">
+    <tr>
+        <td style="padding:30px 40px 20px;background-color:#b71c1c;text-align:center;">
+            <h1 style="color:#ffffff;margin:0;font-size:22px;">SECURITY ALERT</h1>
+            <p style="color:#ef9a9a;margin:5px 0 0;font-size:13px;">PICT Gate Security System</p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:30px 40px;">
+            <h2 style="color:#b71c1c;font-size:18px;margin:0 0 20px;">Security Alert</h2>
+            <p style="color:#424242;font-size:14px;line-height:1.6;margin:0 0 15px;" th:text="'Dear ' + ${name} + ','">Dear Officer,</p>
+            <p style="color:#424242;font-size:14px;line-height:1.6;margin:0 0 15px;" th:text="${message}">alert message</p>
+            <p style="color:#424242;font-size:14px;line-height:1.6;margin:0 0 15px;" th:if="${timestamp}">
+                Time: <span th:text="${timestamp}">timestamp</span>
+            </p>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:20px 40px;background-color:#f8f9fa;text-align:center;border-top:1px solid #e0e0e0;">
+            <p style="margin:0;color:#757575;font-size:12px;">This is an automated alert from PICT Gate Security System.<br>Please do not reply to this email.</p>
+            <p style="margin:8px 0 0;color:#9e9e9e;font-size:11px;">&copy; 2026 PICT. All rights reserved.</p>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

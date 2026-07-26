@@ -1,0 +1,40 @@
+# ============================================================
+# application-local.yml — Local developer machine profile
+# Run with: -Dspring.profiles.active=local
+# Secrets may be in .env or hardcoded for dev convenience ONLY.
+# NEVER commit real credentials.
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:gatesecurity}
+    username: ${POSTGRES_USER:gatesecurity_user}
+    password: ${POSTGRES_PASSWORD:localpassword}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: validate        # Flyway owns the schema; Hibernate just validates
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.pict.gatesecurity: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:local-dev-secret-key-at-least-256-bits-long-pad-if-needed}
+  cors:
+    allowed-origins: http://localhost:5173

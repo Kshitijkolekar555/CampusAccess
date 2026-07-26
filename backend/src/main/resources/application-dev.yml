@@ -1,0 +1,38 @@
+# ============================================================
+# application-dev.yml — Development / staging server profile
+# All secrets MUST come from environment variables.
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.pict.gatesecurity: INFO
+
+management:
+  endpoint:
+    health:
+      show-details: when_authorized
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
