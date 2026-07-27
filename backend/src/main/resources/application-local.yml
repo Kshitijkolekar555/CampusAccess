@@ -12,8 +12,13 @@ spring:
     password: ${POSTGRES_PASSWORD:localpassword}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 5
-      minimum-idle: 2
+      maximum-pool-size: 10
+      minimum-idle: 3
+      idle-timeout: 300000
+      max-lifetime: 600000
+      connection-timeout: 10000
+      pool-name: PictGateSecurityPool
+      register-mbeans: true
 
   jpa:
     hibernate:

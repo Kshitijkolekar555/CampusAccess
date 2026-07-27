@@ -15,6 +15,12 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: false
+        jdbc:
+          batch_size: 25
+          fetch_size: 25
+        order_inserts: true
+        order_updates: true
+        default_batch_fetch_size: 16
     show-sql: false
 
   # --- Flyway ---
@@ -46,11 +52,22 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: health, info, metrics, prometheus
       base-path: /actuator
   endpoint:
     health:
       show-details: when_authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.75, 0.95, 0.99
 
 # --- OpenAPI / Swagger ---
 springdoc:
@@ -77,3 +94,16 @@ app:
   notification:
     max-retries: 3
     retry-interval-cron: "0 */15 * * * *"
+  cache:
+    type: caffeine                        # Switch to 'redis' for production
+    ttl-seconds: 30                       # Default TTL for dashboard cache
+    caffeine-spec: maximumSize=200,expireAfterWrite=30s
+
+  # --- Redis (only used when app.cache.type=redis) ---
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      connect-timeout: 2000ms

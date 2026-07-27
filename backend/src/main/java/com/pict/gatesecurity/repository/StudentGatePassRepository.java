@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -18,4 +19,16 @@ public interface StudentGatePassRepository extends JpaRepository<StudentGatePass
 
     @Query("SELECT sgp FROM StudentGatePass sgp WHERE sgp.status = 'APPROVED' AND sgp.expectedReturnTime < :now")
     List<StudentGatePass> findOverdueApprovedPasses(@Param("now") OffsetDateTime now);
+
+    long countByCreatedAtBetween(OffsetDateTime start, OffsetDateTime end);
+
+    long countByStatusAndCreatedAtBetween(PassStatus status, OffsetDateTime start, OffsetDateTime end);
+
+    long countByStudentDepartmentAndCreatedAtBetween(String department, OffsetDateTime start, OffsetDateTime end);
+
+    long countByStatus(PassStatus status);
+
+    long countByGateIdAndCreatedAtBetween(Long gateId, OffsetDateTime start, OffsetDateTime end);
+
+    long countByGateIdAndStatusAndCreatedAtBetween(Long gateId, PassStatus status, OffsetDateTime start, OffsetDateTime end);
 }

@@ -95,6 +95,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- ======================== MICROMETER + PROMETHEUS ======================== -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- ======================== SWAGGER / OPENAPI ======================== -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -121,6 +127,20 @@
             <version>3.5.3</version>
         </dependency>
 
+        <!-- ======================== EXCEL EXPORT (APACHE POI) ======================== -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
+        <!-- ======================== PDF EXPORT (OPENPDF) ======================== -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>1.3.35</version>
+        </dependency>
+
         <!-- ======================== MAIL ======================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -131,6 +151,23 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <!-- ======================== CACHE (Caffeine) ======================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- ======================== CACHE (Redis — optional for production) ======================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- ======================== LOMBOK ======================== -->
