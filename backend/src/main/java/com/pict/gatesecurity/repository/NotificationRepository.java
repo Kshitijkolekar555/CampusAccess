@@ -3,6 +3,7 @@ package com.pict.gatesecurity.repository;
 import com.pict.gatesecurity.entity.Notification;
 import com.pict.gatesecurity.entity.enums.NotificationEventType;
 import com.pict.gatesecurity.entity.enums.NotificationStatus;
+import com.pict.gatesecurity.entity.enums.NotificationType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,4 +32,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Page<Notification> findByStatusAndRetryCountLessThan(NotificationStatus status, int maxRetries, Pageable pageable);
 
     long countByStatusAndCreatedAtAfter(NotificationStatus status, OffsetDateTime after);
+
+    long countByCreatedAtBetween(OffsetDateTime start, OffsetDateTime end);
+
+    long countByStatusAndCreatedAtBetween(NotificationStatus status, OffsetDateTime start, OffsetDateTime end);
+
+    long countByTypeAndCreatedAtBetween(NotificationType type, OffsetDateTime start, OffsetDateTime end);
 }
