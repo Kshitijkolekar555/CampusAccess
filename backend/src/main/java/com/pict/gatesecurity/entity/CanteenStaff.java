@@ -23,7 +23,7 @@ public class CanteenStaff {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "canteen_staff_role")
+    @Column(nullable = false)
     @Builder.Default
     private CanteenStaffRole role = CanteenStaffRole.OTHER;
 

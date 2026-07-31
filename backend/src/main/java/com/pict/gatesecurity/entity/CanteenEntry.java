@@ -49,7 +49,7 @@ public class CanteenEntry {
     private OffsetDateTime timeOut;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "entry_status")
+    @Column(nullable = false)
     @Builder.Default
     private EntryStatus status = EntryStatus.PRESENT;
 }

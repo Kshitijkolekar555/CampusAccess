@@ -29,6 +29,7 @@ frontend/.vite/
 .DS_Store
 Thumbs.db
 
-# ---- Logs ----
+# ---- Logs & Temporary Scripts ----
 *.log
 logs/
+*.sql

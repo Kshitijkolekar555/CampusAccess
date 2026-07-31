@@ -46,7 +46,7 @@ public class AuditLog {
      * Null for CREATE operations.
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "old_value", columnDefinition = "jsonb")
+    @Column(name = "old_value", columnDefinition = "json")
     private Map<String, Object> oldValue;
 
     /**
@@ -54,7 +54,7 @@ public class AuditLog {
      * Null for DELETE operations.
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "new_value", columnDefinition = "jsonb")
+    @Column(name = "new_value", columnDefinition = "json")
     private Map<String, Object> newValue;
 
     @Column(nullable = false)

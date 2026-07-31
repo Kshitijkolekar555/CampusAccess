@@ -31,7 +31,7 @@ INSERT INTO users (username, password_hash, role, full_name, phone, email, activ
 VALUES
     (
         'admin',
-        '$2a$12$wDMGfbzN8uv6Sz3G4gP8IOO5G5Y.4FNqPFBnE3Kf6i6eF5lQi5upe',
+        '$2a$10$8.UnVuG9HHgffUDAlk8qfOUVGkqRzgVymGe07xd00DMxs.AQubh4a',
         'ADMIN',
         'PICT Administrator',
         NULL,

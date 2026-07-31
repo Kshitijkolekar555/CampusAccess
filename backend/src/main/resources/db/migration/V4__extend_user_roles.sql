@@ -1,13 +1,21 @@
 -- ============================================================
 -- V4__extend_user_roles.sql
 -- PICT Gate Operations Management System — Extended Role Support
+-- MySQL 8.0+ compatible (converted from PostgreSQL)
 --
--- Adds missing user roles. Existing values ADMIN, GUARD,
--- CANTEEN_STAFF are kept for backward compatibility.
+-- In MySQL, ENUMs are per-column, not global types.
+-- We MODIFY the `role` column in `users` to include new values.
+-- Existing data is preserved as ENUM values are extended.
 -- ============================================================
 
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SECURITY_OFFICER';
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SECURITY_GUARD';
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'HOSTEL_WARDEN';
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'CANTEEN_MANAGER';
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'VISITOR';
+ALTER TABLE users
+    MODIFY COLUMN role ENUM(
+        'ADMIN',
+        'GUARD',
+        'CANTEEN_STAFF',
+        'SECURITY_OFFICER',
+        'SECURITY_GUARD',
+        'HOSTEL_WARDEN',
+        'CANTEEN_MANAGER',
+        'VISITOR'
+    ) NOT NULL;

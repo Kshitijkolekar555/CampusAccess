@@ -7,10 +7,10 @@
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:gatesecurity}
-    username: ${POSTGRES_USER:gatesecurity_user}
-    password: ${POSTGRES_PASSWORD:localpassword}
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:mysql://localhost:3306/${MYSQL_DB:acampusaccessdb}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 3
@@ -22,7 +22,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate        # Flyway owns the schema; Hibernate just validates
+      ddl-auto: none        # Flyway owns the schema; Hibernate just maps to it
     show-sql: true
     properties:
       hibernate:

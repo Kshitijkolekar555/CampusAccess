@@ -27,7 +27,7 @@ public class Vehicle {
     private String vehicleType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "vehicle_category")
+    @Column(nullable = false)
     private VehicleCategory category;
 
     @Column(name = "owner_name", length = 150)

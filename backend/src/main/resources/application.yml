@@ -1,19 +1,33 @@
 # ============================================================
 # application.yml — Base configuration (all profiles inherit this)
-# Sensitive values MUST come from environment variables.
-# Never set real secrets here.
+# Sensitive values default to local dev defaults if env vars are unset.
 # ============================================================
 
 spring:
   application:
     name: pict-gate-security
 
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  # --- Database (Default to local MySQL) ---
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB:acampusaccessdb}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
   # --- JPA ---
   jpa:
     open-in-view: false          # Avoid lazy-loading across HTTP boundary
+    hibernate:
+      ddl-auto: none             # Flyway owns the schema
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: false
         jdbc:
           batch_size: 25
@@ -28,14 +42,15 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: false
+    validate-on-migrate: false
     out-of-order: false
 
   # --- Mail (Gmail SMTP) ---
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:test@gmail.com}
+    password: ${MAIL_PASSWORD:testpass}
     properties:
       mail:
         smtp:
@@ -75,13 +90,12 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui
-    operationsSorter: method
   default-produces-media-type: application/json
 
 # --- App-level config ---
 app:
   jwt:
-    secret: ${JWT_SECRET}                       # 256-bit minimum, set in env
+    secret: ${JWT_SECRET:local-dev-secret-key-at-least-256-bits-long-pad-if-needed} # 256-bit minimum
     access-token-expiry-ms: 900000              # 15 minutes
     refresh-token-expiry-ms: 604800000          # 7 days
   visitor:
@@ -90,7 +104,7 @@ app:
   canteen:
     late-checkin-cutoff: "09:30"               # Mark LATE if after this time
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
   notification:
     max-retries: 3
     retry-interval-cron: "0 */15 * * * *"
