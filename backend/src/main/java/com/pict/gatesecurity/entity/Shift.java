@@ -43,7 +43,7 @@ public class Shift {
     private LocalDate date;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "shift_status")
+    @Column(nullable = false)
     @Builder.Default
     private ShiftStatus status = ShiftStatus.ONGOING;
 }

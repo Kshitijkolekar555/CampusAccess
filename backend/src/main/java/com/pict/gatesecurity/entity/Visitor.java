@@ -34,11 +34,11 @@ public class Visitor {
     private String hostName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "host_type", nullable = false, columnDefinition = "host_type")
+    @Column(name = "host_type", nullable = false)
     private HostType hostType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "host_department", nullable = false, columnDefinition = "host_department")
+    @Column(name = "host_department", nullable = false)
     private HostDepartment hostDepartment;
 
     /**

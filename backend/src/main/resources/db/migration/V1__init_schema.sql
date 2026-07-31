@@ -1,78 +1,44 @@
 -- ============================================================
 -- V1__init_schema.sql
 -- PICT Gate Operations Management System — Initial Schema
+-- MySQL 8.0+ compatible (converted from PostgreSQL)
 --
 -- Rules:
---   - All timestamps are TIMESTAMPTZ (timezone-aware)
---   - Enums are PostgreSQL native types for DB-level integrity
+--   - All timestamps are DATETIME(6) (microsecond precision)
+--   - Enums are MySQL native ENUM columns per table
 --   - FKs are explicitly named for clarity in error messages
 --   - Indexes cover all columns used in report filters / searches
 -- ============================================================
 
 -- ============================================================
--- ENUM TYPES
--- ============================================================
-
-CREATE TYPE user_role AS ENUM ('ADMIN', 'GUARD', 'CANTEEN_STAFF');
-
-CREATE TYPE host_type AS ENUM (
-    'FACULTY',
-    'HOD',
-    'ADMIN_STAFF',
-    'STUDENT',
-    'ALUMNI',
-    'VENDOR',
-    'OTHER'
-);
-
-CREATE TYPE host_department AS ENUM (
-    'IT',
-    'CE',
-    'ENTC',
-    'ECE',
-    'AIDS',
-    'ADMIN'
-);
-
-CREATE TYPE shift_status AS ENUM ('ONGOING', 'COMPLETED', 'ABORTED');
-
-CREATE TYPE log_type AS ENUM ('SECURITY_CHECK', 'INCIDENT', 'TASK', 'GENERAL');
-
-CREATE TYPE entry_status AS ENUM ('PRESENT', 'LATE', 'ABSENT');
-
-CREATE TYPE canteen_staff_role AS ENUM ('COOK', 'SERVER', 'CASHIER', 'CLEANER', 'SUPERVISOR', 'OTHER');
-
--- ============================================================
 -- TABLE: gates
 -- ============================================================
 CREATE TABLE gates (
-    id          BIGSERIAL PRIMARY KEY,
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
     name        VARCHAR(100) NOT NULL,
     location    VARCHAR(255),
     active      BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE gates IS 'Physical gates at PICT campus';
+    created_at  DATETIME(6)  NOT NULL DEFAULT NOW(6),
+    PRIMARY KEY (id)
+) COMMENT = 'Physical gates at PICT campus';
 
 -- ============================================================
 -- TABLE: users
 -- ============================================================
 CREATE TABLE users (
-    id            BIGSERIAL PRIMARY KEY,
-    username      VARCHAR(50)  NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role          user_role    NOT NULL,
+    id            BIGINT       NOT NULL AUTO_INCREMENT,
+    username      VARCHAR(50)  NOT NULL,
+    password_hash VARCHAR(255) NOT NULL COMMENT 'BCrypt hashed password — never store plaintext',
+    role          ENUM('ADMIN', 'GUARD', 'CANTEEN_STAFF') NOT NULL,
     full_name     VARCHAR(150) NOT NULL,
     phone         VARCHAR(15),
     email         VARCHAR(100),
     active        BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE users  IS 'System users: admins, guards, canteen staff';
-COMMENT ON COLUMN users.password_hash IS 'BCrypt hashed password — never store plaintext';
+    created_at    DATETIME(6)  NOT NULL DEFAULT NOW(6),
+    updated_at    DATETIME(6)  NOT NULL DEFAULT NOW(6),
+    PRIMARY KEY (id),
+    CONSTRAINT uq_users_username UNIQUE (username)
+) COMMENT = 'System users: admins, guards, canteen staff';
 
 CREATE INDEX idx_users_username ON users (username);
 CREATE INDEX idx_users_role     ON users (role);
@@ -81,19 +47,18 @@ CREATE INDEX idx_users_role     ON users (role);
 -- TABLE: guards
 -- ============================================================
 CREATE TABLE guards (
-    id               BIGSERIAL PRIMARY KEY,
+    id               BIGINT      NOT NULL AUTO_INCREMENT,
     user_id          BIGINT      NOT NULL,
-    employee_code    VARCHAR(30) NOT NULL UNIQUE,
+    employee_code    VARCHAR(30) NOT NULL,
     assigned_gate_id BIGINT,
     active           BOOLEAN     NOT NULL DEFAULT TRUE,
-
+    PRIMARY KEY (id),
+    CONSTRAINT uq_guards_employee_code UNIQUE (employee_code),
     CONSTRAINT fk_guards_user
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
     CONSTRAINT fk_guards_gate
         FOREIGN KEY (assigned_gate_id) REFERENCES gates (id) ON DELETE SET NULL
-);
-
-COMMENT ON TABLE guards IS 'Security guards linked to user accounts';
+) COMMENT = 'Security guards linked to user accounts';
 
 CREATE INDEX idx_guards_user_id          ON guards (user_id);
 CREATE INDEX idx_guards_assigned_gate_id ON guards (assigned_gate_id);
@@ -103,17 +68,15 @@ CREATE INDEX idx_guards_employee_code    ON guards (employee_code);
 -- TABLE: canteen_staff
 -- ============================================================
 CREATE TABLE canteen_staff (
-    id              BIGSERIAL          PRIMARY KEY,
-    user_id         BIGINT             NOT NULL,
-    role            canteen_staff_role NOT NULL DEFAULT 'OTHER',
+    id              BIGINT      NOT NULL AUTO_INCREMENT,
+    user_id         BIGINT      NOT NULL,
+    role            ENUM('COOK', 'SERVER', 'CASHIER', 'CLEANER', 'SUPERVISOR', 'OTHER') NOT NULL DEFAULT 'OTHER',
     assigned_outlet VARCHAR(100),
-    active          BOOLEAN            NOT NULL DEFAULT TRUE,
-
+    active          BOOLEAN     NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (id),
     CONSTRAINT fk_canteen_staff_user
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT
-);
-
-COMMENT ON TABLE canteen_staff IS 'Canteen staff members linked to user accounts';
+) COMMENT = 'Canteen staff members linked to user accounts';
 
 CREATE INDEX idx_canteen_staff_user_id ON canteen_staff (user_id);
 
@@ -121,35 +84,31 @@ CREATE INDEX idx_canteen_staff_user_id ON canteen_staff (user_id);
 -- TABLE: visitors
 -- ============================================================
 CREATE TABLE visitors (
-    id                    BIGSERIAL    PRIMARY KEY,
+    id                    BIGINT       NOT NULL AUTO_INCREMENT,
     name                  VARCHAR(150) NOT NULL,
     mobile                VARCHAR(15)  NOT NULL,
     purpose               VARCHAR(255) NOT NULL,
     host_name             VARCHAR(150) NOT NULL,
-    host_type             host_type    NOT NULL,
-    host_department       host_department NOT NULL,
-    student_prn           VARCHAR(20),                 -- Nullable: only for student hosts
+    host_type             ENUM('FACULTY', 'HOD', 'ADMIN_STAFF', 'STUDENT', 'ALUMNI', 'VENDOR', 'OTHER') NOT NULL,
+    host_department       ENUM('IT', 'CE', 'ENTC', 'ECE', 'AIDS', 'ADMIN') NOT NULL,
+    student_prn           VARCHAR(20),
     gate_id               BIGINT       NOT NULL,
-    vehicle_number        VARCHAR(20),                 -- Nullable
-    time_in               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    time_out              TIMESTAMPTZ,                 -- Nullable: set on checkout
-    id_proof_type         VARCHAR(50)  NOT NULL,       -- e.g. Aadhar, PAN, DL
+    vehicle_number        VARCHAR(20),
+    time_in               DATETIME(6)  NOT NULL DEFAULT NOW(6),
+    time_out              DATETIME(6)  COMMENT 'NULL means visitor is still inside',
+    id_proof_type         VARCHAR(50)  NOT NULL,
     id_proof_number       VARCHAR(50)  NOT NULL,
-    photo_url             VARCHAR(500),                -- Nullable: future photo upload
-    is_blacklisted_match  BOOLEAN      NOT NULL DEFAULT FALSE,
+    photo_url             VARCHAR(500),
+    is_blacklisted_match  BOOLEAN      NOT NULL DEFAULT FALSE COMMENT 'Set true if mobile/name matched watchlist on check-in',
     notes                 TEXT,
-    created_at            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    created_at            DATETIME(6)  NOT NULL DEFAULT NOW(6),
     created_by            BIGINT       NOT NULL,
-
+    PRIMARY KEY (id),
     CONSTRAINT fk_visitors_gate
         FOREIGN KEY (gate_id) REFERENCES gates (id) ON DELETE RESTRICT,
     CONSTRAINT fk_visitors_created_by
         FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT
-);
-
-COMMENT ON TABLE visitors IS 'Visitor entry and exit records';
-COMMENT ON COLUMN visitors.time_out IS 'NULL means visitor is still inside';
-COMMENT ON COLUMN visitors.is_blacklisted_match IS 'Set true if mobile/name matched watchlist on check-in';
+) COMMENT = 'Visitor entry and exit records';
 
 CREATE INDEX idx_visitors_gate_id             ON visitors (gate_id);
 CREATE INDEX idx_visitors_mobile              ON visitors (mobile);
@@ -157,27 +116,25 @@ CREATE INDEX idx_visitors_time_in             ON visitors (time_in);
 CREATE INDEX idx_visitors_time_out            ON visitors (time_out);
 CREATE INDEX idx_visitors_is_blacklisted      ON visitors (is_blacklisted_match);
 CREATE INDEX idx_visitors_host_department     ON visitors (host_department);
-CREATE INDEX idx_visitors_date                ON visitors (DATE(time_in));  -- For date-based filtering
+CREATE INDEX idx_visitors_date                ON visitors ((DATE(time_in)));
 
 -- ============================================================
 -- TABLE: shifts
 -- ============================================================
 CREATE TABLE shifts (
-    id         BIGSERIAL   PRIMARY KEY,
+    id         BIGINT      NOT NULL AUTO_INCREMENT,
     guard_id   BIGINT      NOT NULL,
     gate_id    BIGINT      NOT NULL,
-    start_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    end_time   TIMESTAMPTZ,                        -- Nullable: set on shift end
-    date       DATE        NOT NULL DEFAULT CURRENT_DATE,
-    status     shift_status NOT NULL DEFAULT 'ONGOING',
-
+    start_time DATETIME(6) NOT NULL DEFAULT NOW(6),
+    end_time   DATETIME(6),
+    date       DATE        NOT NULL DEFAULT (CURRENT_DATE),
+    status     ENUM('ONGOING', 'COMPLETED', 'ABORTED') NOT NULL DEFAULT 'ONGOING',
+    PRIMARY KEY (id),
     CONSTRAINT fk_shifts_guard
         FOREIGN KEY (guard_id) REFERENCES guards (id) ON DELETE RESTRICT,
     CONSTRAINT fk_shifts_gate
         FOREIGN KEY (gate_id) REFERENCES gates (id) ON DELETE RESTRICT
-);
-
-COMMENT ON TABLE shifts IS 'Guard duty shift records';
+) COMMENT = 'Guard duty shift records';
 
 CREATE INDEX idx_shifts_guard_id ON shifts (guard_id);
 CREATE INDEX idx_shifts_gate_id  ON shifts (gate_id);
@@ -188,17 +145,15 @@ CREATE INDEX idx_shifts_status   ON shifts (status);
 -- TABLE: shift_logs
 -- ============================================================
 CREATE TABLE shift_logs (
-    id          BIGSERIAL  PRIMARY KEY,
-    shift_id    BIGINT     NOT NULL,
-    timestamp   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    description TEXT       NOT NULL,
-    log_type    log_type   NOT NULL DEFAULT 'GENERAL',
-
+    id          BIGINT      NOT NULL AUTO_INCREMENT,
+    shift_id    BIGINT      NOT NULL,
+    timestamp   DATETIME(6) NOT NULL DEFAULT NOW(6),
+    description TEXT        NOT NULL,
+    log_type    ENUM('SECURITY_CHECK', 'INCIDENT', 'TASK', 'GENERAL') NOT NULL DEFAULT 'GENERAL',
+    PRIMARY KEY (id),
     CONSTRAINT fk_shift_logs_shift
         FOREIGN KEY (shift_id) REFERENCES shifts (id) ON DELETE CASCADE
-);
-
-COMMENT ON TABLE shift_logs IS 'Activity log entries recorded during a guard shift';
+) COMMENT = 'Activity log entries recorded during a guard shift';
 
 CREATE INDEX idx_shift_logs_shift_id  ON shift_logs (shift_id);
 CREATE INDEX idx_shift_logs_timestamp ON shift_logs (timestamp);
@@ -208,25 +163,21 @@ CREATE INDEX idx_shift_logs_log_type  ON shift_logs (log_type);
 -- TABLE: canteen_entries
 -- ============================================================
 CREATE TABLE canteen_entries (
-    id        BIGSERIAL    PRIMARY KEY,
-    staff_id  BIGINT       NOT NULL,
-    gate_id   BIGINT       NOT NULL,
-    date      DATE         NOT NULL DEFAULT CURRENT_DATE,
-    time_in   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    time_out  TIMESTAMPTZ,                          -- Nullable
-    status    entry_status NOT NULL DEFAULT 'PRESENT',
-
+    id        BIGINT      NOT NULL AUTO_INCREMENT,
+    staff_id  BIGINT      NOT NULL,
+    gate_id   BIGINT      NOT NULL,
+    date      DATE        NOT NULL DEFAULT (CURRENT_DATE),
+    time_in   DATETIME(6) NOT NULL DEFAULT NOW(6),
+    time_out  DATETIME(6),
+    status    ENUM('PRESENT', 'LATE', 'ABSENT') NOT NULL DEFAULT 'PRESENT',
+    PRIMARY KEY (id),
     CONSTRAINT fk_canteen_entries_staff
         FOREIGN KEY (staff_id) REFERENCES canteen_staff (id) ON DELETE RESTRICT,
     CONSTRAINT fk_canteen_entries_gate
         FOREIGN KEY (gate_id) REFERENCES gates (id) ON DELETE RESTRICT,
-
-    -- One entry per staff per day
     CONSTRAINT uq_canteen_entries_staff_date
         UNIQUE (staff_id, date)
-);
-
-COMMENT ON TABLE canteen_entries IS 'Daily attendance records for canteen staff';
+) COMMENT = 'Daily attendance records for canteen staff';
 
 CREATE INDEX idx_canteen_entries_staff_id ON canteen_entries (staff_id);
 CREATE INDEX idx_canteen_entries_gate_id  ON canteen_entries (gate_id);
@@ -237,18 +188,16 @@ CREATE INDEX idx_canteen_entries_status   ON canteen_entries (status);
 -- TABLE: watchlist
 -- ============================================================
 CREATE TABLE watchlist (
-    id         BIGSERIAL    PRIMARY KEY,
+    id         BIGINT       NOT NULL AUTO_INCREMENT,
     name       VARCHAR(150) NOT NULL,
     mobile     VARCHAR(15)  NOT NULL,
     reason     TEXT         NOT NULL,
     added_by   BIGINT       NOT NULL,
-    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-
+    created_at DATETIME(6)  NOT NULL DEFAULT NOW(6),
+    PRIMARY KEY (id),
     CONSTRAINT fk_watchlist_added_by
         FOREIGN KEY (added_by) REFERENCES users (id) ON DELETE RESTRICT
-);
-
-COMMENT ON TABLE watchlist IS 'Blacklisted / flagged individuals — checked on visitor check-in';
+) COMMENT = 'Blacklisted / flagged individuals — checked on visitor check-in';
 
 CREATE INDEX idx_watchlist_mobile ON watchlist (mobile);
 CREATE INDEX idx_watchlist_name   ON watchlist (name);
@@ -257,20 +206,18 @@ CREATE INDEX idx_watchlist_name   ON watchlist (name);
 -- TABLE: audit_logs
 -- ============================================================
 CREATE TABLE audit_logs (
-    id          BIGSERIAL    PRIMARY KEY,
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
     user_id     BIGINT       NOT NULL,
-    action      VARCHAR(50)  NOT NULL,   -- e.g. CREATE, UPDATE, DELETE
-    entity_type VARCHAR(100) NOT NULL,   -- e.g. Guard, Gate, Visitor
+    action      VARCHAR(50)  NOT NULL,
+    entity_type VARCHAR(100) NOT NULL,
     entity_id   BIGINT       NOT NULL,
-    old_value   JSONB,                   -- Nullable: snapshot before change
-    new_value   JSONB,                   -- Nullable: snapshot after change
-    timestamp   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-
+    old_value   JSON,
+    new_value   JSON,
+    timestamp   DATETIME(6)  NOT NULL DEFAULT NOW(6),
+    PRIMARY KEY (id),
     CONSTRAINT fk_audit_logs_user
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT
-);
-
-COMMENT ON TABLE audit_logs IS 'Immutable record of all admin actions for accountability';
+) COMMENT = 'Immutable record of all admin actions for accountability';
 
 CREATE INDEX idx_audit_logs_user_id     ON audit_logs (user_id);
 CREATE INDEX idx_audit_logs_entity_type ON audit_logs (entity_type);

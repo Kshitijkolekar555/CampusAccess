@@ -1,13 +1,14 @@
 -- ============================================================
 -- V8__hostel_outpasses.sql
 -- PICT Gate Operations Management System — Hostel Outpasses
+-- MySQL 8.0+ compatible (converted from PostgreSQL)
 --
 -- Students submit outpass requests for leaving campus,
 -- warden approves/rejects, security logs exit/entry.
 -- ============================================================
 
 CREATE TABLE hostel_outpasses (
-    id                     BIGSERIAL    PRIMARY KEY,
+    id                     BIGINT       NOT NULL AUTO_INCREMENT,
     student_user_id        BIGINT,
     student_name           VARCHAR(150) NOT NULL,
     student_prn            VARCHAR(20)  NOT NULL,
@@ -18,25 +19,25 @@ CREATE TABLE hostel_outpasses (
     student_division       VARCHAR(10),
     reason                 TEXT         NOT NULL,
     destination            VARCHAR(255) NOT NULL,
-    departure_time         TIMESTAMPTZ  NOT NULL,
-    expected_return_time   TIMESTAMPTZ  NOT NULL,
-    actual_return_time     TIMESTAMPTZ,
+    departure_time         DATETIME(6)  NOT NULL,
+    expected_return_time   DATETIME(6)  NOT NULL,
+    actual_return_time     DATETIME(6),
     parent_contact         VARCHAR(15),
     emergency_contact      VARCHAR(15),
-    status                 VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
-                                               -- PENDING, APPROVED, REJECTED, EXITED,
-                                               -- RETURNED, EXPIRED
+    status                 VARCHAR(20)  NOT NULL DEFAULT 'PENDING'
+                                            COMMENT 'PENDING, APPROVED, REJECTED, EXITED, RETURNED, EXPIRED',
     warden_id              BIGINT,
     warden_remarks         TEXT,
     rejection_reason       TEXT,
-    warden_acted_at        TIMESTAMPTZ,
-    gate_exit_at           TIMESTAMPTZ,
-    gate_entry_at          TIMESTAMPTZ,
+    warden_acted_at        DATETIME(6),
+    gate_exit_at           DATETIME(6),
+    gate_entry_at          DATETIME(6),
     gate_id                BIGINT,
-    is_late_return         BOOLEAN      NOT NULL DEFAULT FALSE,
-    created_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    is_late_return         BOOLEAN      NOT NULL DEFAULT FALSE
+                                            COMMENT 'Set TRUE if actual return time exceeds expected return time',
+    created_at             DATETIME(6)  NOT NULL DEFAULT NOW(6),
     created_by             BIGINT       NOT NULL,
-
+    PRIMARY KEY (id),
     CONSTRAINT fk_ho_student_user
         FOREIGN KEY (student_user_id) REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT fk_ho_warden
@@ -45,11 +46,7 @@ CREATE TABLE hostel_outpasses (
         FOREIGN KEY (gate_id) REFERENCES gates (id) ON DELETE SET NULL,
     CONSTRAINT fk_ho_created_by
         FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT
-);
-
-COMMENT ON TABLE hostel_outpasses IS 'Hostel outpass requests, approvals, and exit/entry tracking';
-COMMENT ON COLUMN hostel_outpasses.status IS 'PENDING, APPROVED, REJECTED, EXITED, RETURNED, EXPIRED';
-COMMENT ON COLUMN hostel_outpasses.is_late_return IS 'Set TRUE if actual return time exceeds expected return time';
+) COMMENT = 'Hostel outpass requests, approvals, and exit/entry tracking';
 
 CREATE INDEX idx_ho_student_prn    ON hostel_outpasses (student_prn);
 CREATE INDEX idx_ho_status         ON hostel_outpasses (status);

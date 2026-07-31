@@ -31,7 +31,7 @@ public class ShiftLog {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "log_type", nullable = false, columnDefinition = "log_type")
+    @Column(name = "log_type", nullable = false)
     @Builder.Default
     private LogType logType = LogType.GENERAL;
 }
