@@ -105,6 +105,9 @@ public class StudentGatePassServiceImpl implements StudentGatePassService {
             pass.setApprovalNotes(request.getNotes());
             pass.setWardenApprovedAt(OffsetDateTime.now());
         } else {
+            if (request.getRejectionReason() == null || request.getRejectionReason().isBlank()) {
+                throw new BadRequestException("Rejection reason is required when rejecting a gate pass");
+            }
             pass.setStatus(PassStatus.REJECTED);
             pass.setRejectionReason(request.getRejectionReason());
         }

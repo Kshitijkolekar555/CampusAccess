@@ -20,8 +20,8 @@ export const StudentPasses: React.FC = () => {
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // Form State
-  const [form, setForm] = useState({
+  // Initial Form Values
+  const initialForm = {
     studentName: '',
     studentPrn: '',
     studentDepartment: 'CE',
@@ -30,9 +30,11 @@ export const StudentPasses: React.FC = () => {
     studentMobile: '',
     purpose: '',
     destination: '',
-    departureTime: new Date().toISOString(),
-    expectedReturnTime: new Date(Date.now() + 86400000).toISOString(),
-  });
+    departureTime: new Date().toISOString().slice(0, 16),
+    expectedReturnTime: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+  };
+
+  const [form, setForm] = useState(initialForm);
 
   // Queries
   const { data: pageData, isLoading } = useQuery({
@@ -47,11 +49,19 @@ export const StudentPasses: React.FC = () => {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: studentPassApi.createPass,
+    mutationFn: (formData: typeof form) => studentPassApi.createPass({
+      ...formData,
+      departureTime: new Date(formData.departureTime).toISOString(),
+      expectedReturnTime: new Date(formData.expectedReturnTime).toISOString(),
+    }),
     onSuccess: () => {
       toast.success('Gate pass requested successfully!');
       queryClient.invalidateQueries({ queryKey: ['student-passes'] });
       setIsCreateOpen(false);
+      setForm(initialForm);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to create gate pass');
     },
   });
 
@@ -63,6 +73,9 @@ export const StudentPasses: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['student-passes'] });
       setApprovePass(null);
     },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Action failed');
+    },
   });
 
   const exitMutation = useMutation({
@@ -70,6 +83,9 @@ export const StudentPasses: React.FC = () => {
     onSuccess: () => {
       toast.success('Gate exit recorded!');
       queryClient.invalidateQueries({ queryKey: ['student-passes'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to record exit');
     },
   });
 
@@ -79,12 +95,15 @@ export const StudentPasses: React.FC = () => {
       toast.success('Gate re-entry recorded!');
       queryClient.invalidateQueries({ queryKey: ['student-passes'] });
     },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to record entry');
+    },
   });
 
   const columns: Column<StudentGatePass>[] = [
     {
       header: 'Pass #',
-      render: (p) => <span className="font-mono font-bold text-xs text-indigo-600">{p.passNumber}</span>,
+      render: (p) => <span className="font-mono font-bold text-xs text-indigo-600">{p.passNumber || `GP-#${p.id}`}</span>,
     },
     {
       header: 'Student',
@@ -175,8 +194,13 @@ export const StudentPasses: React.FC = () => {
             <Input label="Student Name" required value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })} />
             <Input label="Student PRN" required value={form.studentPrn} onChange={(e) => setForm({ ...form, studentPrn: e.target.value })} />
             <Input label="Student Mobile" required value={form.studentMobile} onChange={(e) => setForm({ ...form, studentMobile: e.target.value })} />
-            <Input label="Purpose" required value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} />
+            <Input label="Department" required value={form.studentDepartment} onChange={(e) => setForm({ ...form, studentDepartment: e.target.value })} />
+            <Input label="Class" required value={form.studentClass} onChange={(e) => setForm({ ...form, studentClass: e.target.value })} />
+            <Input label="Division" required value={form.studentDivision} onChange={(e) => setForm({ ...form, studentDivision: e.target.value })} />
+            <Input label="Departure Time" type="datetime-local" required value={form.departureTime} onChange={(e) => setForm({ ...form, departureTime: e.target.value })} />
+            <Input label="Expected Return" type="datetime-local" required value={form.expectedReturnTime} onChange={(e) => setForm({ ...form, expectedReturnTime: e.target.value })} />
           </div>
+          <Input label="Purpose" required value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} />
           <Input label="Destination" required value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} />
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>

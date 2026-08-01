@@ -192,9 +192,12 @@ export interface Vendor {
   id: number;
   companyName: string;
   contactPerson: string;
-  phone: string;
+  contactPhone?: string;
+  phone?: string;
+  contactEmail?: string;
   email?: string;
-  serviceType: string;
+  serviceType?: string;
+  assignedDepartment?: string;
   workDescription?: string;
   isBlacklisted: boolean;
   blacklistReason?: string;
@@ -221,7 +224,9 @@ export interface VendorVisit {
 
 export interface StudentGatePass {
   id: number;
-  passNumber: string;
+  passNumber?: string;
+  studentUserId?: number;
+  studentUsername?: string;
   studentName: string;
   studentPrn: string;
   studentDepartment: string;
@@ -234,42 +239,59 @@ export interface StudentGatePass {
   expectedReturnTime: string;
   actualReturnTime?: string;
   status: PassStatus;
+  approvedById?: number;
+  approvedByName?: string;
   approvedByUsername?: string;
-  approvedAt?: string;
-  rejectionReason?: string;
   approvalNotes?: string;
+  rejectionReason?: string;
+  wardenApprovedAt?: string;
   gateId?: number;
   gateName?: string;
   gateExitAt?: string;
   gateEntryAt?: string;
   createdAt: string;
+  createdByUsername?: string;
 }
 
 export interface HostelOutpass {
   id: number;
-  outpassNumber: string;
+  outpassNumber?: string;
+  studentUserId?: number;
+  studentUsername?: string;
   studentName: string;
   studentPrn: string;
-  roomNumber: string;
-  hostelBlock: string;
+  studentRoom?: string;
+  roomNumber?: string;
+  studentHostel?: string;
+  hostelBlock?: string;
+  studentClass?: string;
+  studentDivision?: string;
   studentMobile: string;
-  parentMobile: string;
+  parentContact?: string;
+  parentMobile?: string;
+  emergencyContact?: string;
   reason: string;
-  destinationAddress: string;
-  departureDate: string;
-  expectedReturnDate: string;
+  destination?: string;
+  destinationAddress?: string;
+  departureTime?: string;
+  departureDate?: string;
+  expectedReturnTime?: string;
+  expectedReturnDate?: string;
   actualReturnTime?: string;
   status: OutpassStatus;
+  wardenId?: number;
+  wardenUsername?: string;
   approvedByUsername?: string;
-  approvedAt?: string;
   wardenRemarks?: string;
   rejectionReason?: string;
-  gateId?: number;
-  gateName?: string;
+  wardenActedAt?: string;
   gateExitAt?: string;
   gateEntryAt?: string;
+  gateId?: number;
+  gateName?: string;
   isLateReturn: boolean;
   createdAt: string;
+  createdByUsername?: string;
 }
 
 export interface NotificationItem {

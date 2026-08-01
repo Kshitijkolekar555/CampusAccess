@@ -17,7 +17,8 @@ export const HostelOutpasses: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [approveOutpass, setApproveOutpass] = useState<HostelOutpass | null>(null);
 
-  const [form, setForm] = useState({
+  // Initial Form State
+  const initialForm = {
     studentName: '',
     studentPrn: '',
     studentRoom: 'A-102',
@@ -29,9 +30,11 @@ export const HostelOutpasses: React.FC = () => {
     emergencyContact: '',
     reason: '',
     destination: '',
-    departureTime: new Date().toISOString(),
-    expectedReturnTime: new Date(Date.now() + 86400000).toISOString(),
-  });
+    departureTime: new Date().toISOString().slice(0, 16),
+    expectedReturnTime: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+  };
+
+  const [form, setForm] = useState(initialForm);
 
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['hostel-outpasses', page],
@@ -48,6 +51,10 @@ export const HostelOutpasses: React.FC = () => {
       toast.success('Outpass requested successfully!');
       queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
       setIsCreateOpen(false);
+      setForm(initialForm);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to create hostel outpass');
     },
   });
 
@@ -59,6 +66,9 @@ export const HostelOutpasses: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
       setApproveOutpass(null);
     },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Action failed');
+    },
   });
 
   const exitMutation = useMutation({
@@ -66,6 +76,9 @@ export const HostelOutpasses: React.FC = () => {
     onSuccess: () => {
       toast.success('Hostel Outpass Exit recorded!');
       queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to record exit');
     },
   });
 
@@ -75,25 +88,33 @@ export const HostelOutpasses: React.FC = () => {
       toast.success('Hostel Outpass Re-Entry recorded!');
       queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
     },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to record entry');
+    },
   });
 
   const columns: Column<HostelOutpass>[] = [
     {
       header: 'Outpass #',
-      render: (o) => <span className="font-mono font-bold text-xs text-indigo-600">{o.outpassNumber}</span>,
+      render: (o) => <span className="font-mono font-bold text-xs text-indigo-600">{o.outpassNumber || `OP-#${o.id}`}</span>,
     },
     {
       header: 'Student & Room',
       render: (o) => (
         <div>
           <p className="font-bold text-slate-900 dark:text-slate-100">{o.studentName}</p>
-          <p className="text-xs text-slate-400">{o.hostelBlock} ({o.roomNumber})</p>
+          <p className="text-xs text-slate-400">{o.studentHostel || o.hostelBlock || 'Hostel'} ({o.studentRoom || o.roomNumber || 'Room'})</p>
         </div>
       ),
     },
     {
-      header: 'Reason',
-      accessor: 'reason',
+      header: 'Reason & Destination',
+      render: (o) => (
+        <div>
+          <p className="text-xs font-medium text-slate-800 dark:text-slate-200">{o.reason}</p>
+          <p className="text-[11px] text-slate-400">Dest: {o.destination || o.destinationAddress}</p>
+        </div>
+      ),
     },
     {
       header: 'Status',
@@ -163,8 +184,17 @@ export const HostelOutpasses: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <Input label="Student Name" required value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })} />
             <Input label="Student PRN" required value={form.studentPrn} onChange={(e) => setForm({ ...form, studentPrn: e.target.value })} />
+            <Input label="Hostel Block" required value={form.studentHostel} onChange={(e) => setForm({ ...form, studentHostel: e.target.value })} />
+            <Input label="Room Number" required value={form.studentRoom} onChange={(e) => setForm({ ...form, studentRoom: e.target.value })} />
             <Input label="Student Mobile" required value={form.studentMobile} onChange={(e) => setForm({ ...form, studentMobile: e.target.value })} />
             <Input label="Parent Contact" required value={form.parentContact} onChange={(e) => setForm({ ...form, parentContact: e.target.value })} />
+            <Input label="Emergency Contact" value={form.emergencyContact} onChange={(e) => setForm({ ...form, emergencyContact: e.target.value })} />
+            <Input label="Class & Div" value={`${form.studentClass}-${form.studentDivision}`} onChange={(e) => {
+              const parts = e.target.value.split('-');
+              setForm({ ...form, studentClass: parts[0] || 'BE', studentDivision: parts[1] || '1' });
+            }} />
+            <Input label="Departure Time" type="datetime-local" required value={form.departureTime} onChange={(e) => setForm({ ...form, departureTime: e.target.value })} />
+            <Input label="Expected Return" type="datetime-local" required value={form.expectedReturnTime} onChange={(e) => setForm({ ...form, expectedReturnTime: e.target.value })} />
           </div>
           <Input label="Reason for Outpass" required value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
           <Input label="Destination Address" required value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} />

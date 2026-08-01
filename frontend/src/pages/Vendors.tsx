@@ -19,15 +19,17 @@ export const Vendors: React.FC = () => {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [entryVendor, setEntryVendor] = useState<Vendor | null>(null);
 
-  // Form State
-  const [form, setForm] = useState({
+  // Initial Form State
+  const initialForm = {
     companyName: '',
     contactPerson: '',
-    phone: '',
-    email: '',
-    serviceType: 'Delivery',
+    contactPhone: '',
+    contactEmail: '',
+    assignedDepartment: 'Maintenance',
     workDescription: '',
-  });
+  };
+
+  const [form, setForm] = useState(initialForm);
 
   const [visitGateId, setVisitGateId] = useState(1);
   const [workerCount, setWorkerCount] = useState(1);
@@ -53,11 +55,25 @@ export const Vendors: React.FC = () => {
 
   // Mutations
   const registerMutation = useMutation({
-    mutationFn: vendorApi.register,
+    mutationFn: (formData: typeof form) => vendorApi.register({
+      companyName: formData.companyName,
+      contactPerson: formData.contactPerson,
+      contactPhone: formData.contactPhone,
+      contactEmail: formData.contactEmail || undefined,
+      assignedDepartment: formData.assignedDepartment,
+      workDescription: formData.workDescription || undefined,
+    }),
     onSuccess: () => {
       toast.success('Vendor registered successfully!');
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
       setIsRegisterOpen(false);
+      setForm(initialForm);
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.errors
+        ? Object.values(err.response.data.errors).join(', ')
+        : (err.response?.data?.message || 'Failed to register vendor');
+      toast.error(msg);
     },
   });
 
@@ -69,6 +85,9 @@ export const Vendors: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['vendor-visits'] });
       setEntryVendor(null);
     },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to record entry');
+    },
   });
 
   const exitMutation = useMutation({
@@ -76,6 +95,9 @@ export const Vendors: React.FC = () => {
     onSuccess: () => {
       toast.success('Vendor exit logged!');
       queryClient.invalidateQueries({ queryKey: ['vendor-visits'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to record exit');
     },
   });
 
@@ -85,7 +107,7 @@ export const Vendors: React.FC = () => {
       render: (v) => (
         <div>
           <p className="font-extrabold text-slate-900 dark:text-slate-100">{v.companyName}</p>
-          <p className="text-xs text-slate-400">{v.serviceType}</p>
+          <p className="text-xs text-slate-400">{v.assignedDepartment || v.serviceType || 'Vendor'}</p>
         </div>
       ),
     },
@@ -94,7 +116,7 @@ export const Vendors: React.FC = () => {
       render: (v) => (
         <div>
           <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{v.contactPerson}</p>
-          <p className="text-[11px] text-slate-400">{v.phone}</p>
+          <p className="text-[11px] text-slate-400">{v.contactPhone || v.phone}</p>
         </div>
       ),
     },
@@ -189,7 +211,10 @@ export const Vendors: React.FC = () => {
         <form onSubmit={(e) => { e.preventDefault(); registerMutation.mutate(form); }} className="space-y-4">
           <Input label="Company Name" required value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} />
           <Input label="Contact Person" required value={form.contactPerson} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} />
-          <Input label="Phone" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <Input label="Contact Phone" required placeholder="10-15 digits" value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} />
+          <Input label="Contact Email" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
+          <Input label="Department" value={form.assignedDepartment} onChange={(e) => setForm({ ...form, assignedDepartment: e.target.value })} />
+          <Input label="Work Description" value={form.workDescription} onChange={(e) => setForm({ ...form, workDescription: e.target.value })} />
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsRegisterOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={registerMutation.isPending}>Save Vendor</Button>

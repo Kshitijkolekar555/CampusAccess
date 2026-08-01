@@ -114,6 +114,9 @@ public class HostelOutpassServiceImpl implements HostelOutpassService {
             outpass.setWardenRemarks(request.getRemarks());
             outpass.setWardenActedAt(OffsetDateTime.now());
         } else {
+            if (request.getRejectionReason() == null || request.getRejectionReason().isBlank()) {
+                throw new BadRequestException("Rejection reason is required when rejecting an outpass");
+            }
             outpass.setStatus(OutpassStatus.REJECTED);
             outpass.setWarden(warden);
             outpass.setRejectionReason(request.getRejectionReason());
