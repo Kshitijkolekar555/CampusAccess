@@ -15,7 +15,7 @@ public interface HostelOutpassService {
 
     HostelOutpassResponse recordGateEntry(Long outpassId, String performingUsername);
 
-    HostelOutpassResponse getOutpassById(Long outpassId);
+    HostelOutpassResponse getOutpassById(Long outpassId, String performingUsername);
 
-    Page<HostelOutpassResponse> getOutpasses(String query, String studentPrn, OutpassStatus status, Boolean isLateReturn, Pageable pageable);
+    Page<HostelOutpassResponse> getOutpasses(String query, String studentPrn, OutpassStatus status, Boolean isLateReturn, Pageable pageable, String performingUsername);
 }

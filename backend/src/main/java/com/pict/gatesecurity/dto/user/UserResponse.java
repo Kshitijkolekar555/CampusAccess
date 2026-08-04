@@ -21,6 +21,7 @@ public class UserResponse {
     private String phone;
     private String email;
     private Boolean active;
+    private Boolean isLateComerPermitted;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 }

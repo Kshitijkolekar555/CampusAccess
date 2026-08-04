@@ -12,7 +12,10 @@ import { Input } from '../components/ui/Input';
 import { GraduationCap, Plus, CheckCircle2, XCircle, LogOut, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useAuthStore } from '../store/authStore';
+
 export const StudentPasses: React.FC = () => {
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -20,21 +23,30 @@ export const StudentPasses: React.FC = () => {
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // Initial Form Values
-  const initialForm = {
-    studentName: '',
-    studentPrn: '',
+  const toLocalISOString = (d: Date) => {
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
+  // Initial Form Values (Autofilled from signed in user profile)
+  const getInitialForm = () => ({
+    studentName: user?.fullName || '',
+    studentPrn: user?.username || '',
     studentDepartment: 'CE',
     studentClass: 'BE',
     studentDivision: '1',
-    studentMobile: '',
+    studentMobile: user?.phone || '9876543210',
     purpose: '',
     destination: '',
-    departureTime: new Date().toISOString().slice(0, 16),
-    expectedReturnTime: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
-  };
+    departureTime: toLocalISOString(new Date()),
+    expectedReturnTime: toLocalISOString(new Date(Date.now() + 86400000)),
+  });
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(getInitialForm());
+
+  React.useEffect(() => {
+    setForm(getInitialForm());
+  }, [user]);
 
   // Queries
   const { data: pageData, isLoading } = useQuery({
@@ -58,10 +70,11 @@ export const StudentPasses: React.FC = () => {
       toast.success('Gate pass requested successfully!');
       queryClient.invalidateQueries({ queryKey: ['student-passes'] });
       setIsCreateOpen(false);
-      setForm(initialForm);
+      setForm(getInitialForm());
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to create gate pass');
+      const msg = err.response?.data?.message || err.message || 'Failed to create gate pass';
+      toast.error(msg);
     },
   });
 
@@ -133,32 +146,44 @@ export const StudentPasses: React.FC = () => {
           EXPIRED: 'info',
           COMPLETED: 'default',
         };
-        return <Badge variant={variants[p.status]}>{p.status}</Badge>;
+        return (
+          <div>
+            <Badge variant={variants[p.status]}>{p.status}</Badge>
+            {p.status === 'REJECTED' && p.rejectionReason && (
+              <p className="text-[10px] text-rose-500 font-medium mt-0.5">Reason: {p.rejectionReason}</p>
+            )}
+          </div>
+        );
       },
     },
     {
       header: 'Actions',
-      render: (p) => (
-        <div className="flex items-center gap-2">
-          {p.status === 'PENDING' && (
-            <Button variant="outline" size="sm" onClick={() => setApprovePass(p)}>
-              Review Pass
-            </Button>
-          )}
+      render: (p) => {
+        const canReview = user?.role !== 'STUDENT';
+        const canRecordExit = user?.role === 'SECURITY_GUARD' || user?.role === 'GUARD' || user?.role === 'ADMIN' || user?.role === 'SECURITY_OFFICER';
 
-          {p.status === 'APPROVED' && !p.gateExitAt && (
-            <Button variant="primary" size="sm" onClick={() => exitMutation.mutate(p.id)} leftIcon={<LogOut className="w-3.5 h-3.5" />}>
-              Exit Gate
-            </Button>
-          )}
+        return (
+          <div className="flex items-center gap-2">
+            {p.status === 'PENDING' && canReview && (
+              <Button variant="outline" size="sm" onClick={() => { setApprovePass(p); setApprovalNotes(''); setRejectionReason(''); }}>
+                Review Pass
+              </Button>
+            )}
 
-          {p.gateExitAt && !p.actualReturnTime && (
-            <Button variant="success" size="sm" onClick={() => entryMutation.mutate(p.id)} leftIcon={<LogIn className="w-3.5 h-3.5" />}>
-              Record Entry
-            </Button>
-          )}
-        </div>
-      ),
+            {p.status === 'APPROVED' && !p.gateExitAt && canRecordExit && (
+              <Button variant="primary" size="sm" onClick={() => exitMutation.mutate(p.id)} leftIcon={<LogOut className="w-3.5 h-3.5" />}>
+                Exit Gate
+              </Button>
+            )}
+
+            {p.gateExitAt && !p.actualReturnTime && canRecordExit && (
+              <Button variant="success" size="sm" onClick={() => entryMutation.mutate(p.id)} leftIcon={<LogIn className="w-3.5 h-3.5" />}>
+                Record Entry
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -191,9 +216,9 @@ export const StudentPasses: React.FC = () => {
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Issue Student Gate Pass Request">
         <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Student Name" required value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })} />
-            <Input label="Student PRN" required value={form.studentPrn} onChange={(e) => setForm({ ...form, studentPrn: e.target.value })} />
-            <Input label="Student Mobile" required value={form.studentMobile} onChange={(e) => setForm({ ...form, studentMobile: e.target.value })} />
+            <Input label="Student Name (Auto-filled)" required value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })} disabled={user?.role === 'STUDENT'} />
+            <Input label="Student PRN (Auto-filled)" required value={form.studentPrn} onChange={(e) => setForm({ ...form, studentPrn: e.target.value })} disabled={user?.role === 'STUDENT'} />
+            <Input label="Student Mobile (Auto-filled)" required value={form.studentMobile} onChange={(e) => setForm({ ...form, studentMobile: e.target.value })} disabled={user?.role === 'STUDENT'} />
             <Input label="Department" required value={form.studentDepartment} onChange={(e) => setForm({ ...form, studentDepartment: e.target.value })} />
             <Input label="Class" required value={form.studentClass} onChange={(e) => setForm({ ...form, studentClass: e.target.value })} />
             <Input label="Division" required value={form.studentDivision} onChange={(e) => setForm({ ...form, studentDivision: e.target.value })} />
@@ -209,18 +234,25 @@ export const StudentPasses: React.FC = () => {
         </form>
       </Modal>
 
-      {/* Warden Approval Modal */}
-      <Modal isOpen={!!approvePass} onClose={() => setApprovePass(null)} title="Warden Pass Review" maxWidth="sm">
+      {/* Warden / Guard Approval Modal */}
+      <Modal isOpen={!!approvePass} onClose={() => setApprovePass(null)} title="Pass Review & Approval" maxWidth="sm">
         {approvePass && (
           <div className="space-y-4">
             <p className="text-sm">Pass Request for <strong>{approvePass.studentName}</strong> ({approvePass.purpose})</p>
-            <Input label="Approval Notes" value={approvalNotes} onChange={(e) => setApprovalNotes(e.target.value)} />
+            <Input label="Approval Notes (Optional)" value={approvalNotes} onChange={(e) => setApprovalNotes(e.target.value)} placeholder="e.g. Approved for weekend visit" />
+            <Input label="Rejection Reason (Required if Rejecting)" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="e.g. Insufficient documentation" />
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="danger"
-                onClick={() => approveMutation.mutate({ passId: approvePass.id, approved: false, rejectionReason: 'Declined by Warden' })}
+                onClick={() => {
+                  if (!rejectionReason.trim()) {
+                    toast.error('Please enter a rejection reason');
+                    return;
+                  }
+                  approveMutation.mutate({ passId: approvePass.id, approved: false, rejectionReason: rejectionReason.trim() });
+                }}
               >
-                Reject
+                Reject Pass
               </Button>
               <Button
                 variant="success"

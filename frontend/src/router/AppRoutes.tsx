@@ -17,7 +17,7 @@ import { Notifications } from '../pages/Notifications';
 import { Profile } from '../pages/Profile';
 import type { UserRole } from '../types';
 
-// Protected Route Component
+// Protected Route Component with strict role checks
 const ProtectedLayout: React.FC<{ allowedRoles?: UserRole[] }> = ({ allowedRoles }) => {
   const { isAuthenticated, user } = useAuthStore();
 
@@ -42,20 +42,36 @@ export const AppRoutes: React.FC = () => {
       {/* Public Route */}
       <Route path="/login" element={<Login />} />
 
-      {/* Protected Routes */}
+      {/* General Protected Routes */}
       <Route element={<ProtectedLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
+
+      {/* Role Protected Routes */}
+      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF']} />}>
         <Route path="/visitors" element={<Visitors />} />
+      </Route>
+
+      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD']} />}>
         <Route path="/vehicles" element={<Vehicles />} />
         <Route path="/vendors" element={<Vendors />} />
-        <Route path="/student-passes" element={<StudentPasses />} />
-        <Route path="/hostel-outpasses" element={<HostelOutpasses />} />
         <Route path="/guards" element={<Guards />} />
         <Route path="/shifts" element={<Shifts />} />
-        <Route path="/users" element={<Users />} />
         <Route path="/gates" element={<Gates />} />
+      </Route>
+
+      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'HOSTEL_WARDEN', 'STUDENT']} />}>
+        <Route path="/student-passes" element={<StudentPasses />} />
+        <Route path="/hostel-outpasses" element={<HostelOutpasses />} />
+      </Route>
+
+      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'HOSTEL_WARDEN']} />}>
         <Route path="/notifications" element={<Notifications />} />
-        <Route path="/profile" element={<Profile />} />
+      </Route>
+
+      <Route element={<ProtectedLayout allowedRoles={['ADMIN']} />}>
+        <Route path="/users" element={<Users />} />
       </Route>
 
       {/* Default Catch All */}

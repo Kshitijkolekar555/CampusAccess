@@ -29,7 +29,7 @@ public class StudentGatePassController {
     private final StudentGatePassService studentGatePassService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT')")
     @Operation(summary = "Create Gate Pass", description = "Creates a new student gate pass request")
     public ResponseEntity<ApiResponse<StudentGatePassResponse>> createPass(
             @Valid @RequestBody StudentGatePassRequest request,
@@ -40,8 +40,8 @@ public class StudentGatePassController {
     }
 
     @PutMapping("/{passId}/approve")
-    @PreAuthorize("hasAnyRole('HOSTEL_WARDEN', 'ADMIN')")
-    @Operation(summary = "Approve or Reject Gate Pass", description = "Warden or Admin approves/rejects a pending gate pass")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'HOSTEL_WARDEN', 'ADMIN')")
+    @Operation(summary = "Approve or Reject Gate Pass", description = "Guard, Warden, or Admin approves/rejects a pending gate pass")
     public ResponseEntity<ApiResponse<StudentGatePassResponse>> approvePass(
             @PathVariable Long passId,
             @Valid @RequestBody StudentGatePassApprovalRequest request,
@@ -51,7 +51,7 @@ public class StudentGatePassController {
     }
 
     @PutMapping("/{passId}/exit/{gateId}")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Record Gate Exit", description = "Records student exit through the gate using an approved pass")
     public ResponseEntity<ApiResponse<StudentGatePassResponse>> recordGateExit(
             @PathVariable Long passId,
@@ -62,7 +62,7 @@ public class StudentGatePassController {
     }
 
     @PutMapping("/{passId}/entry")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Record Gate Entry", description = "Records student re-entry through the gate")
     public ResponseEntity<ApiResponse<StudentGatePassResponse>> recordGateEntry(
             @PathVariable Long passId,
@@ -72,15 +72,17 @@ public class StudentGatePassController {
     }
 
     @GetMapping("/{passId}")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT')")
     @Operation(summary = "Get Gate Pass by ID", description = "Fetches gate pass details by ID")
-    public ResponseEntity<ApiResponse<StudentGatePassResponse>> getPassById(@PathVariable Long passId) {
-        StudentGatePassResponse response = studentGatePassService.getPassById(passId);
+    public ResponseEntity<ApiResponse<StudentGatePassResponse>> getPassById(
+            @PathVariable Long passId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        StudentGatePassResponse response = studentGatePassService.getPassById(passId, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT')")
     @Operation(summary = "Search & Filter Gate Passes", description = "Paginated list of gate passes filtered by query, PRN, or status")
     public ResponseEntity<ApiResponse<PageResponse<StudentGatePassResponse>>> getPasses(
             @RequestParam(required = false) String query,
@@ -89,12 +91,13 @@ public class StudentGatePassController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") String sortDir) {
+            @RequestParam(defaultValue = "DESC") String sortDir,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
         Sort sort = sortDir.equalsIgnoreCase("ASC") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<StudentGatePassResponse> passPage = studentGatePassService.getPasses(query, studentPrn, status, pageable);
+        Page<StudentGatePassResponse> passPage = studentGatePassService.getPasses(query, studentPrn, status, pageable, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(passPage)));
     }
 }

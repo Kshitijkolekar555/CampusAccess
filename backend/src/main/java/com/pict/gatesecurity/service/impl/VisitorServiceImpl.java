@@ -32,6 +32,8 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import com.pict.gatesecurity.config.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,6 +50,7 @@ public class VisitorServiceImpl implements VisitorService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {CacheConfig.CACHE_ADMIN_DASHBOARD, CacheConfig.CACHE_GUARD_DASHBOARD}, allEntries = true)
     public VisitorResponse checkIn(VisitorCheckInRequest request, String performingUsername) {
         Gate gate = gateRepository.findById(request.getGateId())
                 .orElseThrow(() -> new ResourceNotFoundException("Gate", "id", request.getGateId()));
@@ -103,6 +106,7 @@ public class VisitorServiceImpl implements VisitorService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {CacheConfig.CACHE_ADMIN_DASHBOARD, CacheConfig.CACHE_GUARD_DASHBOARD}, allEntries = true)
     public VisitorResponse checkOut(VisitorCheckOutRequest request, String performingUsername) {
         Visitor visitor = null;
 
@@ -165,9 +169,16 @@ public class VisitorServiceImpl implements VisitorService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<VisitorResponse> getVisitors(String query, HostDepartment department, HostType hostType, Boolean isBlacklisted, Boolean activeInside, Pageable pageable) {
+    public Page<VisitorResponse> getVisitors(String query, HostDepartment department, HostType hostType, Boolean isBlacklisted, Boolean activeInside, Pageable pageable, String performingUsername) {
+        User user = userRepository.findByUsername(performingUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
+
         Specification<Visitor> spec = (root, q, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            if (user.getRole() == com.pict.gatesecurity.entity.enums.UserRole.STAFF) {
+                predicates.add(cb.equal(root.get("createdBy").get("id"), user.getId()));
+            }
 
             if (StringUtils.hasText(query)) {
                 String searchPattern = "%" + query.toLowerCase() + "%";

@@ -19,6 +19,7 @@ public class UserMapper {
                 .phone(user.getPhone())
                 .email(user.getEmail())
                 .active(user.getActive())
+                .isLateComerPermitted(user.getIsLateComerPermitted())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

@@ -7,9 +7,9 @@ public enum UserRole {
     HOSTEL_WARDEN,
     CANTEEN_MANAGER,
     VISITOR,
+    STUDENT,
+    STAFF,
 
-    @Deprecated(since = "Phase 2", forRemoval = true)
     GUARD,
-    @Deprecated(since = "Phase 2", forRemoval = true)
     CANTEEN_STAFF
 }

@@ -47,6 +47,10 @@ public class User {
     @Builder.Default
     private Boolean active = true;
 
+    @Column(name = "is_late_comer_permitted", nullable = false)
+    @Builder.Default
+    private Boolean isLateComerPermitted = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

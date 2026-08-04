@@ -163,12 +163,20 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
+        if (org.springframework.util.StringUtils.hasText(request.getConfirmPassword())
+                && !request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("New password and confirm password do not match");
+        }
+
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new BadRequestException("Current password does not match");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // Invalidate active refresh tokens after password change
+        refreshTokenRepository.deleteByUserId(user.getId());
 
         auditLogService.logAction(user, "CHANGE_PASSWORD", "User", user.getId(), null, Map.of("username", user.getUsername()));
         notificationService.sendPasswordChangedEmail(user);
@@ -230,6 +238,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponse register(UserCreateRequest request) {
+        if (request.getRole() == com.pict.gatesecurity.entity.enums.UserRole.ADMIN) {
+            throw new BadRequestException("Self-registration as ADMIN is not permitted. Contact system admin.");
+        }
+
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new DuplicateResourceException("Username '" + request.getUsername() + "' is already taken");
         }
@@ -257,6 +269,43 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("New user registered: {}", savedUser.getUsername());
         return userMapper.toResponse(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public StudentAuthDto verifyPrn(String prn) {
+        if (prn == null || prn.trim().isEmpty()) {
+            throw new BadRequestException("PRN is required");
+        }
+
+        String normalizedPrn = prn.trim().toUpperCase();
+
+        User studentUser = userRepository.findByUsername(normalizedPrn)
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid PRN"));
+
+        if (studentUser.getRole() != com.pict.gatesecurity.entity.enums.UserRole.STUDENT) {
+            throw new BadRequestException("Invalid PRN: Provided identifier does not belong to a student record");
+        }
+
+        if (!Boolean.TRUE.equals(studentUser.getActive())) {
+            throw new UnauthorizedException("Student account inactive");
+        }
+
+        String accessToken = jwtUtil.generateAccessToken(studentUser.getUsername(), studentUser.getRole().name());
+        String refreshTokenStr = jwtUtil.generateRefreshToken(studentUser.getUsername());
+
+        persistRefreshToken(studentUser, refreshTokenStr);
+
+        return StudentAuthDto.builder()
+                .prn(normalizedPrn)
+                .studentName(studentUser.getFullName())
+                .branchYear("COMP - TE")
+                .hostelRoom("B-304")
+                .mobileNumber(studentUser.getPhone() != null ? studentUser.getPhone() : "9876543210")
+                .active(studentUser.getActive())
+                .accessToken(accessToken)
+                .refreshToken(refreshTokenStr)
+                .build();
     }
 
     private void persistRefreshToken(User user, String token) {

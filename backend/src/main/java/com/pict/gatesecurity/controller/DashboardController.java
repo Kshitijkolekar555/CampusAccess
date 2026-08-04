@@ -63,6 +63,22 @@ public class DashboardController {
         return ResponseEntity.ok(ApiResponse.success(dashboardService.getWardenDashboard(hostel)));
     }
 
+    // ==================== STUDENT & VISITOR DASHBOARDS ====================
+
+    @GetMapping("/student")
+    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
+    @Operation(summary = "Student Dashboard", description = "Student passes and outpasses status")
+    public ResponseEntity<ApiResponse<String>> getStudentDashboard() {
+        return ResponseEntity.ok(ApiResponse.success("Student Dashboard Active"));
+    }
+
+    @GetMapping("/visitor")
+    @PreAuthorize("hasAnyRole('VISITOR', 'ADMIN')")
+    @Operation(summary = "Visitor Dashboard", description = "Visitor pass and token status")
+    public ResponseEntity<ApiResponse<String>> getVisitorDashboard() {
+        return ResponseEntity.ok(ApiResponse.success("Visitor Dashboard Active"));
+    }
+
     // ==================== ANALYTICS ====================
 
     @GetMapping("/analytics/daily-trends")

@@ -35,4 +35,9 @@ export const authApi = {
     const res = await api.post<ApiResponse<User>>('/auth/register', data);
     return res.data.data;
   },
+
+  verifyPrn: async (prn: string) => {
+    const res = await api.post<ApiResponse<any>>(`/auth/verify-prn?prn=${encodeURIComponent(prn)}`);
+    return res.data.data;
+  },
 };

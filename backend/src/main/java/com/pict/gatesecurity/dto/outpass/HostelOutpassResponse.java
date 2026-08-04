@@ -25,6 +25,7 @@ public class HostelOutpassResponse {
     private String studentClass;
     private String studentDivision;
     private String reason;
+    private String studentNote;
     private String destination;
     private OffsetDateTime departureTime;
     private OffsetDateTime expectedReturnTime;

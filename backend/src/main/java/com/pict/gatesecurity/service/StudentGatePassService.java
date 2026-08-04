@@ -15,7 +15,7 @@ public interface StudentGatePassService {
 
     StudentGatePassResponse recordGateEntry(Long passId, String performingUsername);
 
-    StudentGatePassResponse getPassById(Long passId);
+    StudentGatePassResponse getPassById(Long passId, String performingUsername);
 
-    Page<StudentGatePassResponse> getPasses(String query, String studentPrn, PassStatus status, Pageable pageable);
+    Page<StudentGatePassResponse> getPasses(String query, String studentPrn, PassStatus status, Pageable pageable, String performingUsername);
 }

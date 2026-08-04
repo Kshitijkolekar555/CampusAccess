@@ -49,6 +49,9 @@ public class HostelOutpass {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String reason;
 
+    @Column(name = "student_note", columnDefinition = "TEXT")
+    private String studentNote;
+
     @Column(nullable = false, length = 255)
     private String destination;
 

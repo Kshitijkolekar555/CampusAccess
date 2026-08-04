@@ -130,11 +130,18 @@ public class GuardServiceImpl implements GuardService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
 
         Guard guard = guardRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new BadRequestException("Current user is not registered as a security guard"));
+                .orElseGet(() -> {
+                    Guard newGuard = Guard.builder()
+                            .user(user)
+                            .employeeCode("G-" + user.getId())
+                            .active(true)
+                            .build();
+                    return guardRepository.save(newGuard);
+                });
 
         Optional<Shift> ongoingShift = shiftRepository.findByGuardIdAndStatus(guard.getId(), ShiftStatus.ONGOING);
         if (ongoingShift.isPresent()) {
-            throw new BadRequestException("Guard already has an ongoing shift (Shift ID: " + ongoingShift.get().getId() + ")");
+            throw new BadRequestException("Shift already active. Please end current shift before starting a new shift.");
         }
 
         Gate gate = gateRepository.findById(request.getGateId())
@@ -166,10 +173,17 @@ public class GuardServiceImpl implements GuardService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
 
         Guard guard = guardRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new BadRequestException("Current user is not registered as a security guard"));
+                .orElseGet(() -> {
+                    Guard newGuard = Guard.builder()
+                            .user(user)
+                            .employeeCode("G-" + user.getId())
+                            .active(true)
+                            .build();
+                    return guardRepository.save(newGuard);
+                });
 
         Shift shift = shiftRepository.findByGuardIdAndStatus(guard.getId(), ShiftStatus.ONGOING)
-                .orElseThrow(() -> new BadRequestException("No ongoing shift found for guard"));
+                .orElseThrow(() -> new BadRequestException("No active shift to close"));
 
         shift.setEndTime(OffsetDateTime.now());
         shift.setStatus(ShiftStatus.COMPLETED);
@@ -191,7 +205,14 @@ public class GuardServiceImpl implements GuardService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
 
         Guard guard = guardRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new BadRequestException("Current user is not registered as a security guard"));
+                .orElseGet(() -> {
+                    Guard newGuard = Guard.builder()
+                            .user(user)
+                            .employeeCode("G-" + user.getId())
+                            .active(true)
+                            .build();
+                    return guardRepository.save(newGuard);
+                });
 
         Shift shift = shiftRepository.findByGuardIdAndStatus(guard.getId(), ShiftStatus.ONGOING)
                 .orElseThrow(() -> new ResourceNotFoundException("No active ongoing shift for current guard"));

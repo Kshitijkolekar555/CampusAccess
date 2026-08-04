@@ -50,6 +50,14 @@ public class VehicleLog {
     @Column(name = "exit_note", columnDefinition = "TEXT")
     private String exitNote;
 
+    @Column(name = "action_time")
+    private OffsetDateTime actionTime;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "processed_by_guard_id",
+            foreignKey = @ForeignKey(name = "fk_vehicle_logs_processed_by_guard"))
+    private User processedByGuard;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

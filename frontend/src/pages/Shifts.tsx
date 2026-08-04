@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { Clock, Play, Square, PlusCircle, Activity, Shield } from 'lucide-react';
 import { toast } from 'sonner';
@@ -189,19 +190,17 @@ export const Shifts: React.FC = () => {
       {/* Modal */}
       <Modal isOpen={isLogModalOpen} onClose={() => setIsLogModalOpen(false)} title="Add Shift Activity Entry" maxWidth="sm">
         <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Log Type</label>
-            <select
-              className="w-full p-2.5 border rounded-xl text-sm"
-              value={logType}
-              onChange={(e) => setLogType(e.target.value)}
-            >
-              <option value="GENERAL">GENERAL</option>
-              <option value="INCIDENT">INCIDENT</option>
-              <option value="CHECK_ROUNDS">CHECK_ROUNDS</option>
-              <option value="HANDOVER">HANDOVER</option>
-            </select>
-          </div>
+          <Select
+            label="Log Type"
+            value={logType}
+            onChange={(e) => setLogType(e.target.value)}
+            options={[
+              { label: 'GENERAL', value: 'GENERAL' },
+              { label: 'INCIDENT', value: 'INCIDENT' },
+              { label: 'CHECK_ROUNDS', value: 'CHECK_ROUNDS' },
+              { label: 'HANDOVER', value: 'HANDOVER' },
+            ]}
+          />
           <Input
             label="Activity Description"
             placeholder="Routine perimeter check completed..."

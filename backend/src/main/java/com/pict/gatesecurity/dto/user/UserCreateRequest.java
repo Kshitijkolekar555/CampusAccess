@@ -21,7 +21,7 @@ public class UserCreateRequest {
     private String username;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 6, max = 100, message = "Password must be at least 6 characters")
+    @Size(min = 1, max = 100, message = "Password must be provided")
     private String password;
 
     @NotNull(message = "User role is required")
@@ -31,6 +31,7 @@ public class UserCreateRequest {
     @Size(min = 2, max = 150, message = "Full name must be between 2 and 150 characters")
     private String fullName;
 
+    @jakarta.validation.constraints.Pattern(regexp = "^\\d{10}$", message = "Phone number must be exactly 10 digits")
     private String phone;
 
     @Email(message = "Email must be valid")

@@ -25,7 +25,10 @@ export type UserRole =
   | 'SECURITY_GUARD'
   | 'HOSTEL_WARDEN'
   | 'CANTEEN_MANAGER'
-  | 'VISITOR';
+  | 'VISITOR'
+  | 'STUDENT'
+  | 'STAFF'
+  | 'GUARD';
 
 export type HostType =
   | 'FACULTY'
@@ -72,6 +75,7 @@ export interface User {
   phone?: string;
   email?: string;
   active: boolean;
+  isLateComerPermitted?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -181,8 +185,12 @@ export interface VehicleLog {
   gateName: string;
   entryTime: string;
   exitTime?: string;
+  actionTime?: string;
+  processedByGuardId?: number;
+  processedByGuardName?: string;
   driverName?: string;
   driverContact?: string;
+  purpose?: string;
   entryNote?: string;
   exitNote?: string;
   recordedByUsername: string;
@@ -271,6 +279,7 @@ export interface HostelOutpass {
   parentMobile?: string;
   emergencyContact?: string;
   reason: string;
+  studentNote?: string;
   destination?: string;
   destinationAddress?: string;
   departureTime?: string;
@@ -306,3 +315,48 @@ export interface NotificationItem {
   createdAt: string;
   sentAt?: string;
 }
+
+export interface GuardSelfDashboardResponse {
+  guardName: string;
+  guardId: string;
+  shiftId?: number;
+  gateName: string;
+  gateId?: number;
+  shiftName: string;
+  shiftStartTime?: string;
+  shiftEndTime?: string;
+  dutyStatus: string;
+  visitorsEnteredToday: number;
+  visitorsExitedToday: number;
+  vehiclesEnteredToday: number;
+  vehiclesExitedToday: number;
+  materialsProcessedToday: number;
+  studentPassesProcessedToday?: number;
+  activeVisitorsInsideCampus: number;
+  recentLogs: ShiftLog[];
+}
+
+export interface StudentAuthDto {
+  prn: string;
+  studentName: string;
+  branchYear: string;
+  hostelRoom: string;
+  mobileNumber: string;
+  active: boolean;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface StaffBreak {
+  id: number;
+  userId: number;
+  username: string;
+  fullName: string;
+  startTime: string;
+  endTime?: string;
+  durationMinutes?: number;
+  status: 'ONGOING' | 'COMPLETED';
+  note?: string;
+  createdAt: string;
+}
+

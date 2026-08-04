@@ -25,6 +25,9 @@ public class VehicleLogResponse {
     private String purpose;
     private String entryNote;
     private String exitNote;
+    private OffsetDateTime actionTime;
+    private Long processedByGuardId;
+    private String processedByGuardName;
     private OffsetDateTime createdAt;
     private String createdByUsername;
 }

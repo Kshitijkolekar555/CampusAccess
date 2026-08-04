@@ -28,6 +28,10 @@ public interface NotificationService {
 
     void sendOutpassRejected(User user, String studentName, Long outpassId, String reason);
 
+    void sendOutpassSubmitted(User user, String studentName, Long outpassId);
+
+    void sendOutpassReturned(User user, String studentName, Long outpassId);
+
     void sendSecurityAlert(User recipient, String message);
 
     void retryFailedNotifications();

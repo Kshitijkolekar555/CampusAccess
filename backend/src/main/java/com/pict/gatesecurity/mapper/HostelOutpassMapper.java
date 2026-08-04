@@ -24,6 +24,7 @@ public class HostelOutpassMapper {
                 .studentClass(outpass.getStudentClass())
                 .studentDivision(outpass.getStudentDivision())
                 .reason(outpass.getReason())
+                .studentNote(outpass.getStudentNote())
                 .destination(outpass.getDestination())
                 .departureTime(outpass.getDepartureTime())
                 .expectedReturnTime(outpass.getExpectedReturnTime())

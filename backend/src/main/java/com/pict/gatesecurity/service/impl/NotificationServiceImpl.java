@@ -195,6 +195,28 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
+    public void sendOutpassSubmitted(User user, String studentName, Long outpassId) {
+        if (user == null) return;
+        String subject = "Hostel Outpass Submitted";
+        String body = "Dear " + studentName + ", your outpass request #" + outpassId + " has been successfully submitted and is under review.";
+        Notification notification = buildNotification(user, user.getEmail() != null ? user.getEmail() : user.getUsername(),
+                NotificationEventType.HOSTEL_OUTPASS_SUBMITTED, subject, body);
+        send(notification);
+    }
+
+    @Override
+    @Transactional
+    public void sendOutpassReturned(User user, String studentName, Long outpassId) {
+        if (user == null) return;
+        String subject = "Hostel Outpass Closed - Student Returned";
+        String body = "Dear " + studentName + ", your return to campus for outpass #" + outpassId + " has been logged.";
+        Notification notification = buildNotification(user, user.getEmail() != null ? user.getEmail() : user.getUsername(),
+                NotificationEventType.HOSTEL_OUTPASS_RETURNED, subject, body);
+        send(notification);
+    }
+
+    @Override
+    @Transactional
     public void sendSecurityAlert(User recipient, String message) {
         Context context = new Context();
         context.setVariable("name", recipient.getFullName());

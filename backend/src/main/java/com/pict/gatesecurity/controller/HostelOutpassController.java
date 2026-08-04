@@ -29,7 +29,7 @@ public class HostelOutpassController {
     private final HostelOutpassService hostelOutpassService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT')")
     @Operation(summary = "Create Outpass", description = "Creates a new hostel outpass request")
     public ResponseEntity<ApiResponse<HostelOutpassResponse>> createOutpass(
             @Valid @RequestBody HostelOutpassRequest request,
@@ -40,8 +40,8 @@ public class HostelOutpassController {
     }
 
     @PutMapping("/{outpassId}/approve")
-    @PreAuthorize("hasAnyRole('HOSTEL_WARDEN', 'ADMIN')")
-    @Operation(summary = "Approve or Reject Outpass", description = "Warden or Admin approves/rejects a pending outpass")
+    @PreAuthorize("hasAnyRole('HOSTEL_WARDEN', 'ADMIN', 'SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER')")
+    @Operation(summary = "Approve or Reject Outpass", description = "Warden, Admin, or Guard approves/rejects a pending outpass")
     public ResponseEntity<ApiResponse<HostelOutpassResponse>> approveOutpass(
             @PathVariable Long outpassId,
             @Valid @RequestBody HostelOutpassApprovalRequest request,
@@ -51,7 +51,7 @@ public class HostelOutpassController {
     }
 
     @PutMapping("/{outpassId}/exit/{gateId}")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'GUARD')")
     @Operation(summary = "Record Gate Exit", description = "Records student exit through the gate using an approved outpass")
     public ResponseEntity<ApiResponse<HostelOutpassResponse>> recordGateExit(
             @PathVariable Long outpassId,
@@ -62,7 +62,7 @@ public class HostelOutpassController {
     }
 
     @PutMapping("/{outpassId}/entry")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'GUARD')")
     @Operation(summary = "Record Gate Entry", description = "Records student re-entry through the gate")
     public ResponseEntity<ApiResponse<HostelOutpassResponse>> recordGateEntry(
             @PathVariable Long outpassId,
@@ -72,15 +72,17 @@ public class HostelOutpassController {
     }
 
     @GetMapping("/{outpassId}")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT', 'GUARD')")
     @Operation(summary = "Get Outpass by ID", description = "Fetches outpass details by ID")
-    public ResponseEntity<ApiResponse<HostelOutpassResponse>> getOutpassById(@PathVariable Long outpassId) {
-        HostelOutpassResponse response = hostelOutpassService.getOutpassById(outpassId);
+    public ResponseEntity<ApiResponse<HostelOutpassResponse>> getOutpassById(
+            @PathVariable Long outpassId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        HostelOutpassResponse response = hostelOutpassService.getOutpassById(outpassId, userDetails != null ? userDetails.getUsername() : null);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT', 'GUARD')")
     @Operation(summary = "Search & Filter Outpasses", description = "Paginated list of outpasses filtered by query, PRN, status, or late return")
     public ResponseEntity<ApiResponse<PageResponse<HostelOutpassResponse>>> getOutpasses(
             @RequestParam(required = false) String query,
@@ -90,12 +92,13 @@ public class HostelOutpassController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") String sortDir) {
+            @RequestParam(defaultValue = "DESC") String sortDir,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
         Sort sort = sortDir.equalsIgnoreCase("ASC") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<HostelOutpassResponse> outpassPage = hostelOutpassService.getOutpasses(query, studentPrn, status, isLateReturn, pageable);
+        Page<HostelOutpassResponse> outpassPage = hostelOutpassService.getOutpasses(query, studentPrn, status, isLateReturn, pageable, userDetails != null ? userDetails.getUsername() : null);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(outpassPage)));
     }
 }

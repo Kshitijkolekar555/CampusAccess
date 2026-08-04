@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { visitorApi } from '../api/visitors';
 import { gateApi } from '../api/gates';
+import { useAuthStore } from '../store/authStore';
 import { Visitor, HostType, HostDepartment } from '../types';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { Pagination } from '../components/ui/Pagination';
@@ -9,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Card } from '../components/ui/Card';
 import { UserPlus, LogOut, Search, QrCode, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,6 +18,7 @@ import { toast } from 'sonner';
 export const Visitors: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [hostTypeFilter, setHostTypeFilter] = useState<string>('');
   const [page, setPage] = useState(0);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [checkoutVisitor, setCheckoutVisitor] = useState<Visitor | null>(null);
@@ -37,10 +40,15 @@ export const Visitors: React.FC = () => {
     notes: '',
   });
 
-  // Query Visitors
+  // Query Visitors with hostType filter support
   const { data: pageData, isLoading } = useQuery({
-    queryKey: ['visitors', page, search],
-    queryFn: () => visitorApi.getVisitors({ page, size: 10, query: search || undefined }),
+    queryKey: ['visitors', page, search, hostTypeFilter],
+    queryFn: () => visitorApi.getVisitors({
+      page,
+      size: 10,
+      query: search || undefined,
+      hostType: hostTypeFilter ? (hostTypeFilter as HostType) : undefined,
+    }),
   });
 
   // Query Active Visitors Inside
@@ -84,6 +92,8 @@ export const Visitors: React.FC = () => {
     },
   });
 
+  const { user } = useAuthStore();
+
   const columns: Column<Visitor>[] = [
     {
       header: 'Visitor',
@@ -122,25 +132,29 @@ export const Visitors: React.FC = () => {
     },
     {
       header: 'Actions',
-      render: (v) => (
-        <div className="flex items-center gap-2">
-          {v.qrCodeDataUrl && (
-            <Button variant="ghost" size="sm" onClick={() => setQrVisitor(v)}>
-              <QrCode className="w-4 h-4 text-indigo-600" />
-            </Button>
-          )}
-          {!v.timeOut && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCheckoutVisitor(v)}
-              leftIcon={<LogOut className="w-3.5 h-3.5" />}
-            >
-              Exit
-            </Button>
-          )}
-        </div>
-      ),
+      render: (v) => {
+        const canCheckOut = user?.role === 'SECURITY_GUARD' || user?.role === 'GUARD' || user?.role === 'ADMIN' || user?.role === 'SECURITY_OFFICER';
+
+        return (
+          <div className="flex items-center gap-2">
+            {v.qrCodeDataUrl && (
+              <Button variant="ghost" size="sm" onClick={() => setQrVisitor(v)}>
+                <QrCode className="w-4 h-4 text-indigo-600" />
+              </Button>
+            )}
+            {!v.timeOut && canCheckOut && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCheckoutVisitor(v)}
+                leftIcon={<LogOut className="w-3.5 h-3.5" />}
+              >
+                Exit
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -189,9 +203,9 @@ export const Visitors: React.FC = () => {
         </Card>
       </div>
 
-      {/* Search & Filter */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      {/* Search & Host Type Filter */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative flex-1 w-full max-w-md">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -200,6 +214,27 @@ export const Visitors: React.FC = () => {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500"
           />
+        </div>
+
+        {/* Host Category Filter */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs font-semibold text-slate-500 shrink-0">Host Category:</span>
+          <select
+            value={hostTypeFilter}
+            onChange={(e) => {
+              setHostTypeFilter(e.target.value);
+              setPage(0);
+            }}
+            className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Host Categories</option>
+            <option value="FACULTY">Teachers / Faculty</option>
+            <option value="HOD">Department HOD</option>
+            <option value="ADMIN_STAFF">Admin Staff</option>
+            <option value="STUDENT">Student Host</option>
+            <option value="ALUMNI">Alumni</option>
+            <option value="VENDOR">Vendor / Contractor</option>
+          </select>
         </div>
       </div>
 
@@ -267,53 +302,43 @@ export const Visitors: React.FC = () => {
               onChange={(e) => setForm({ ...form, hostName: e.target.value })}
             />
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">Host Category</label>
-              <select
-                className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none"
-                value={form.hostType}
-                onChange={(e) => setForm({ ...form, hostType: e.target.value as HostType })}
-              >
-                <option value="FACULTY">Faculty / Professor</option>
-                <option value="HOD">Head of Department (HOD)</option>
-                <option value="ADMIN_STAFF">Admin Staff</option>
-                <option value="STUDENT">Student</option>
-                <option value="ALUMNI">Alumni</option>
-                <option value="VENDOR">Vendor</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
+            <Select
+              label="Host Category"
+              value={form.hostType}
+              onChange={(e) => setForm({ ...form, hostType: e.target.value as HostType })}
+              options={[
+                { label: 'Faculty / Professor', value: 'FACULTY' },
+                { label: 'Head of Department (HOD)', value: 'HOD' },
+                { label: 'Admin Staff', value: 'ADMIN_STAFF' },
+                { label: 'Student', value: 'STUDENT' },
+                { label: 'Alumni', value: 'ALUMNI' },
+                { label: 'Vendor', value: 'VENDOR' },
+                { label: 'Other', value: 'OTHER' },
+              ]}
+            />
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">Host Department</label>
-              <select
-                className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none"
-                value={form.hostDepartment}
-                onChange={(e) => setForm({ ...form, hostDepartment: e.target.value as HostDepartment })}
-              >
-                <option value="CE">Computer Engineering (CE)</option>
-                <option value="IT">Information Technology (IT)</option>
-                <option value="ENTC">Electronics & Telecomm (ENTC)</option>
-                <option value="ECE">Electronics & Computer (ECE)</option>
-                <option value="AIDS">AI & Data Science (AIDS)</option>
-                <option value="ADMIN">Administrative Office (ADMIN)</option>
-              </select>
-            </div>
+            <Select
+              label="Host Department"
+              value={form.hostDepartment}
+              onChange={(e) => setForm({ ...form, hostDepartment: e.target.value as HostDepartment })}
+              options={[
+                { label: 'Computer Engineering (CE)', value: 'CE' },
+                { label: 'Information Technology (IT)', value: 'IT' },
+                { label: 'Electronics & Telecomm (ENTC)', value: 'ENTC' },
+                { label: 'Electronics & Computer (ECE)', value: 'ECE' },
+                { label: 'AI & Data Science (AIDS)', value: 'AIDS' },
+                { label: 'Administrative Office (ADMIN)', value: 'ADMIN' },
+              ]}
+            />
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">Gate</label>
-              <select
-                className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none"
-                value={form.gateId}
-                onChange={(e) => setForm({ ...form, gateId: Number(e.target.value) })}
-              >
-                {gates?.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                )) || <option value={1}>Gate 1 - Main Entrance</option>}
-              </select>
-            </div>
+            <Select
+              label="Gate"
+              value={form.gateId}
+              onChange={(e) => setForm({ ...form, gateId: Number(e.target.value) })}
+              options={gates && gates.length > 0
+                ? gates.map((g) => ({ label: g.name, value: g.id }))
+                : [{ label: 'Gate 1 - Main Entrance', value: 1 }]}
+            />
 
             <Input
               label="ID Proof Type"
@@ -352,27 +377,68 @@ export const Visitors: React.FC = () => {
       <Modal
         isOpen={!!qrVisitor}
         onClose={() => setQrVisitor(null)}
-        title="Visitor Digital QR Pass"
-        subtitle="Show this digital pass at the gate"
-        maxWidth="sm"
+        title="Visitor Digital Gate Pass & QR Code"
+        subtitle="Present or scan this pass at campus security checkpoints"
+        maxWidth="md"
       >
         {qrVisitor && (
-          <div className="text-center p-4 space-y-4">
-            {qrVisitor.qrCodeDataUrl ? (
-              <img src={qrVisitor.qrCodeDataUrl} alt="QR Code" className="mx-auto w-48 h-48 rounded-xl border p-2" />
-            ) : (
-              <div className="p-8 bg-slate-100 dark:bg-slate-800 rounded-2xl font-mono text-lg font-bold">
-                {qrVisitor.passNumber || `PASS-#${qrVisitor.id}`}
+          <div className="p-2 space-y-5">
+            <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-5 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">PICT Digital Access Pass</span>
+                  <h4 className="font-extrabold text-lg text-white">{qrVisitor.name}</h4>
+                </div>
+                <Badge variant="purple" className="font-mono text-xs">{qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`}</Badge>
               </div>
-            )}
-            <div>
-              <h4 className="font-extrabold text-lg text-slate-900 dark:text-slate-100">{qrVisitor.name}</h4>
-              <p className="text-xs text-slate-500">Host: {qrVisitor.hostName} ({qrVisitor.hostDepartment})</p>
-              <Badge variant="success" className="mt-2">Authorized Entry</Badge>
+
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                {qrVisitor.qrCodeDataUrl ? (
+                  <div className="bg-white p-3 rounded-2xl shrink-0 shadow-lg">
+                    <img src={qrVisitor.qrCodeDataUrl} alt="QR Digital Pass Code" className="w-40 h-40" />
+                  </div>
+                ) : (
+                  <div className="p-8 bg-slate-800 rounded-2xl font-mono text-center font-bold text-indigo-400">
+                    {qrVisitor.passNumber}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 text-xs w-full">
+                  <div>
+                    <p className="text-slate-400">Mobile</p>
+                    <p className="font-semibold">{qrVisitor.mobile}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400">Visiting Host</p>
+                    <p className="font-semibold text-indigo-300">{qrVisitor.hostName}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400">Department</p>
+                    <p className="font-semibold">{qrVisitor.hostDepartment}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400">Host Type</p>
+                    <p className="font-semibold text-emerald-400">{qrVisitor.hostType || 'FACULTY'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400">Purpose</p>
+                    <p className="font-semibold truncate">{qrVisitor.purpose}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400">Status</p>
+                    <Badge variant={qrVisitor.timeOut ? 'default' : 'success'}>
+                      {qrVisitor.timeOut ? 'Checked Out' : 'Active Inside'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
             </div>
-            <Button variant="primary" className="w-full" onClick={() => setQrVisitor(null)}>
-              Done
-            </Button>
+
+            <div className="flex justify-end gap-3">
+              <Button variant="primary" className="w-full" onClick={() => setQrVisitor(null)}>
+                Close Pass View
+              </Button>
+            </div>
           </div>
         )}
       </Modal>

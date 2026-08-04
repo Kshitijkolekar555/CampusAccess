@@ -43,7 +43,7 @@ public class StudentGatePassServiceImpl implements StudentGatePassService {
         User createdBy = userRepository.findByUsername(performingUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
 
-        if (request.getDepartureTime().isBefore(OffsetDateTime.now())) {
+        if (request.getDepartureTime().isBefore(OffsetDateTime.now().minusMinutes(15))) {
             throw new BadRequestException("Departure time cannot be in the past");
         }
 
@@ -196,15 +196,35 @@ public class StudentGatePassServiceImpl implements StudentGatePassService {
 
     @Override
     @Transactional(readOnly = true)
-    public StudentGatePassResponse getPassById(Long passId) {
+    public StudentGatePassResponse getPassById(Long passId, String performingUsername) {
         StudentGatePass pass = studentGatePassRepository.findById(passId)
                 .orElseThrow(() -> new ResourceNotFoundException("StudentGatePass", "id", passId));
+
+        User user = userRepository.findByUsername(performingUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
+
+        if (user.getRole() == com.pict.gatesecurity.entity.enums.UserRole.STUDENT) {
+            if (!pass.getStudentPrn().equalsIgnoreCase(user.getUsername())) {
+                throw new com.pict.gatesecurity.exception.ForbiddenException("Access denied: You can only view your own gate pass");
+            }
+        }
+
         return studentGatePassMapper.toResponse(pass);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<StudentGatePassResponse> getPasses(String query, String studentPrn, PassStatus status, Pageable pageable) {
+    public Page<StudentGatePassResponse> getPasses(String query, String studentPrn, PassStatus status, Pageable pageable, String performingUsername) {
+        User user = userRepository.findByUsername(performingUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
+
+        final String effectivePrn;
+        if (user.getRole() == com.pict.gatesecurity.entity.enums.UserRole.STUDENT) {
+            effectivePrn = user.getUsername().toUpperCase();
+        } else {
+            effectivePrn = StringUtils.hasText(studentPrn) ? studentPrn.toUpperCase() : null;
+        }
+
         Specification<StudentGatePass> spec = (root, q, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -216,8 +236,8 @@ public class StudentGatePassServiceImpl implements StudentGatePassService {
                 predicates.add(cb.or(nameMatch, prnMatch, purposeMatch));
             }
 
-            if (StringUtils.hasText(studentPrn)) {
-                predicates.add(cb.equal(root.get("studentPrn"), studentPrn.toUpperCase()));
+            if (StringUtils.hasText(effectivePrn)) {
+                predicates.add(cb.equal(cb.upper(root.get("studentPrn")), effectivePrn));
             }
 
             if (status != null) {

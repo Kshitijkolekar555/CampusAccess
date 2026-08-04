@@ -3,7 +3,9 @@ package com.pict.gatesecurity.service.impl;
 import com.pict.gatesecurity.dto.outpass.*;
 import com.pict.gatesecurity.entity.*;
 import com.pict.gatesecurity.entity.enums.OutpassStatus;
+import com.pict.gatesecurity.entity.enums.UserRole;
 import com.pict.gatesecurity.exception.BadRequestException;
+import com.pict.gatesecurity.exception.ForbiddenException;
 import com.pict.gatesecurity.exception.ResourceNotFoundException;
 import com.pict.gatesecurity.mapper.HostelOutpassMapper;
 import com.pict.gatesecurity.repository.*;
@@ -43,7 +45,11 @@ public class HostelOutpassServiceImpl implements HostelOutpassService {
         User createdBy = userRepository.findByUsername(performingUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
 
-        if (request.getDepartureTime().isBefore(OffsetDateTime.now())) {
+        if (createdBy.getRole() == UserRole.STUDENT && !Boolean.TRUE.equals(createdBy.getIsLateComerPermitted())) {
+            throw new BadRequestException("Student is not eligible for hostel outpass creation. Permitted category required.");
+        }
+
+        if (request.getDepartureTime().isBefore(OffsetDateTime.now().minusMinutes(15))) {
             throw new BadRequestException("Departure time cannot be in the past");
         }
 
@@ -51,15 +57,16 @@ public class HostelOutpassServiceImpl implements HostelOutpassService {
             throw new BadRequestException("Expected return time must be after departure time");
         }
 
-        String prn = request.getStudentPrn().toUpperCase();
+        String prn = (createdBy.getRole() == UserRole.STUDENT) ? createdBy.getUsername().toUpperCase() : request.getStudentPrn().toUpperCase();
+
         List<OutpassStatus> activeStatuses = List.of(OutpassStatus.PENDING, OutpassStatus.APPROVED, OutpassStatus.EXITED);
         List<HostelOutpass> active = hostelOutpassRepository.findByStudentPrnAndStatusIn(prn, activeStatuses);
         if (!active.isEmpty()) {
             throw new BadRequestException("Student already has an active outpass (ID: " + active.get(0).getId() + ", Status: " + active.get(0).getStatus() + ")");
         }
 
-        User studentUser = null;
-        if (request.getStudentUserId() != null) {
+        User studentUser = (createdBy.getRole() == UserRole.STUDENT) ? createdBy : null;
+        if (studentUser == null && request.getStudentUserId() != null) {
             studentUser = userRepository.findById(request.getStudentUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getStudentUserId()));
         }
@@ -74,6 +81,7 @@ public class HostelOutpassServiceImpl implements HostelOutpassService {
                 .studentClass(request.getStudentClass())
                 .studentDivision(request.getStudentDivision())
                 .reason(request.getReason())
+                .studentNote(request.getStudentNote())
                 .destination(request.getDestination())
                 .departureTime(request.getDepartureTime())
                 .expectedReturnTime(request.getExpectedReturnTime())
@@ -90,6 +98,12 @@ public class HostelOutpassServiceImpl implements HostelOutpassService {
                 "studentName", saved.getStudentName(),
                 "studentPrn", saved.getStudentPrn()
         ));
+
+        if (saved.getStudentUser() != null) {
+            notificationService.sendOutpassSubmitted(saved.getStudentUser(), saved.getStudentName(), saved.getId());
+        } else {
+            notificationService.sendOutpassSubmitted(createdBy, saved.getStudentName(), saved.getId());
+        }
 
         log.info("Outpass created for {} (PRN: {})", saved.getStudentName(), saved.getStudentPrn());
         return hostelOutpassMapper.toResponse(saved);
@@ -205,21 +219,45 @@ public class HostelOutpassServiceImpl implements HostelOutpassService {
                 Map.of("status", "RETURNED", "isLateReturn", saved.getIsLateReturn())
         );
 
+        if (saved.getStudentUser() != null) {
+            notificationService.sendOutpassReturned(saved.getStudentUser(), saved.getStudentName(), saved.getId());
+        }
+
         log.info("Outpass {} - student {} returned (late: {})", saved.getId(), saved.getStudentName(), saved.getIsLateReturn());
         return hostelOutpassMapper.toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public HostelOutpassResponse getOutpassById(Long outpassId) {
+    public HostelOutpassResponse getOutpassById(Long outpassId, String performingUsername) {
         HostelOutpass outpass = hostelOutpassRepository.findById(outpassId)
                 .orElseThrow(() -> new ResourceNotFoundException("HostelOutpass", "id", outpassId));
+
+        if (performingUsername != null) {
+            User performer = userRepository.findByUsername(performingUsername).orElse(null);
+            if (performer != null && performer.getRole() == UserRole.STUDENT) {
+                if (!outpass.getStudentPrn().equalsIgnoreCase(performer.getUsername()) &&
+                    (outpass.getStudentUser() == null || !outpass.getStudentUser().getId().equals(performer.getId()))) {
+                    throw new ForbiddenException("Access denied: You can only view your own outpasses");
+                }
+            }
+        }
+
         return hostelOutpassMapper.toResponse(outpass);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<HostelOutpassResponse> getOutpasses(String query, String studentPrn, OutpassStatus status, Boolean isLateReturn, Pageable pageable) {
+    public Page<HostelOutpassResponse> getOutpasses(String query, String studentPrn, OutpassStatus status, Boolean isLateReturn, Pageable pageable, String performingUsername) {
+        User performer = null;
+        if (performingUsername != null) {
+            performer = userRepository.findByUsername(performingUsername).orElse(null);
+        }
+
+        final String effectiveStudentPrn = (performer != null && performer.getRole() == UserRole.STUDENT)
+                ? performer.getUsername().toUpperCase()
+                : studentPrn;
+
         Specification<HostelOutpass> spec = (root, q, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -231,8 +269,8 @@ public class HostelOutpassServiceImpl implements HostelOutpassService {
                 predicates.add(cb.or(nameMatch, prnMatch, reasonMatch));
             }
 
-            if (StringUtils.hasText(studentPrn)) {
-                predicates.add(cb.equal(root.get("studentPrn"), studentPrn.toUpperCase()));
+            if (StringUtils.hasText(effectiveStudentPrn)) {
+                predicates.add(cb.equal(root.get("studentPrn"), effectiveStudentPrn.toUpperCase()));
             }
 
             if (status != null) {

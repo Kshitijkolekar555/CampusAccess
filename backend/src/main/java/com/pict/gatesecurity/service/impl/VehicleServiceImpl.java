@@ -104,6 +104,8 @@ public class VehicleServiceImpl implements VehicleService {
                 .gate(gate)
                 .entryTime(OffsetDateTime.now())
                 .exitTime(null)
+                .actionTime(OffsetDateTime.now())
+                .processedByGuard(performer)
                 .driverName(request.getDriverName())
                 .driverContact(request.getDriverContact())
                 .purpose(request.getPurpose())
@@ -128,7 +130,7 @@ public class VehicleServiceImpl implements VehicleService {
     @Transactional
     public VehicleLogResponse recordExit(Long logId, VehicleExitRequest request, String performingUsername) {
         VehicleLog vehicleLog = vehicleLogRepository.findById(logId)
-                .orElseThrow(() -> new ResourceNotFoundException("VehicleLog", "id", logId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle active entry log not found for ID: " + logId));
 
         if (vehicleLog.getExitTime() != null) {
             throw new BadRequestException("Vehicle has already exited at " + vehicleLog.getExitTime());
@@ -138,6 +140,9 @@ public class VehicleServiceImpl implements VehicleService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
 
         vehicleLog.setExitTime(OffsetDateTime.now());
+        vehicleLog.setActionTime(OffsetDateTime.now());
+        vehicleLog.setProcessedByGuard(performer);
+
         if (StringUtils.hasText(request.getExitNote())) {
             vehicleLog.setExitNote(request.getExitNote());
         }

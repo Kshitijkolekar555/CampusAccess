@@ -48,6 +48,12 @@ public class UserServiceImpl implements UserService {
 
         User performer = userRepository.findByUsername(performingUsername).orElse(null);
 
+        if (request.getRole() == UserRole.ADMIN) {
+            if (performer == null || performer.getRole() != UserRole.ADMIN) {
+                throw new BadRequestException("Only an existing ADMIN can create a user with ADMIN role.");
+            }
+        }
+
         User user = User.builder()
                 .username(request.getUsername())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))

@@ -15,16 +15,32 @@ import java.util.List;
 @AllArgsConstructor
 public class GuardSelfDashboardResponse {
 
+    private String guardName;
+    private String guardId;
     private Long shiftId;
     private String gateName;
     private Long gateId;
-    private OffsetDateTime shiftStartTime;
-    private OffsetDateTime shiftEndTime;
+    private String shiftName; // Morning / Evening / Night
+    private OffsetDateTime shiftStartTime; // In Time
+    private OffsetDateTime shiftEndTime;   // Out Time
     private String shiftStatus;
+    private String dutyStatus;             // ON DUTY / OFF DUTY
+
+    // Today's activity cards
+    private long visitorsEnteredToday;
+    private long visitorsExitedToday;
+    private long vehiclesEnteredToday;
+    private long vehiclesExitedToday;
+    private long materialsProcessedToday;
+    private long studentPassesProcessedToday;
+    private long activeVisitorsInsideCampus;
+
+    // Legacy fields for backward compatibility
     private long shiftDurationMinutes;
     private long visitorsProcessed;
     private long vehiclesProcessed;
     private long vendorEntries;
     private long hostelVerifications;
+
     private List<ShiftLogResponse> recentLogs;
 }

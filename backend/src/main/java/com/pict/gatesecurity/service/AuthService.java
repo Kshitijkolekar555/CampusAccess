@@ -11,6 +11,7 @@ public interface AuthService {
     UserResponse getCurrentUser(String username);
     void changePassword(String username, ChangePasswordRequest request);
     UserResponse register(UserCreateRequest request);
+    StudentAuthDto verifyPrn(String prn);
     void forgotPassword(ForgotPasswordRequest request);
     void resetPassword(ResetPasswordRequest request);
 }

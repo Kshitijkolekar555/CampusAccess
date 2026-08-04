@@ -38,20 +38,28 @@ export const Profile: React.FC = () => {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!oldPassword.trim()) {
+      toast.error('Current password is required');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
     if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
+      toast.error('New password and confirm password do not match');
       return;
     }
 
     setLoadingPassword(true);
     try {
-      await authApi.changePassword({ currentPassword: oldPassword, newPassword });
-      toast.success('Password changed successfully!');
+      await authApi.changePassword({ currentPassword: oldPassword, newPassword, confirmPassword });
+      toast.success('Password updated successfully! Please sign in again if prompted.');
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to change password');
+      toast.error(err.response?.data?.message || 'Failed to update password');
     } finally {
       setLoadingPassword(false);
     }

@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { ShieldCheck, Plus, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -96,16 +97,12 @@ export const Guards: React.FC = () => {
         <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4">
           <Input label="User ID (System Account)" type="number" required value={form.userId} onChange={(e) => setForm({ ...form, userId: Number(e.target.value) })} />
           <Input label="Security Badge Number" required value={form.badgeNumber} onChange={(e) => setForm({ ...form, badgeNumber: e.target.value })} />
-          <div>
-            <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Assigned Gate</label>
-            <select
-              className="w-full p-2.5 border rounded-xl text-sm"
-              value={form.assignedGateId}
-              onChange={(e) => setForm({ ...form, assignedGateId: Number(e.target.value) })}
-            >
-              {gates?.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-          </div>
+          <Select
+            label="Assigned Gate"
+            value={form.assignedGateId}
+            onChange={(e) => setForm({ ...form, assignedGateId: Number(e.target.value) })}
+            options={gates?.map((g) => ({ label: g.name, value: g.id }))}
+          />
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={createMutation.isPending}>Register Guard</Button>

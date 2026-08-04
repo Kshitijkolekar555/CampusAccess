@@ -23,8 +23,8 @@ import java.time.OffsetDateTime;
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
-@Tag(name = "Notification Management", description = "View and manage notification history (ADMIN, SECURITY_OFFICER)")
+@PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'HOSTEL_WARDEN')")
+@Tag(name = "Notification Management", description = "View and manage notification history across campus roles")
 public class NotificationController {
 
     private final NotificationService notificationService;

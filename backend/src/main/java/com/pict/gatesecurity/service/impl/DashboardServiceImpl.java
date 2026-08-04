@@ -103,34 +103,53 @@ public class DashboardServiceImpl implements DashboardService {
     @Cacheable(value = CacheConfig.CACHE_GUARD_DASHBOARD, key = "#userId")
     public GuardSelfDashboardResponse getGuardSelfDashboard(Long userId) {
         Guard guard = guardRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Guard not found for user: " + userId));
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+                    Guard newGuard = Guard.builder()
+                            .user(user)
+                            .employeeCode("G-" + user.getId())
+                            .active(true)
+                            .build();
+                    return guardRepository.save(newGuard);
+                });
 
         Optional<Shift> currentShiftOpt = shiftRepository.findByGuardIdAndStatus(guard.getId(), ShiftStatus.ONGOING);
 
         Long gateId = guard.getAssignedGate() != null ? guard.getAssignedGate().getId() : null;
-        String gateName = guard.getAssignedGate() != null ? guard.getAssignedGate().getName() : "Unassigned";
+        String gateName = guard.getAssignedGate() != null ? guard.getAssignedGate().getName() : "Main Gate";
+
+        String guardName = guard.getUser() != null ? guard.getUser().getFullName() : "Guard #" + guard.getId();
+        String guardCode = guard.getEmployeeCode() != null ? guard.getEmployeeCode() : "G-" + guard.getId();
 
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime dayStart = ReportSpecifications.toStartOfDay(now.toLocalDate());
         OffsetDateTime dayEnd = ReportSpecifications.toEndOfDay(now.toLocalDate());
 
-        long visitorsProcessed = 0;
-        long vehiclesProcessed = 0;
-        long vendorEntries = 0;
-        long hostelVerifications = 0;
-
-        if (gateId != null) {
-            visitorsProcessed = visitorRepository.countByGateIdAndTimeInBetween(gateId, dayStart, dayEnd);
-            vehiclesProcessed = vehicleLogRepository.countByEntryTimeBetweenAndGateId(dayStart, dayEnd, gateId);
-            vendorEntries = vendorVisitRepository.countByEntryTimeBetweenAndGateId(dayStart, dayEnd, gateId);
-            hostelVerifications = hostelOutpassRepository.countByGateIdAndCreatedAtBetween(gateId, dayStart, dayEnd);
-        }
+        long visitorsEnteredToday = visitorRepository.countByTimeInBetween(dayStart, dayEnd);
+        long visitorsExitedToday = visitorRepository.countByTimeOutBetween(dayStart, dayEnd);
+        long vehiclesEnteredToday = vehicleLogRepository.countByEntryTimeBetween(dayStart, dayEnd);
+        long vehiclesExitedToday = vehicleLogRepository.countByExitTimeBetween(dayStart, dayEnd);
+        long materialsProcessedToday = vendorVisitRepository.countByEntryTimeBetween(dayStart, dayEnd);
+        long studentPassesProcessedToday = studentGatePassRepository.countByCreatedAtBetween(dayStart, dayEnd);
+        long activeVisitorsInsideCampus = visitorRepository.countByTimeOutIsNull();
 
         long shiftDurationMinutes = 0;
         OffsetDateTime shiftStart = null;
         OffsetDateTime shiftEnd = null;
         String shiftStatus = "NO_SHIFT";
+        String shiftName = "Morning";
+        String dutyStatus = currentShiftOpt.isPresent() ? "ON DUTY" : "OFF DUTY";
         Long shiftId = null;
+
+        int currentHour = now.getHour();
+        if (currentHour >= 6 && currentHour < 14) {
+            shiftName = "Morning";
+        } else if (currentHour >= 14 && currentHour < 22) {
+            shiftName = "Evening";
+        } else {
+            shiftName = "Night";
+        }
 
         if (currentShiftOpt.isPresent()) {
             Shift shift = currentShiftOpt.get();
@@ -159,17 +178,28 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         return GuardSelfDashboardResponse.builder()
+                .guardName(guardName)
+                .guardId(guardCode)
                 .shiftId(shiftId)
                 .gateName(gateName)
                 .gateId(gateId)
+                .shiftName(shiftName)
                 .shiftStartTime(shiftStart)
                 .shiftEndTime(shiftEnd)
                 .shiftStatus(shiftStatus)
+                .dutyStatus(dutyStatus)
+                .visitorsEnteredToday(visitorsEnteredToday)
+                .visitorsExitedToday(visitorsExitedToday)
+                .vehiclesEnteredToday(vehiclesEnteredToday)
+                .vehiclesExitedToday(vehiclesExitedToday)
+                .materialsProcessedToday(materialsProcessedToday)
+                .studentPassesProcessedToday(studentPassesProcessedToday)
+                .activeVisitorsInsideCampus(activeVisitorsInsideCampus)
                 .shiftDurationMinutes(shiftDurationMinutes)
-                .visitorsProcessed(visitorsProcessed)
-                .vehiclesProcessed(vehiclesProcessed)
-                .vendorEntries(vendorEntries)
-                .hostelVerifications(hostelVerifications)
+                .visitorsProcessed(visitorsEnteredToday)
+                .vehiclesProcessed(vehiclesEnteredToday)
+                .vendorEntries(materialsProcessedToday)
+                .hostelVerifications(0)
                 .recentLogs(recentLogs)
                 .build();
     }

@@ -49,6 +49,9 @@ public class VehicleMapper {
                 .purpose(vehicleLog.getPurpose())
                 .entryNote(vehicleLog.getEntryNote())
                 .exitNote(vehicleLog.getExitNote())
+                .actionTime(vehicleLog.getActionTime() != null ? vehicleLog.getActionTime() : vehicleLog.getCreatedAt())
+                .processedByGuardId(vehicleLog.getProcessedByGuard() != null ? vehicleLog.getProcessedByGuard().getId() : null)
+                .processedByGuardName(vehicleLog.getProcessedByGuard() != null ? vehicleLog.getProcessedByGuard().getFullName() : null)
                 .createdAt(vehicleLog.getCreatedAt())
                 .createdByUsername(vehicleLog.getCreatedBy() != null ? vehicleLog.getCreatedBy().getUsername() : null)
                 .build();

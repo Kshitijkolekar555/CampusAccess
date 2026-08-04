@@ -39,10 +39,10 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
     @Query("SELECT FUNCTION('DATE', v.timeIn) as d, COUNT(v) FROM Visitor v WHERE v.timeIn BETWEEN :start AND :end GROUP BY d ORDER BY d")
     List<Object[]> countByDateRange(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end);
 
-    @Query("SELECT FUNCTION('EXTRACT', FUNCTION('HOUR', v.timeIn)) as h, COUNT(v) FROM Visitor v WHERE v.timeIn BETWEEN :start AND :end GROUP BY h ORDER BY h")
+    @Query("SELECT HOUR(v.timeIn) as h, COUNT(v) FROM Visitor v WHERE v.timeIn BETWEEN :start AND :end GROUP BY HOUR(v.timeIn) ORDER BY HOUR(v.timeIn)")
     List<Object[]> countCheckInsByHour(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end);
 
-    @Query("SELECT FUNCTION('EXTRACT', FUNCTION('HOUR', v.timeOut)) as h, COUNT(v) FROM Visitor v WHERE v.timeOut BETWEEN :start AND :end AND v.timeOut IS NOT NULL GROUP BY h ORDER BY h")
+    @Query("SELECT HOUR(v.timeOut) as h, COUNT(v) FROM Visitor v WHERE v.timeOut BETWEEN :start AND :end AND v.timeOut IS NOT NULL GROUP BY HOUR(v.timeOut) ORDER BY HOUR(v.timeOut)")
     List<Object[]> countCheckOutsByHour(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end);
 
     long countByGateIdAndTimeInBetween(Long gateId, OffsetDateTime start, OffsetDateTime end);

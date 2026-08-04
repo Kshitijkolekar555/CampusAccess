@@ -24,6 +24,7 @@ public class VehicleEntryRequest {
     @Pattern(regexp = "^[0-9]{10,15}$", message = "Driver contact must be between 10 and 15 digits")
     private String driverContact;
 
+    @NotBlank(message = "Purpose is required")
     @Size(max = 255, message = "Purpose must be at most 255 characters")
     private String purpose;
 

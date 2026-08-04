@@ -45,6 +45,8 @@ public class HostelOutpassRequest {
     @NotBlank(message = "Reason is required")
     private String reason;
 
+    private String studentNote;
+
     @NotBlank(message = "Destination is required")
     @Size(max = 255)
     private String destination;

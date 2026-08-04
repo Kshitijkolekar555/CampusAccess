@@ -9,12 +9,13 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { Car, Plus, ShieldAlert, ShieldCheck, LogOut, ArrowRightLeft } from 'lucide-react';
+import { Select } from '../components/ui/Select';
+import { Plus, ShieldAlert, LogOut, History, Car } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const Vehicles: React.FC = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'registered' | 'logs'>('registered');
+  const [activeTab, setActiveTab] = useState<'registered' | 'logs' | 'history'>('registered');
   const [page, setPage] = useState(0);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [entryVehicle, setEntryVehicle] = useState<Vehicle | null>(null);
@@ -25,7 +26,7 @@ export const Vehicles: React.FC = () => {
   const [form, setForm] = useState({
     registrationNumber: '',
     vehicleType: 'Car',
-    category: 'STUDENT' as VehicleCategory,
+    category: 'VISITOR' as VehicleCategory,
     ownerName: '',
     ownerContact: '',
     color: '',
@@ -34,18 +35,25 @@ export const Vehicles: React.FC = () => {
   // Entry Form State
   const [entryGateId, setEntryGateId] = useState(1);
   const [driverName, setDriverName] = useState('');
+  const [driverContact, setDriverContact] = useState('');
+  const [purpose, setPurpose] = useState('Visitor');
+  const [entryNote, setEntryNote] = useState('');
 
   // Queries
-  const { data: vehiclePage, isLoading: loadingVehicles } = useQuery({
+  const { data: vehiclePage, isLoading: loadingVehicles, refetch: refetchVehicles } = useQuery({
     queryKey: ['vehicles', page],
     queryFn: () => vehicleApi.getVehicles({ page, size: 10 }),
     enabled: activeTab === 'registered',
   });
 
-  const { data: logsPage, isLoading: loadingLogs } = useQuery({
-    queryKey: ['vehicle-logs', page],
-    queryFn: () => vehicleApi.getVehicleLogs({ page, size: 10 }),
-    enabled: activeTab === 'logs',
+  const { data: logsPage, isLoading: loadingLogs, refetch: refetchLogs } = useQuery({
+    queryKey: ['vehicle-logs', page, activeTab],
+    queryFn: () => vehicleApi.getVehicleLogs({ 
+      page, 
+      size: 10,
+      isInside: activeTab === 'logs' ? true : undefined, // 'logs' = active inside, 'history' = all history
+    }),
+    enabled: activeTab === 'logs' || activeTab === 'history',
   });
 
   const { data: gates } = useQuery({
@@ -59,7 +67,16 @@ export const Vehicles: React.FC = () => {
     onSuccess: () => {
       toast.success('Vehicle registered successfully!');
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      refetchVehicles();
       setIsRegisterOpen(false);
+      setForm({
+        registrationNumber: '',
+        vehicleType: 'Car',
+        category: 'VISITOR',
+        ownerName: '',
+        ownerContact: '',
+        color: '',
+      });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Registration failed');
@@ -71,9 +88,14 @@ export const Vehicles: React.FC = () => {
     mutationFn: (data: { vehicleId: number; payload: any }) =>
       vehicleApi.recordEntry(data.vehicleId, data.payload),
     onSuccess: () => {
-      toast.success('Vehicle entry logged!');
+      toast.success('Vehicle entry logged successfully!');
       queryClient.invalidateQueries({ queryKey: ['vehicle-logs'] });
+      refetchLogs();
       setEntryVehicle(null);
+      setDriverName('');
+      setDriverContact('');
+      setPurpose('Visitor');
+      setEntryNote('');
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Entry log failed');
@@ -84,8 +106,12 @@ export const Vehicles: React.FC = () => {
   const exitMutation = useMutation({
     mutationFn: (logId: number) => vehicleApi.recordExit(logId),
     onSuccess: () => {
-      toast.success('Vehicle exit logged!');
+      toast.success('Vehicle exit recorded successfully!');
       queryClient.invalidateQueries({ queryKey: ['vehicle-logs'] });
+      refetchLogs();
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to record exit');
     },
   });
 
@@ -95,7 +121,12 @@ export const Vehicles: React.FC = () => {
     onSuccess: () => {
       toast.success('Vehicle blacklisted!');
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      refetchVehicles();
       setBlacklistVehicle(null);
+      setBlacklistReason('');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Blacklist action failed');
     },
   });
 
@@ -104,8 +135,8 @@ export const Vehicles: React.FC = () => {
       header: 'Registration',
       render: (v) => (
         <div>
-          <p className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">{v.registrationNumber}</p>
-          <p className="text-xs text-slate-400">{v.vehicleType} ({v.color})</p>
+          <p className="font-extrabold text-slate-900 dark:text-slate-100 font-mono text-sm">{v.registrationNumber}</p>
+          <p className="text-xs text-slate-400">{v.vehicleType || 'Vehicle'} {v.color ? `(${v.color})` : ''}</p>
         </div>
       ),
     },
@@ -114,11 +145,11 @@ export const Vehicles: React.FC = () => {
       render: (v) => <Badge variant="purple">{v.category}</Badge>,
     },
     {
-      header: 'Owner',
+      header: 'Owner Details',
       render: (v) => (
         <div>
           <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{v.ownerName || 'N/A'}</p>
-          <p className="text-[11px] text-slate-400">{v.ownerContact}</p>
+          <p className="text-[11px] text-slate-400">{v.ownerContact || 'No contact'}</p>
         </div>
       ),
     },
@@ -139,14 +170,16 @@ export const Vehicles: React.FC = () => {
               Record Entry
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setBlacklistVehicle(v)}
-            className="text-rose-500 hover:text-rose-600"
-          >
-            <ShieldAlert className="w-4 h-4" />
-          </Button>
+          {!v.isBlacklisted && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setBlacklistVehicle(v)}
+              className="text-rose-500 hover:text-rose-600"
+            >
+              <ShieldAlert className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -154,38 +187,54 @@ export const Vehicles: React.FC = () => {
 
   const logColumns: Column<VehicleLog>[] = [
     {
-      header: 'Registration',
-      accessor: 'registrationNumber',
-      render: (l) => <span className="font-mono font-bold">{l.registrationNumber}</span>,
+      header: 'Vehicle Reg #',
+      render: (l) => <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{l.registrationNumber}</span>,
     },
     {
-      header: 'Gate',
-      accessor: 'gateName',
+      header: 'Purpose',
+      render: (l) => <Badge variant="info">{l.purpose || 'Visitor'}</Badge>,
+    },
+    {
+      header: 'Location / Gate',
+      render: (l) => <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{l.gateName || 'Main Gate'}</span>,
+    },
+    {
+      header: 'Driver & Contact',
+      render: (l) => (
+        <div>
+          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{l.driverName || 'Self'}</p>
+          <p className="text-[11px] text-slate-400">{l.driverContact || '-'}</p>
+        </div>
+      ),
     },
     {
       header: 'Entry Time',
-      render: (l) => <span className="text-xs text-slate-500">{new Date(l.entryTime).toLocaleString()}</span>,
+      render: (l) => <span className="text-xs text-slate-500 font-mono">{new Date(l.entryTime).toLocaleString()}</span>,
     },
     {
       header: 'Exit Time',
       render: (l) =>
         l.exitTime ? (
-          <span className="text-xs text-slate-500">{new Date(l.exitTime).toLocaleString()}</span>
+          <span className="text-xs text-slate-500 font-mono">{new Date(l.exitTime).toLocaleString()}</span>
         ) : (
           <Badge variant="warning">Inside Campus</Badge>
         ),
+    },
+    {
+      header: 'Processed By',
+      render: (l) => <span className="text-xs text-slate-400">{l.processedByGuardName || l.recordedByUsername || 'Guard'}</span>,
     },
     {
       header: 'Actions',
       render: (l) =>
         !l.exitTime && (
           <Button
-            variant="outline"
+            variant="success"
             size="sm"
             onClick={() => exitMutation.mutate(l.id)}
             leftIcon={<LogOut className="w-3.5 h-3.5" />}
           >
-            Record Exit
+            Log Exit
           </Button>
         ),
     },
@@ -196,10 +245,10 @@ export const Vehicles: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Vehicle & ANPR Management
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+            <Car className="w-6 h-6 text-indigo-600" /> Vehicle Record Entry & History
           </h2>
-          <p className="text-sm text-slate-500">Vehicle registration, gate access logs, and security blacklisting.</p>
+          <p className="text-sm text-slate-500">Guard vehicle log management, entry/exit time recording, and movement history.</p>
         </div>
 
         <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsRegisterOpen(true)}>
@@ -207,7 +256,7 @@ export const Vehicles: React.FC = () => {
         </Button>
       </div>
 
-      {/* Tabs */}
+      {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           onClick={() => { setActiveTab('registered'); setPage(0); }}
@@ -227,7 +276,17 @@ export const Vehicles: React.FC = () => {
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
-          Gate Entry/Exit Logs
+          Active Inside Campus
+        </button>
+        <button
+          onClick={() => { setActiveTab('history'); setPage(0); }}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-1.5 ${
+            activeTab === 'history'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <History className="w-3.5 h-3.5" /> Full Movement History
         </button>
       </div>
 
@@ -260,12 +319,12 @@ export const Vehicles: React.FC = () => {
         </>
       )}
 
-      {/* Register Modal */}
+      {/* Register Vehicle Modal */}
       <Modal
         isOpen={isRegisterOpen}
         onClose={() => setIsRegisterOpen(false)}
-        title="Register Campus Vehicle"
-        subtitle="Adds a vehicle to authorized database"
+        title="Register Vehicle Master"
+        subtitle="Adds vehicle registration details to master record"
       >
         <form
           onSubmit={(e) => {
@@ -282,6 +341,26 @@ export const Vehicles: React.FC = () => {
             onChange={(e) => setForm({ ...form, registrationNumber: e.target.value.toUpperCase() })}
           />
           <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Category"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value as VehicleCategory })}
+              options={[
+                { label: 'VISITOR', value: 'VISITOR' },
+                { label: 'STAFF', value: 'STAFF' },
+                { label: 'STUDENT', value: 'STUDENT' },
+                { label: 'CONTRACTOR', value: 'CONTRACTOR' },
+                { label: 'VIP', value: 'VIP' },
+              ]}
+            />
+            <Input
+              label="Vehicle Type"
+              placeholder="e.g. Two Wheeler / SUV"
+              value={form.vehicleType}
+              onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <Input
               label="Owner Name"
               placeholder="Full Name"
@@ -297,32 +376,50 @@ export const Vehicles: React.FC = () => {
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsRegisterOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="primary" isLoading={registerMutation.isPending}>Register</Button>
+            <Button type="submit" variant="primary" isLoading={registerMutation.isPending}>Register Vehicle</Button>
           </div>
         </form>
       </Modal>
 
-      {/* Record Entry Modal */}
+      {/* Record Entry Modal (Guard Module - Mandatory Purpose Field) */}
       <Modal
         isOpen={!!entryVehicle}
         onClose={() => setEntryVehicle(null)}
-        title="Record Vehicle Gate Entry"
-        subtitle={`Vehicle: ${entryVehicle?.registrationNumber}`}
-        maxWidth="sm"
+        title="Record Vehicle Entry (Guard Module)"
+        subtitle={`Vehicle Reg: ${entryVehicle?.registrationNumber}`}
+        maxWidth="md"
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Gate</label>
-            <select
-              className="w-full p-2.5 border rounded-xl text-sm"
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Location Gate"
               value={entryGateId}
               onChange={(e) => setEntryGateId(Number(e.target.value))}
-            >
-              {gates?.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
+              options={gates?.map((g) => ({ label: g.name, value: g.id }))}
+            />
+            <Select
+              label="Mandatory Purpose"
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              options={[
+                { label: 'Visitor', value: 'Visitor' },
+                { label: 'Staff', value: 'Staff' },
+                { label: 'Delivery', value: 'Delivery' },
+                { label: 'Hostel', value: 'Hostel' },
+                { label: 'Maintenance', value: 'Maintenance' },
+                { label: 'Emergency', value: 'Emergency' },
+              ]}
+            />
           </div>
-          <Input label="Driver Name (Optional)" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
-          <div className="flex justify-end gap-3 pt-2">
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Driver Name (Optional)" placeholder="Driver Name" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+            <Input label="Driver Contact (Optional)" placeholder="Mobile number" value={driverContact} onChange={(e) => setDriverContact(e.target.value)} />
+          </div>
+
+          <Input label="Entry Note / Vehicle Remarks" placeholder="Optional guard entry notes..." value={entryNote} onChange={(e) => setEntryNote(e.target.value)} />
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setEntryVehicle(null)}>Cancel</Button>
             <Button
               variant="primary"
@@ -331,11 +428,17 @@ export const Vehicles: React.FC = () => {
                 entryVehicle &&
                 entryMutation.mutate({
                   vehicleId: entryVehicle.id,
-                  payload: { gateId: entryGateId, driverName },
+                  payload: { 
+                    gateId: entryGateId, 
+                    driverName, 
+                    driverContact,
+                    purpose,
+                    entryNote
+                  },
                 })
               }
             >
-              Log Entry
+              Log Vehicle Entry
             </Button>
           </div>
         </div>
@@ -363,7 +466,7 @@ export const Vehicles: React.FC = () => {
               isLoading={blacklistMutation.isPending}
               onClick={() => blacklistVehicle && blacklistMutation.mutate(blacklistVehicle.id)}
             >
-              Blacklist
+              Blacklist Vehicle
             </Button>
           </div>
         </div>

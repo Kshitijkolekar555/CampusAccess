@@ -75,6 +75,14 @@ public class AuthController {
                 .body(ApiResponse.created(response, "Registration successful"));
     }
 
+    @PostMapping("/verify-prn")
+    @Operation(summary = "Verify Student PRN", description = "Validates student PRN number, fetches student details, and returns authentication tokens")
+    public ResponseEntity<ApiResponse<com.pict.gatesecurity.dto.auth.StudentAuthDto>> verifyPrn(
+            @RequestParam String prn) {
+        com.pict.gatesecurity.dto.auth.StudentAuthDto response = authService.verifyPrn(prn);
+        return ResponseEntity.ok(ApiResponse.success(response, "PRN verified successfully"));
+    }
+
     @PostMapping("/forgot-password")
     @Operation(summary = "Forgot Password", description = "Generates a password reset token for the given username or email")
     public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {

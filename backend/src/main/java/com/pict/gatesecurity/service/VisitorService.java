@@ -15,5 +15,5 @@ public interface VisitorService {
     VisitorResponse checkOut(VisitorCheckOutRequest request, String performingUsername);
     VisitorResponse getVisitorById(Long id);
     List<VisitorResponse> getActiveVisitorsInside();
-    Page<VisitorResponse> getVisitors(String query, HostDepartment department, HostType hostType, Boolean isBlacklisted, Boolean activeInside, Pageable pageable);
+    Page<VisitorResponse> getVisitors(String query, HostDepartment department, HostType hostType, Boolean isBlacklisted, Boolean activeInside, Pageable pageable, String performingUsername);
 }
