@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class VehicleRegisterRequest {
 
     @NotBlank(message = "Registration number is required")
-    @Size(min = 3, max = 20, message = "Registration number must be between 3 and 20 characters")
+    @Pattern(regexp = "^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$", message = "Please enter a valid Indian vehicle registration number (e.g. MH12AB1234)")
     private String registrationNumber;
 
     @Size(max = 50, message = "Vehicle type must be at most 50 characters")
@@ -27,9 +27,10 @@ public class VehicleRegisterRequest {
     private VehicleCategory category;
 
     @Size(max = 150, message = "Owner name must be at most 150 characters")
+    @Pattern(regexp = "^([a-zA-Z\\s.']{2,150})?$", message = "Owner name must contain letters and spaces only")
     private String ownerName;
 
-    @Pattern(regexp = "^[0-9]{10,15}$", message = "Owner contact must be between 10 and 15 digits")
+    @Pattern(regexp = "^([6-9][0-9]{9})?$", message = "Owner contact must be a valid 10-digit Indian mobile number")
     private String ownerContact;
 
     private Long ownerUserId;

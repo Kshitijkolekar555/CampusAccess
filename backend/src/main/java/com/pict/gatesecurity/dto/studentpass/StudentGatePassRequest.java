@@ -19,31 +19,32 @@ public class StudentGatePassRequest {
     private Long studentUserId;
 
     @NotBlank(message = "Student name is required")
-    @Size(max = 150)
+    @Size(min = 2, max = 150, message = "Student name must be between 2 and 150 characters")
+    @jakarta.validation.constraints.Pattern(regexp = "^[a-zA-Z\\s.']{2,150}$", message = "Student name must contain letters and spaces only")
     private String studentName;
 
     @NotBlank(message = "Student PRN is required")
-    @Size(max = 20)
+    @jakarta.validation.constraints.Pattern(regexp = "^[A-Z0-9]{8,20}$", message = "Student PRN must be 8 to 20 alphanumeric characters")
     private String studentPrn;
 
-    @Size(max = 15)
+    @jakarta.validation.constraints.Pattern(regexp = "^([6-9][0-9]{9})?$", message = "Student mobile must be a valid 10-digit Indian mobile number")
     private String studentMobile;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "Class must be at most 50 characters")
     private String studentClass;
 
-    @Size(max = 10)
+    @Size(max = 10, message = "Division must be at most 10 characters")
     private String studentDivision;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "Department must be at most 50 characters")
     private String studentDepartment;
 
     @NotBlank(message = "Purpose is required")
-    @Size(max = 255)
+    @Size(min = 3, max = 255, message = "Purpose must be between 3 and 255 characters")
     private String purpose;
 
     @NotBlank(message = "Destination is required")
-    @Size(max = 255)
+    @Size(min = 2, max = 255, message = "Destination must be between 2 and 255 characters")
     private String destination;
 
     @NotNull(message = "Departure time is required")

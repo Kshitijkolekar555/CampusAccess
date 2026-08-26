@@ -73,6 +73,12 @@ public class Visitor {
     @Column(name = "photo_url", length = 500)
     private String photoUrl;
 
+    @Column(name = "photo_path", length = 500)
+    private String photoPath;
+
+    @Column(name = "face_id", length = 100)
+    private String faceId;
+
     /**
      * True if the visitor's mobile or name matched an entry in the watchlist
      * at the time of check-in.

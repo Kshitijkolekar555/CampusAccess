@@ -19,6 +19,7 @@ public class GuardCreateRequest {
 
     @NotBlank(message = "Employee code is required")
     @Size(min = 2, max = 30, message = "Employee code must be between 2 and 30 characters")
+    @jakarta.validation.constraints.Pattern(regexp = "^[a-zA-Z0-9_-]{2,30}$", message = "Employee code can only contain alphanumeric characters, hyphens, and underscores")
     private String employeeCode;
 
     private Long assignedGateId;

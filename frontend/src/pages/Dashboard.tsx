@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { StatsCard } from '../components/ui/StatsCard';
@@ -9,7 +10,9 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { Input } from '../components/ui/Input';
 import { api } from '../api/axios';
 import { visitorApi } from '../api/visitors';
+import { staffBreaksApi } from '../api/staffBreaks';
 import { ApiResponse, GuardSelfDashboardResponse, StaffBreak, Visitor } from '../types';
+import { QRCodeDisplay } from '../components/ui/QRCodeDisplay';
 import {
   Users,
   ShieldCheck,
@@ -28,10 +31,21 @@ import {
   Square,
   History,
   QrCode,
+  MapPin,
+  Calendar,
+  Building,
+  Send,
+  Eye,
+  X,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
+import { hostelOutpassApi } from '../api/hostelOutpasses';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
+import { GuardDashboardView } from '../components/guard/GuardDashboardView';
 
 const chartData = [
   { time: '08:00', visitors: 12 },
@@ -55,10 +69,18 @@ export const Dashboard: React.FC = () => {
   const isVisitor = role === 'VISITOR';
   const isStaff = role === 'STAFF';
 
+  const [isSimplifiedGuardView, setIsSimplifiedGuardView] = useState(true);
+
   // Real-time Active Visitors Inside Campus (polling every 10s)
   const { data: activeVisitorsList } = useQuery<Visitor[]>({
     queryKey: ['active-visitors-dashboard'],
-    queryFn: () => visitorApi.getActiveInside(),
+    queryFn: async () => {
+      try {
+        return await visitorApi.getActiveInside();
+      } catch (err) {
+        return [];
+      }
+    },
     refetchInterval: 10000,
   });
 
@@ -66,8 +88,12 @@ export const Dashboard: React.FC = () => {
   const { data: guardData, isLoading: isGuardLoading } = useQuery<GuardSelfDashboardResponse>({
     queryKey: ['guard-self-dashboard', user?.id],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<GuardSelfDashboardResponse>>('/dashboard/guard');
-      return res.data.data;
+      try {
+        const res = await api.get<ApiResponse<GuardSelfDashboardResponse>>('/dashboard/guard');
+        return res.data.data;
+      } catch (err) {
+        return null;
+      }
     },
     enabled: isGuard || role === 'ADMIN',
     refetchInterval: 10000,
@@ -77,8 +103,12 @@ export const Dashboard: React.FC = () => {
   const { data: adminMetrics, isLoading: isAdminLoading } = useQuery({
     queryKey: ['admin-dashboard-metrics'],
     queryFn: async () => {
-      const res = await api.get<ApiResponse<any>>('/dashboard/admin');
-      return res.data.data;
+      try {
+        const res = await api.get<ApiResponse<any>>('/dashboard/admin');
+        return res.data.data;
+      } catch (err) {
+        return null;
+      }
     },
     enabled: !isGuard && !isStudent && !isVisitor && !isStaff,
     refetchInterval: 30000,
@@ -104,13 +134,25 @@ export const Dashboard: React.FC = () => {
 
   const { data: activeBreakRes, refetch: refetchActiveBreak } = useQuery({
     queryKey: ['staff-active-break'],
-    queryFn: () => staffBreaksApi.getActiveBreak(),
+    queryFn: async () => {
+      try {
+        return await staffBreaksApi.getActiveBreak();
+      } catch (err) {
+        return null;
+      }
+    },
     enabled: isStaff,
   });
 
   const { data: breakHistoryRes, refetch: refetchBreakHistory } = useQuery({
     queryKey: ['staff-break-history'],
-    queryFn: () => staffBreaksApi.getHistory(0, 5),
+    queryFn: async () => {
+      try {
+        return await staffBreaksApi.getHistory(0, 5);
+      } catch (err) {
+        return null;
+      }
+    },
     enabled: isStaff,
   });
 
@@ -142,42 +184,63 @@ export const Dashboard: React.FC = () => {
 
   const activeBreak: StaffBreak | null = activeBreakRes?.data || null;
 
+  const checkInMutation = useMutation({
+    mutationFn: (payload: any) => visitorApi.checkIn(payload),
+    onSuccess: (data) => {
+      const token = {
+        tokenNumber: data.passNumber || `VT-${data.id}`,
+        visitorName: data.name,
+        mobileNumber: data.mobile,
+        hostPersonOrDepartment: data.hostName || data.hostDepartment || 'General Inquiry',
+        purpose: data.purpose,
+        entryTime: new Date(data.timeIn).toLocaleTimeString(),
+        validTillTime: new Date(Date.now() + 4 * 3600000).toLocaleTimeString(),
+      };
+      setActiveToken(token);
+      toast.success('Visit Request Created & Token Generated!');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Check-in request failed');
+    },
+  });
+
   const handleCreateVisit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!visitorName || !visitorMobile || !purpose) {
       toast.error('Please fill required visitor fields');
       return;
     }
-    const token = {
-      tokenNumber: 'VT-' + Math.floor(100000 + Math.random() * 900000),
-      visitorName,
-      mobileNumber: visitorMobile,
-      hostPersonOrDepartment: hostDept || 'General Inquiry',
+    checkInMutation.mutate({
+      name: visitorName,
+      mobile: visitorMobile,
       purpose,
-      entryTime: new Date().toLocaleTimeString(),
-      validTillTime: new Date(Date.now() + 4 * 3600000).toLocaleTimeString(),
-    };
-    setActiveToken(token);
-    toast.success('Visit Request Created & Token Generated!');
+      hostName: hostDept || 'General Inquiry',
+      hostType: 'FACULTY',
+      hostDepartment: 'IT',
+      gateId: 1,
+      idProofType: 'Aadhaar',
+      idProofNumber: 'ID-' + Math.floor(100000 + Math.random() * 900000),
+      vehicleNumber: vehicleNo || undefined,
+    });
   };
 
   // RENDER VISITOR DASHBOARD (Section I2)
   if (isVisitor) {
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 p-6 md:p-8 rounded-3xl text-white shadow-xl">
-          <span className="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+        <div style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}>
+          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: 'var(--accent)', background: 'rgba(47,93,124,0.18)', border: '1px solid rgba(47,93,124,0.35)', borderRadius: 2, padding: '2px 8px', display: 'inline-block', marginBottom: 10 }}>
             Visitor Portal
           </span>
-          <h2 className="text-2xl font-extrabold mt-2">Welcome, {user?.fullName || 'Visitor'}!</h2>
-          <p className="text-xs text-slate-400 mt-1">Autofilled profile details. Submit new campus visit requests and check active token status.</p>
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Welcome, {user?.fullName || 'Visitor'}</h2>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Submit new campus visit requests and check active digital token status.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* New Visit Request (Section I1: Autofilled) */}
           <Card>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <PlusCircle className="w-5 h-5 text-indigo-500" />
+            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PlusCircle style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
               New Visit Request
             </h3>
             <form onSubmit={handleCreateVisit} className="space-y-4">
@@ -186,7 +249,7 @@ export const Dashboard: React.FC = () => {
               <Input label="Host Person or Department" value={hostDept} onChange={(e) => setHostDept(e.target.value)} placeholder="e.g. Prof. Sharma / IT Dept" />
               <Input label="Purpose of Visit" value={purpose} onChange={(e) => setPurpose(e.target.value)} required placeholder="Reason for visiting campus" />
               <Input label="Vehicle Number (Optional)" value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="e.g. MH12AB1234" />
-              <Button type="submit" variant="primary" className="w-full bg-indigo-600 hover:bg-indigo-500">
+              <Button type="submit" variant="primary" className="w-full">
                 Generate Digital Token
               </Button>
             </form>
@@ -194,48 +257,48 @@ export const Dashboard: React.FC = () => {
 
           {/* Active Token & Visit Status */}
           <Card>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <Ticket className="w-5 h-5 text-emerald-500" />
+            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Ticket style={{ width: 16, height: 16, color: '#047857', flexShrink: 0 }} />
               My Active Token & Status
             </h3>
             {activeToken ? (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                  <span className="text-xs text-slate-400 font-semibold uppercase">Token Number</span>
-                  <span className="text-lg font-extrabold text-indigo-400 font-mono">{activeToken.tokenNumber}</span>
+              <div style={{ background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12, marginBottom: 14 }}>
+                  <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>Token Number</span>
+                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 16, fontWeight: 500, color: 'var(--accent)' }}>{activeToken.tokenNumber}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-xs">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12 }}>
                   <div>
-                    <p className="text-slate-400">Visitor Name</p>
-                    <p className="font-semibold">{activeToken.visitorName}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Visitor Name</p>
+                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{activeToken.visitorName}</p>
                   </div>
                   <div>
-                    <p className="text-slate-400">Mobile</p>
-                    <p className="font-semibold">{activeToken.mobileNumber}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Mobile</p>
+                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{activeToken.mobileNumber}</p>
                   </div>
                   <div>
-                    <p className="text-slate-400">Host / Dept</p>
-                    <p className="font-semibold">{activeToken.hostPersonOrDepartment}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Host / Dept</p>
+                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{activeToken.hostPersonOrDepartment}</p>
                   </div>
                   <div>
-                    <p className="text-slate-400">Purpose</p>
-                    <p className="font-semibold">{activeToken.purpose}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Purpose</p>
+                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{activeToken.purpose}</p>
                   </div>
                   <div>
-                    <p className="text-slate-400">Entry Time</p>
-                    <p className="font-semibold text-emerald-400">{activeToken.entryTime}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Entry Time</p>
+                    <p style={{ color: '#6ee7b7', fontWeight: 500, fontFamily: 'IBM Plex Mono, monospace', margin: 0 }}>{activeToken.entryTime}</p>
                   </div>
                   <div>
-                    <p className="text-slate-400">Valid Till</p>
-                    <p className="font-semibold text-purple-400">{activeToken.validTillTime}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Valid Till</p>
+                    <p style={{ color: 'var(--accent)', fontWeight: 500, fontFamily: 'IBM Plex Mono, monospace', margin: 0 }}>{activeToken.validTillTime}</p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-10 border border-dashed border-slate-800 rounded-2xl">
-                <Ticket className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <p className="text-sm font-medium text-slate-400">No active token currently.</p>
-                <p className="text-xs text-slate-500">Fill out the form on the left to request a digital pass.</p>
+              <div style={{ textAlign: 'center', padding: '40px 20px', border: '1px dashed var(--line)', borderRadius: 4 }}>
+                <Ticket style={{ width: 28, height: 28, color: 'var(--line)', margin: '0 auto 10px' }} />
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--mute)', fontWeight: 500, margin: '0 0 4px' }}>No active token currently.</p>
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--line)', margin: 0 }}>Fill out the form on the left to request a digital pass.</p>
               </div>
             )}
           </Card>
@@ -244,43 +307,27 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  // RENDER STUDENT DASHBOARD (PRN Verified)
+  // RENDER STUDENT DASHBOARD (PRN Verified & Outpass Management)
   if (isStudent) {
-    const studentPrn = user?.username || 'PRN-2026';
-    return (
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 p-6 md:p-8 rounded-3xl text-white shadow-xl">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full text-xs font-semibold text-purple-300 uppercase tracking-wider flex items-center gap-1.5 w-fit">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                Student Verified Session
-              </span>
-              <h2 className="text-2xl font-extrabold mt-2">{user?.fullName}</h2>
-              <p className="text-xs text-slate-300 font-mono mt-1">PRN: {studentPrn} • Computer Engineering • Permitted Outpass Category</p>
-            </div>
-            <Badge variant="success" className="text-xs">Verified Student</Badge>
-          </div>
-        </div>
+    const studentPrn = user?.username || 'F24IT32';
+    const studentName = user?.fullName || 'Shanaya';
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-purple-500" />
-              Quick Outpass Application
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">To create a detailed outpass, visit the Hostel Outpasses section.</p>
-            <Button variant="primary" onClick={() => navigate('/hostel-outpasses')} className="w-full bg-purple-600 hover:bg-purple-500">
-              Go to Hostel Outpasses
-            </Button>
-          </Card>
-        </div>
-      </div>
-    );
+    return <StudentDashboardView studentName={studentName} studentPrn={studentPrn} user={user} navigate={navigate} />;
   }
 
   // RENDER GUARD DASHBOARD (Section F2 & F3: Dynamic Real-time Polling)
   if (isGuard) {
+    if (isSimplifiedGuardView) {
+      return (
+        <GuardDashboardView
+          user={user}
+          guardSummary={guardData || null}
+          activeVisitors={activeVisitorsList || []}
+          onToggleDetailedView={() => setIsSimplifiedGuardView(false)}
+        />
+      );
+    }
+
     const summary = guardData || {
       guardName: user?.fullName || 'Guard Officer',
       guardId: 'G-' + user?.id,
@@ -301,31 +348,34 @@ export const Dashboard: React.FC = () => {
 
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 md:p-8 rounded-3xl text-white shadow-xl border border-slate-800">
+        <div style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <span className="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5 w-fit">
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                Dynamic Guard Duty Terminal
+              <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: 'var(--accent)', background: 'rgba(47,93,124,0.18)', border: '1px solid rgba(47,93,124,0.35)', borderRadius: 2, padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
+                <ShieldCheck style={{ width: 12, height: 12 }} />
+                Duty Terminal (Detailed View)
               </span>
-              <h2 className="text-2xl md:text-3xl font-extrabold mt-2">{summary.guardName}</h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Guard ID: <span className="font-mono text-indigo-300">{summary.guardId}</span> • Assigned Location: <span className="text-slate-200 font-semibold">{summary.gateName}</span>
+              <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>{summary.guardName}</h2>
+              <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+                Guard ID: <span style={{ color: 'var(--accent)' }}>{summary.guardId}</span> • Assigned: <span style={{ color: '#e8e6e2', fontWeight: 500 }}>{summary.gateName}</span>
                 {summary.shiftStartTime && (
-                  <span> • In-Time: <span className="font-mono text-emerald-400">{new Date(summary.shiftStartTime).toLocaleTimeString()}</span></span>
+                  <span> • In: <span style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#6ee7b7' }}>{new Date(summary.shiftStartTime).toLocaleTimeString()}</span></span>
                 )}
                 {summary.shiftEndTime && (
-                  <span> • Out-Time: <span className="font-mono text-rose-400">{new Date(summary.shiftEndTime).toLocaleTimeString()}</span></span>
+                  <span> • Out: <span style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#fca5a5' }}>{new Date(summary.shiftEndTime).toLocaleTimeString()}</span></span>
                 )}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={() => setIsSimplifiedGuardView(true)}>
+                ⚡ Simplified Guard Mode
+              </Button>
               <div className="text-right">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${summary.dutyStatus === 'ON DUTY' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'}`}>
+                <span className={`px-2.5 py-0.5 rounded-[2px] text-xs font-bold uppercase tracking-wider border ${summary.dutyStatus === 'ON DUTY' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'}`}>
                   {summary.dutyStatus}
                 </span>
-                <p className="text-[11px] text-slate-400 mt-1">{summary.shiftName}</p>
+                <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>{summary.shiftName}</p>
               </div>
             </div>
           </div>
@@ -347,11 +397,11 @@ export const Dashboard: React.FC = () => {
         <Card>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Users className="w-5 h-5 text-emerald-500" />
+              <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Users style={{ width: 16, height: 16, color: '#047857', flexShrink: 0 }} />
                 Live Active Visitors Inside Campus
               </h3>
-              <p className="text-xs text-slate-500">Real-time listing of visitors currently inside campus (auto-refreshes every 10s)</p>
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: '4px 0 0' }}>Real-time listing of visitors currently inside campus (auto-refreshes every 10s)</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => navigate('/visitors')}>
               View All Visitor Registers
@@ -362,7 +412,7 @@ export const Dashboard: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase text-[10px]">
+                  <tr className="border-b border-slate-200 text-slate-400 font-semibold uppercase text-[10px]">
                     <th className="py-2.5 px-3">Pass #</th>
                     <th className="py-2.5 px-3">Visitor Name</th>
                     <th className="py-2.5 px-3">Mobile</th>
@@ -372,15 +422,15 @@ export const Dashboard: React.FC = () => {
                     <th className="py-2.5 px-3 text-right">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                <tbody className="divide-y divide-slate-100">
                   {activeVisitorsList.map((v) => (
-                    <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-2.5 px-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">{v.passNumber || `#${v.id}`}</td>
-                      <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-slate-100">{v.name}</td>
-                      <td className="py-2.5 px-3 text-slate-500 font-mono">{v.mobile}</td>
-                      <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium">{v.hostName}</td>
-                      <td className="py-2.5 px-3 text-slate-500">{v.hostDepartment} ({v.hostType || 'FACULTY'})</td>
-                      <td className="py-2.5 px-3 text-slate-500 font-mono">{new Date(v.timeIn).toLocaleTimeString()}</td>
+                    <tr key={v.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--accent)', fontWeight: 500 }}>{v.passNumber || `#${v.id}`}</td>
+                      <td className="py-2.5 px-3" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, color: 'var(--text)' }}>{v.name}</td>
+                      <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{v.mobile}</td>
+                      <td className="py-2.5 px-3" style={{ color: 'var(--text)' }}>{v.hostName}</td>
+                      <td className="py-2.5 px-3" style={{ color: 'var(--mute)', fontSize: 12 }}>{v.hostDepartment} ({v.hostType || 'FACULTY'})</td>
+                      <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{new Date(v.timeIn).toLocaleTimeString()}</td>
                       <td className="py-2.5 px-3 text-right">
                         <Badge variant="success">Active Inside</Badge>
                       </td>
@@ -390,9 +440,9 @@ export const Dashboard: React.FC = () => {
               </table>
             </div>
           ) : (
-            <div className="text-center py-8 border border-dashed border-slate-800 rounded-xl">
-              <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-400 font-medium">No visitors currently inside campus.</p>
+            <div style={{ textAlign: 'center', padding: '32px 20px', border: '1px dashed var(--line)', borderRadius: 4 }}>
+              <Users style={{ width: 26, height: 26, color: 'var(--line)', margin: '0 auto 10px' }} />
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--mute)', fontWeight: 500, margin: 0 }}>No visitors currently inside campus.</p>
             </div>
           )}
         </Card>
@@ -404,25 +454,25 @@ export const Dashboard: React.FC = () => {
   if (isStaff) {
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-slate-900 to-emerald-950 p-6 md:p-8 rounded-3xl text-white shadow-xl">
-          <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-xs font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5 w-fit">
-            <Coffee className="w-3.5 h-3.5 text-emerald-400" />
+        <div style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}>
+          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: '#6ee7b7', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 2, padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
+            <Coffee style={{ width: 12, height: 12 }} />
             Staff & Faculty Portal
           </span>
-          <h2 className="text-2xl font-extrabold mt-2">Welcome, {user?.fullName}!</h2>
-          <p className="text-xs text-slate-400 mt-1">Department: Computer Engineering • Simplified Staff Workspace</p>
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Welcome, {user?.fullName}</h2>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Department: Computer Engineering • Staff Workspace</p>
         </div>
 
         {/* Section H2: Break Update Only */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <Coffee className="w-5 h-5 text-amber-500" />
+            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Coffee style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0 }} />
               Staff Break Controls
             </h3>
 
             {activeBreak ? (
-              <div className="bg-amber-950/40 border border-amber-800/60 p-4 rounded-xl space-y-3">
+              <div style={{ background: 'rgba(120,53,15,0.15)', border: '1px solid rgba(180,83,9,0.35)', borderRadius: 4, padding: 16 }} className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-semibold text-amber-300">ON BREAK</span>
                   <Badge variant="warning">Ongoing</Badge>
@@ -460,15 +510,15 @@ export const Dashboard: React.FC = () => {
 
           {/* Break History */}
           <Card>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <History className="w-5 h-5 text-indigo-500" />
+            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <History style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
               My Break History
             </h3>
 
             <div className="space-y-2">
               {breakHistoryRes?.data?.content && breakHistoryRes.data.content.length > 0 ? (
                 breakHistoryRes.data.content.map((b) => (
-                  <div key={b.id} className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs flex justify-between items-center text-slate-200">
+                  <div key={b.id} style={{ padding: '10px 12px', background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 4, fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#e8e6e2' }}>
                     <div>
                       <p className="font-semibold text-slate-100">{new Date(b.startTime).toLocaleDateString()} {new Date(b.startTime).toLocaleTimeString()}</p>
                       <p className="text-[11px] text-slate-400">{b.note || 'Break'}</p>
@@ -491,27 +541,27 @@ export const Dashboard: React.FC = () => {
 
   // DEFAULT RENDER: ADMIN DASHBOARD
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 md:p-8 rounded-3xl text-white shadow-xl">
+      <div style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <div>
-          <span className="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-xs font-semibold text-indigo-300 uppercase tracking-wider">
-            Admin Master Control
+          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: 'var(--accent)', background: 'rgba(47,93,124,0.18)', border: '1px solid rgba(47,93,124,0.35)', borderRadius: 2, padding: '2px 8px', display: 'inline-block', marginBottom: 10 }}>
+            Admin Security Control
           </span>
-          <h2 className="text-2xl md:text-3xl font-extrabold mt-2 tracking-tight">
-            Welcome, System Admin {user?.fullName}!
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+            Welcome, System Admin {user?.fullName}
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Comprehensive analytics, guard operations, and security logs.
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+            System overview, active gate operations, and security logs.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Button variant="primary" leftIcon={<PlusCircle className="w-4 h-4" />} onClick={() => navigate('/visitors')}>
             Check-In Visitor
           </Button>
-          <Button variant="outline" className="border-slate-700 text-slate-200 hover:bg-slate-800" onClick={() => navigate('/users')}>
-            User Control
+          <Button variant="outline" className="border-white/20 text-white/80 hover:bg-white/10" onClick={() => navigate('/users')}>
+            User Management
           </Button>
         </div>
       </div>
@@ -519,7 +569,7 @@ export const Dashboard: React.FC = () => {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {isAdminLoading ? (
-          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)
+          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-[4px]" />)
         ) : (
           <>
             <StatsCard title="Active Visitors Inside" value={adminMetrics?.visitorsInside ?? 14} icon={<Users className="w-6 h-6" />} colorTheme="indigo" description="Currently on campus" />
@@ -535,11 +585,11 @@ export const Dashboard: React.FC = () => {
       <Card>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-indigo-600" />
+            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Activity style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
               Hourly Visitor Traffic (Today)
             </h3>
-            <p className="text-xs text-slate-500 font-medium">Real-time gate traffic intensity across all campus locations</p>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: '4px 0 0' }}>Real-time gate traffic intensity across all campus locations</p>
           </div>
           <Badge variant="purple">System Analytics</Badge>
         </div>
@@ -549,14 +599,14 @@ export const Dashboard: React.FC = () => {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorVis" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#2f5d7c" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#2f5d7c" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} tickLine={false} />
               <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }} />
-              <Area type="monotone" dataKey="visitors" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorVis)" />
+              <Area type="monotone" dataKey="visitors" stroke="#2f5d7c" strokeWidth={2} fillOpacity={1} fill="url(#colorVis)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -566,11 +616,11 @@ export const Dashboard: React.FC = () => {
       <Card>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-600" />
+            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Users style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
               Active Campus Visitors Log
             </h3>
-            <p className="text-xs text-slate-500">Live monitoring of all visitors currently on campus (auto-refreshes every 10s)</p>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: '4px 0 0' }}>Live monitoring of all visitors currently on campus (auto-refreshes every 10s)</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => navigate('/visitors')}>
             Manage All Visitors
@@ -581,7 +631,7 @@ export const Dashboard: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase text-[10px]">
+                <tr className="border-b border-slate-200 text-slate-400 font-semibold uppercase text-[10px]">
                   <th className="py-2.5 px-3">Pass #</th>
                   <th className="py-2.5 px-3">Visitor Name</th>
                   <th className="py-2.5 px-3">Mobile</th>
@@ -591,15 +641,15 @@ export const Dashboard: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {activeVisitorsList.map((v) => (
-                  <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-2.5 px-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">{v.passNumber || `#${v.id}`}</td>
-                    <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-slate-100">{v.name}</td>
-                    <td className="py-2.5 px-3 text-slate-500 font-mono">{v.mobile}</td>
-                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium">{v.hostName}</td>
-                    <td className="py-2.5 px-3 text-slate-500">{v.hostDepartment} ({v.hostType || 'FACULTY'})</td>
-                    <td className="py-2.5 px-3 text-slate-500 font-mono">{new Date(v.timeIn).toLocaleTimeString()}</td>
+                  <tr key={v.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--accent)', fontWeight: 500 }}>{v.passNumber || `#${v.id}`}</td>
+                    <td className="py-2.5 px-3" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, color: 'var(--text)' }}>{v.name}</td>
+                    <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{v.mobile}</td>
+                    <td className="py-2.5 px-3" style={{ color: 'var(--text)' }}>{v.hostName}</td>
+                    <td className="py-2.5 px-3" style={{ color: 'var(--mute)', fontSize: 12 }}>{v.hostDepartment} ({v.hostType || 'FACULTY'})</td>
+                    <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{new Date(v.timeIn).toLocaleTimeString()}</td>
                     <td className="py-2.5 px-3 text-right">
                       <Badge variant="success">Active Inside</Badge>
                     </td>
@@ -609,12 +659,758 @@ export const Dashboard: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="text-center py-8 border border-dashed border-slate-800 rounded-xl">
-            <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-            <p className="text-sm text-slate-400 font-medium">No active visitors logged inside campus right now.</p>
+          <div style={{ textAlign: 'center', padding: '32px 20px', border: '1px dashed var(--line)', borderRadius: 4 }}>
+            <Users style={{ width: 26, height: 26, color: 'var(--line)', margin: '0 auto 10px' }} />
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--mute)', fontWeight: 500, margin: 0 }}>No active visitors logged inside campus right now.</p>
           </div>
         )}
       </Card>
     </div>
   );
 };
+
+// ============================================================
+// STUDENT DASHBOARD VIEW (Landing Page Match: Light Theme, Indigo & Emerald Accents)
+// ============================================================
+interface StudentDashboardViewProps {
+  studentName: string;
+  studentPrn: string;
+  user: any;
+  navigate: any;
+}
+
+const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName, studentPrn, user, navigate }) => {
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<'pass' | 'apply' | 'history'>('pass');
+  const [showGuardModal, setShowGuardModal] = useState(false);
+
+  // Form State for New Outpass Application
+  const toLocalISOString = (d: Date) => {
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
+  const [outpassCategory, setOutpassCategory] = useState<'HOSTEL' | 'GATE_DAY'>('HOSTEL');
+  const [reasonCategory, setReasonCategory] = useState('Medical Checkup');
+  const [reasonDetails, setReasonDetails] = useState('Medical Checkup & Prescription collection at Sahyadri Hospital, Erandwane');
+  const [destination, setDestination] = useState('Erandwane, Pune');
+  const [parentContact, setParentContact] = useState(user?.phone || '9876543210');
+  const [emergencyPhone, setEmergencyPhone] = useState('9812345678');
+  const [departureTime, setDepartureTime] = useState(toLocalISOString(new Date()));
+  const [expectedReturnTime, setExpectedReturnTime] = useState(toLocalISOString(new Date(Date.now() + 5 * 3600000)));
+  const [parentConsent, setParentConsent] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Real API Query for Student Outpasses
+  const { data: realOutpassesData, isLoading: isOutpassesLoading, refetch: refetchOutpasses } = useQuery({
+    queryKey: ['student-outpasses-dashboard', studentPrn],
+    queryFn: async () => {
+      try {
+        const res = await hostelOutpassApi.getOutpasses({ studentPrn });
+        return res?.content || (Array.isArray(res) ? res : []);
+      } catch (err) {
+        return [];
+      }
+    },
+    enabled: !!studentPrn,
+    refetchInterval: 10000,
+  });
+
+  const activeOutpass = useMemo(() => {
+    if (!realOutpassesData || realOutpassesData.length === 0) {
+      return {
+        id: 999,
+        outpassNumber: 'OP-2026-001',
+        studentName: studentName || 'Student User',
+        studentPrn: studentPrn || 'F24IT32',
+        studentHostel: 'Hostel Block B',
+        roomNumber: 'B-304',
+        reason: 'Medical Checkup & Prescription collection at Sahyadri Hospital',
+        destination: 'Erandwane, Pune',
+        wardenName: 'Dr. S. Kulkarni (Warden)',
+        departureTime: 'Today, 02:00 PM',
+        expectedReturnTime: 'Today, 07:00 PM',
+        status: 'APPROVED',
+      };
+    }
+    return realOutpassesData.find((op: any) => op.status === 'APPROVED' || op.status === 'PENDING_WARDEN' || op.status === 'OUT_OF_CAMPUS') || realOutpassesData[0];
+  }, [realOutpassesData, studentName, studentPrn]);
+
+  const outpassList = realOutpassesData || [];
+
+  // Handle New Outpass Form Submit
+  const handleSubmitApplication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reasonDetails || !destination) {
+      toast.error('Please fill in reason and destination address');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        studentName: studentName,
+        studentPrn: studentPrn,
+        studentHostel: 'Hostel Block B',
+        studentRoom: 'B-304',
+        studentClass: 'BE',
+        studentDivision: '1',
+        studentMobile: user?.phone || '9876543210',
+        parentContact: parentContact,
+        emergencyContact: emergencyPhone,
+        reason: `[${reasonCategory}] ${reasonDetails}`,
+        studentNote: `Parent consent verified: ${parentConsent ? 'Yes' : 'No'}`,
+        destination: destination,
+        departureTime: new Date(departureTime).toISOString(),
+        expectedReturnTime: new Date(expectedReturnTime).toISOString(),
+      };
+
+      const created = await hostelOutpassApi.createOutpass(payload);
+      toast.success('Outpass application submitted to Hostel Warden!');
+      queryClient.invalidateQueries({ queryKey: ['student-outpasses-dashboard'] });
+      setActiveTab('pass');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to submit outpass');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Welcome Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-400/30 rounded-md text-[11px] font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                Verified Student Portal
+              </span>
+              <span className="px-2.5 py-0.5 bg-slate-800 border border-slate-700 rounded-md text-[11px] font-mono text-slate-300">
+                Hostel Block B • Room B-304
+              </span>
+            </div>
+
+            <h2 className="text-xl font-bold mt-2 tracking-tight text-white font-heading">
+              Welcome, {studentName}
+            </h2>
+            <p className="text-xs text-slate-400 font-mono mt-1 flex flex-wrap items-center gap-3">
+              <span>PRN: <strong style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--accent)', fontWeight: 500 }}>{studentPrn}</strong></span>
+              <span>•</span>
+              <span>Branch: <strong>Computer Engineering</strong></span>
+              <span>•</span>
+              <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Outpass Permitted
+              </span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <Button
+              variant="primary"
+              onClick={() => setActiveTab('apply')}
+              leftIcon={<PlusCircle className="w-4 h-4" />}
+            >
+              Apply Outpass
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowGuardModal(true)}
+              leftIcon={<QrCode className="w-4 h-4 text-emerald-300" />}
+            className="border-white/20 text-white/80 hover:bg-white/10"
+            >
+              Show Digital Pass
+            </Button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16, overflowX: 'auto' }}>
+          <button
+            onClick={() => setActiveTab('pass')}
+            style={{
+              padding: '7px 16px', borderRadius: 2, fontSize: 12, fontWeight: 500, fontFamily: 'Inter, sans-serif',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, transition: 'all 0.15s',
+              background: activeTab === 'pass' ? 'white' : 'rgba(255,255,255,0.06)',
+              color: activeTab === 'pass' ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
+              border: activeTab === 'pass' ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <ShieldCheck style={{ width: 13, height: 13, color: '#34d399' }} />
+            Active Digital Gate Pass
+          </button>
+          <button
+            onClick={() => setActiveTab('apply')}
+            style={{
+              padding: '7px 16px', borderRadius: 2, fontSize: 12, fontWeight: 500, fontFamily: 'Inter, sans-serif',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, transition: 'all 0.15s',
+              background: activeTab === 'apply' ? 'white' : 'rgba(255,255,255,0.06)',
+              color: activeTab === 'apply' ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
+              border: activeTab === 'apply' ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <FileText style={{ width: 13, height: 13, color: 'var(--accent)' }} />
+            Apply Outpass Form
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            style={{
+              padding: '7px 16px', borderRadius: 2, fontSize: 12, fontWeight: 500, fontFamily: 'Inter, sans-serif',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, transition: 'all 0.15s',
+              background: activeTab === 'history' ? 'white' : 'rgba(255,255,255,0.06)',
+              color: activeTab === 'history' ? 'var(--ink)' : 'rgba(255,255,255,0.5)',
+              border: activeTab === 'history' ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <History style={{ width: 13, height: 13, color: '#2dd4bf' }} />
+            My Applications History ({outpassList.length})
+          </button>
+        </div>
+      </motion.div>
+
+      {/* TAB CONTENT SWITCHING WITH FRAMER MOTION */}
+      <AnimatePresence mode="wait">
+        {/* TAB 1: ACTIVE DIGITAL GATE PERMISSION PASS */}
+        {activeTab === 'pass' && (
+          <motion.div
+            key="pass-tab"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          >
+            {/* Main Crisp White Digital Pass Card with Emerald Border */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="border border-[--line] bg-white relative overflow-hidden p-6 rounded-[4px] text-slate-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                  <div>
+                    <span className="px-3.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5 w-fit shadow-xs">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                      WARDEN APPROVED — PERMITTED FOR EXIT & ENTRY
+                    </span>
+                    <h3 className="text-2xl font-black text-slate-900 mt-2 font-mono tracking-tight">
+                      Pass #{activeOutpass.outpassNumber}
+                    </h3>
+                  </div>
+
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={() => setShowGuardModal(true)}
+                    leftIcon={<Eye className="w-4 h-4" />}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 text-xs shadow-md shadow-emerald-600/20 shrink-0"
+                  >
+                    Show to Guard (Full View)
+                  </Button>
+                </div>
+
+                {/* Pass Details Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5 text-xs">
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80 hover:border-indigo-300 transition-colors">
+                    <p className="text-slate-500 font-medium">Student Name & PRN</p>
+                    <p className="text-slate-900 font-extrabold text-base mt-0.5">{activeOutpass.studentName}</p>
+                    <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>PRN: {activeOutpass.studentPrn}</p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80 hover:border-indigo-300 transition-colors">
+                    <p className="text-slate-500 font-medium">Hostel & Room</p>
+                    <p className="text-slate-900 font-extrabold text-base mt-0.5">{activeOutpass.studentHostel}</p>
+                    <p className="text-slate-700 font-mono">Room: {activeOutpass.roomNumber}</p>
+                  </div>
+
+                  <div className="bg-amber-50/80 p-4 rounded-lg border border-amber-200 sm:col-span-2">
+                    <p className="text-amber-800 font-extrabold flex items-center gap-1.5 uppercase text-[10px] tracking-wider">
+                      <FileText className="w-3.5 h-3.5 text-amber-600" />
+                      Stated Reason for Outpass (Presented to Guard)
+                    </p>
+                    <p className="text-amber-950 font-bold text-sm mt-1 bg-white border border-amber-200 p-3 rounded-xl">
+                      "{activeOutpass.reason}"
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80">
+                    <p className="text-slate-500 font-medium flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-indigo-600" /> Destination
+                    </p>
+                    <p className="text-slate-900 font-extrabold text-sm mt-0.5">{activeOutpass.destination}</p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80">
+                    <p className="text-slate-500 font-medium flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5 text-purple-600" /> Verified Warden
+                    </p>
+                    <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{activeOutpass.wardenName}</p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80">
+                    <p className="text-slate-500 font-medium flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-emerald-600" /> Permitted Departure
+                    </p>
+                    <p className="text-emerald-700 font-mono font-extrabold text-sm mt-0.5">{activeOutpass.departureTime}</p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80">
+                    <p className="text-slate-500 font-medium flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-indigo-600" /> Expected Return Cutoff
+                    </p>
+                    <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{activeOutpass.expectedReturnTime}</p>
+                  </div>
+                </div>
+
+                {/* QR Verification Barcode Graphic */}
+                <div style={{ background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }} className="sm:flex-row items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <QRCodeDisplay
+                      value={JSON.stringify({
+                        system: 'CampusAccess PICT Gate Control',
+                        passNo: activeOutpass.outpassNumber,
+                        prn: activeOutpass.studentPrn,
+                        student: activeOutpass.studentName,
+                        reason: activeOutpass.reason,
+                        validTill: activeOutpass.expectedReturnTime,
+                        warden: activeOutpass.wardenName,
+                        status: activeOutpass.status,
+                      })}
+                      size={72}
+                      showBorder={false}
+                      className="p-0 bg-white rounded-xl shadow-md p-1"
+                    />
+                    <div>
+                      <p className="text-xs font-extrabold text-white uppercase tracking-wider">Gate Scanner Ready</p>
+                      <p className="text-[11px] text-slate-300">Guards at Main Gate & Hostel Gate can scan or search PRN <strong className="text-emerald-400">{studentPrn}</strong></p>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowGuardModal(true)}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs py-2 px-4 shadow-md shrink-0"
+                    leftIcon={<QrCode className="w-4 h-4 text-slate-950" />}
+                  >
+                    Present Security Pass
+                  </Button>
+                </div>
+              </Card>
+            </div>
+
+            {/* Verification Progress Timeline Column */}
+            <div className="space-y-6">
+              <Card className="border border-[--line] bg-white p-6 rounded-[4px] text-slate-900">
+                <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Activity style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
+                  Approval Status & Timeline
+                </h3>
+
+                <div className="space-y-6 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                  {/* Step 1: Application Submitted */}
+                  <div className="relative pl-10">
+                    <div className="absolute left-1.5 top-0 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm">
+                      ✓
+                    </div>
+                    <h4 className="text-xs font-extrabold text-slate-900">1. Student Application Filed</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Reason & Parent Consent Submitted</p>
+                    <span className="text-[10px] text-emerald-700 font-mono font-bold">Completed</span>
+                  </div>
+
+                  {/* Step 2: Warden Verification */}
+                  <div className="relative pl-10">
+                    <div className="absolute left-1.5 top-0 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shadow-sm">
+                      ✓
+                    </div>
+                    <h4 className="text-xs font-extrabold text-slate-900">2. Hostel Warden Verified</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Approved by Mrs. S. Kulkarni</p>
+                    <span className="text-[10px] text-emerald-700 font-mono font-bold">Verified & Stamp Attached</span>
+                  </div>
+
+                  {/* Step 3: Gate Security Permission */}
+                  <div className="relative pl-10">
+                    <div style={{ position: 'absolute', left: 6, top: 0, width: 18, height: 18, borderRadius: '50%', background: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 10, boxShadow: '0 1px 3px rgba(47,93,124,0.4)' }}
+                      className="animate-pulse">
+                      3
+                    </div>
+                    <h4 style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', margin: '0 0 2px' }}>3. Gate Security Active</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Show QR Pass at Gate 1 or Gate 2</p>
+                    <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: 'var(--accent)', fontWeight: 500 }}>Ready for Exit Log</span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card style={{ background: 'rgba(47,93,124,0.06)', border: '1px solid rgba(47,93,124,0.15)', borderRadius: 4, padding: '16px 20px' }}>
+                <h4 className="text-xs font-extrabold text-indigo-900 uppercase tracking-wider mb-2.5">Campus Security Rules</h4>
+                <ul className="text-[11px] text-slate-600 space-y-2 list-disc list-inside font-medium">
+                  <li>Show your Warden Approval reason to the guard when exiting.</li>
+                  <li>Ensure return before <strong className="text-slate-900 font-bold">{activeOutpass.expectedReturnTime}</strong> to prevent late flags.</li>
+                  <li>Emergency assistance phone: <strong className="text-indigo-700 font-bold">020-24371101</strong></li>
+                </ul>
+              </Card>
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB 2: APPLICATION FORM FOR HOSTEL OUTPASS / GATE PASS */}
+        {activeTab === 'apply' && (
+          <motion.div
+            key="apply-tab"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="max-w-3xl mx-auto shadow-sm border border-slate-200 bg-white p-6 md:p-8 rounded-xl text-slate-900">
+              <div className="border-b border-slate-200 pb-4 mb-6">
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-indigo-600" />
+                  New Outpass Application Form
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Fill in details for Warden verification. Once approved by your Hostel Warden, your digital permission pass will be active for security guards at the gate.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmitApplication} className="space-y-6">
+                {/* Outpass Type Selection */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2.5">
+                    Outpass Type Category
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setOutpassCategory('HOSTEL')}
+                       className={`p-5 rounded-[4px] border text-left transition-all duration-200 ${
+                        outpassCategory === 'HOSTEL'
+                          ? 'bg-[rgba(47,93,124,0.06)] border-[--accent] text-[--ink]'
+                          : 'bg-[--paper] border-[--line] text-[--mute] hover:border-[--mute]'
+                      }`}
+                    >
+                      <Building className="w-6 h-6 text-indigo-600 mb-2" />
+                      <p className="text-sm font-bold text-slate-900">Hostel Overnight / Leave Pass</p>
+                      <p className="text-xs text-slate-500 mt-1">For night out, weekend leave, or extended home visits</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setOutpassCategory('GATE_DAY')}
+                       className={`p-5 rounded-[4px] border text-left transition-all duration-200 ${
+                        outpassCategory === 'GATE_DAY'
+                          ? 'bg-[rgba(47,93,124,0.06)] border-[--accent] text-[--ink]'
+                          : 'bg-[--paper] border-[--line] text-[--mute] hover:border-[--mute]'
+                      }`}
+                    >
+                      <LogOut className="w-6 h-6 text-teal-600 mb-2" />
+                      <p className="text-sm font-bold text-slate-900">Gate Day Pass (Short Exit)</p>
+                      <p className="text-xs text-slate-500 mt-1">For doctor visits, library work, or urgent errands (same day return)</p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Student Autofilled Meta */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+                  <div>
+                    <p className="text-slate-500 font-medium">Student Name</p>
+                    <p className="font-extrabold text-slate-900 text-sm">{studentName}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 font-medium">PRN Number</p>
+                    <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{studentPrn}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 font-medium">Hostel & Room</p>
+                    <p className="font-bold text-slate-900 text-sm">Block B • Room B-304</p>
+                  </div>
+                </div>
+
+                {/* Reason Selection & Details */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5">Primary Reason Category</label>
+                    <select
+                      value={reasonCategory}
+                      onChange={(e) => setReasonCategory(e.target.value)}
+                      className="w-full bg-white border border-[--line] rounded-[4px] py-2.5 px-3 text-xs text-[--text] focus:outline-none focus:border-[--accent]"
+                    >
+                      <option value="Medical Checkup">Medical Checkup / Hospital Appointment</option>
+                      <option value="Home Visit">Home Visit / Weekend Leave</option>
+                      <option value="Academic Errand">Academic Project / Library Errand</option>
+                      <option value="Personal Errand">Personal Errands / Shopping</option>
+                      <option value="Emergency">Family Emergency</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                      Detailed Explanation of Reason (Required for Guard & Warden Verification)
+                    </label>
+                    <textarea
+                      value={reasonDetails}
+                      onChange={(e) => setReasonDetails(e.target.value)}
+                      rows={3}
+                      placeholder="Explain why you need to go outside (e.g., Doctor appointment at Sahyadri Hospital)..."
+                      className="w-full bg-white border border-[--line] rounded-[4px] p-3 text-xs text-[--text] placeholder-[--mute] focus:outline-none focus:border-[--accent]"
+                      required
+                    />
+                  </div>
+
+                  <Input
+                    label="Destination Address / City"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="e.g. Sahyadri Hospital, Erandwane, Pune"
+                    required
+                  />
+                </div>
+
+                {/* Departure & Return Timestamps */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Planned Departure Date & Time"
+                    type="datetime-local"
+                    value={departureTime}
+                    onChange={(e) => setDepartureTime(e.target.value)}
+                    required
+                  />
+                  <Input
+                    label="Expected Return Date & Time"
+                    type="datetime-local"
+                    value={expectedReturnTime}
+                    onChange={(e) => setExpectedReturnTime(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Emergency Contacts & Parent Consent */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Parent Mobile Number"
+                    value={parentContact}
+                    onChange={(e) => setParentContact(e.target.value)}
+                    required
+                  />
+                  <Input
+                    label="Emergency Secondary Contact"
+                    value={emergencyPhone}
+                    onChange={(e) => setEmergencyPhone(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 bg-[--paper] p-4 rounded-[4px] border border-[--line]">
+                  <input
+                    type="checkbox"
+                    id="parentConsent"
+                    checked={parentConsent}
+                    onChange={(e) => setParentConsent(e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-white border-slate-300"
+                  />
+                  <label htmlFor="parentConsent" className="text-xs font-medium text-slate-700 cursor-pointer">
+                    I confirm parent consent has been informed & Warden can verify with parent contact number.
+                  </label>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={isSubmitting}
+                  leftIcon={<Send className="w-4.5 h-4.5" />}
+                  className="w-full"
+                >
+                  Submit Application to Warden
+                </Button>
+              </form>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* TAB 3: APPLICATION HISTORY */}
+        {activeTab === 'history' && (
+          <motion.div
+            key="history-tab"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="border border-slate-200 bg-white p-6 rounded-xl shadow-sm text-slate-900">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <History className="w-5 h-5 text-indigo-600" />
+                    My Outpass Applications History
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Track all your past and current outpass requests and warden approval logs</p>
+                </div>
+
+                <Button variant="outline" size="sm" onClick={() => setActiveTab('apply')} leftIcon={<PlusCircle className="w-4 h-4" />}>
+                  New Request
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] bg-slate-50">
+                      <th className="py-3.5 px-4">Pass #</th>
+                      <th className="py-3.5 px-4">Category</th>
+                      <th className="py-3.5 px-4">Reason & Stated Purpose</th>
+                      <th className="py-3.5 px-4">Destination</th>
+                      <th className="py-3.5 px-4">Departure / Return</th>
+                      <th className="py-3.5 px-4 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {outpassList.map((op) => (
+                      <tr key={op.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-4 px-4" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{op.outpassNumber}</td>
+                        <td className="py-4 px-4 font-medium text-slate-800">{op.category}</td>
+                        <td className="py-4 px-4 max-w-xs">
+                          <p className="font-semibold text-slate-900">{op.reason}</p>
+                          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)', marginTop: 2 }}>{op.wardenStatus}</p>
+                        </td>
+                        <td className="py-4 px-4 text-slate-700">{op.destination}</td>
+                        <td className="py-4 px-4 font-mono text-[11px] text-slate-500">
+                          <div>Out: {op.departureTime}</div>
+                          <div>In: {op.expectedReturnTime}</div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <Badge
+                            variant={
+                              op.status === 'APPROVED'
+                                ? 'success'
+                                : op.status === 'PENDING_WARDEN'
+                                ? 'warning'
+                                : op.status === 'REJECTED'
+                                ? 'danger'
+                                : 'default'
+                            }
+                          >
+                            {op.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FULLSCREEN DIGITAL VERIFICATION PASS MODAL (LIGHT THEME MATCHING LANDING PAGE) */}
+      <AnimatePresence>
+        {showGuardModal && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            onClick={() => setShowGuardModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-md w-full max-h-[90vh] overflow-y-auto bg-white border-2 border-emerald-500 rounded-xl p-4 sm:p-5 shadow-2xl relative space-y-3.5 text-slate-900"
+            >
+              {/* Top Close Button */}
+              <button
+                onClick={() => setShowGuardModal(false)}
+                className="absolute right-3.5 top-3.5 w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-colors border border-slate-200 z-10"
+                title="Close Pass"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="text-center space-y-1 pr-6">
+                <span className="px-3 py-0.5 bg-emerald-100 border border-emerald-300 rounded-full text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider inline-flex items-center gap-1.5 shadow-xs">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                  VERIFIED GATE PERMISSION PASS
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 pt-1 font-mono tracking-tight">
+                  {activeOutpass.outpassNumber}
+                </h3>
+                <p className="text-[11px] text-slate-500 font-mono">PICT Main Campus Gate Security Pass</p>
+                {/* Student Photo / Avatar & Verified Details */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2.5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-lg bg-slate-900 text-indigo-400 font-semibold text-base flex items-center justify-center shrink-0">
+                    {studentName.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-extrabold text-slate-900 truncate">{studentName}</h4>
+                    <p className="font-mono text-xs text-indigo-600 font-medium">PRN: {studentPrn}</p>
+                    <p className="text-[11px] text-slate-500 truncate">Computer Engg • Block B, Rm B-304</p>
+                  </div>
+                </div>
+
+                {/* Stated Reason Box */}
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                  <p className="text-[9px] text-amber-800 font-extrabold uppercase tracking-wider">Reason Presented to Guard:</p>
+                  <p className="text-xs text-amber-950 font-bold mt-0.5">"{activeOutpass.reason}"</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="bg-white p-2 rounded-xl border border-slate-200">
+                    <p className="text-[9px] text-slate-500">Destination</p>
+                    <p className="font-bold text-slate-900 truncate">{activeOutpass.destination}</p>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-slate-200">
+                    <p className="text-[9px] text-slate-500 mb-0.5">Warden Verification</p>
+                    <p className="font-mono text-xs text-emerald-700 font-medium">{activeOutpass.wardenName}</p>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-slate-200">
+                    <p className="text-[9px] text-slate-500 mb-0.5">Departure</p>
+                    <p className="font-mono text-xs text-emerald-700 font-medium">{activeOutpass.departureTime}</p>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-slate-200">
+                    <p className="text-[9px] text-slate-500 mb-0.5">Return Cutoff</p>
+                    <p className="font-mono text-xs text-indigo-600 font-medium">{activeOutpass.expectedReturnTime}</p>
+                  </div>
+                </div>
+              </div>
+              </div>
+
+              {/* QR Scanner Code - Crisp High Contrast */}
+              <div className="text-center bg-slate-900 text-white p-3 rounded-2xl border border-slate-800">
+                <QRCodeDisplay
+                  value={JSON.stringify({
+                    system: 'CampusAccess PICT Gate Control',
+                    passNo: activeOutpass.outpassNumber,
+                    prn: activeOutpass.studentPrn,
+                    student: activeOutpass.studentName,
+                    reason: activeOutpass.reason,
+                    validTill: activeOutpass.expectedReturnTime,
+                    warden: activeOutpass.wardenName,
+                    status: activeOutpass.status,
+                  })}
+                  size={150}
+                  showBorder={false}
+                  title="AUTHENTICATED PASS QR"
+                  subtitle={`PRN: ${activeOutpass.studentPrn} • ${activeOutpass.outpassNumber}`}
+                  className="p-1"
+                />
+                <p className="text-[11px] font-mono text-emerald-400 font-bold tracking-wider mt-1">SCAN AT GATE CONTROLLER</p>
+                <p className="text-[9px] text-slate-400">Guard can verify via scanner or PRN search in Gate Terminal</p>
+              </div>
+
+              {/* Prominent Action / Close Button */}
+              <Button
+                variant="outline"
+                onClick={() => setShowGuardModal(false)}
+                className="w-full border-slate-300 text-slate-700 hover:bg-slate-100 font-bold py-2.5 text-xs shadow-xs"
+              >
+                Close Presentation Pass
+              </Button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+

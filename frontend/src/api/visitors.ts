@@ -26,4 +26,24 @@ export const visitorApi = {
     const res = await api.get<ApiResponse<PageResponse<Visitor>>>('/visitors', { params });
     return res.data.data;
   },
+
+  recognizeFace: async (photoBlob: Blob) => {
+    const formData = new FormData();
+    formData.append('photo', photoBlob, 'captured_visitor.jpg');
+    const res = await api.post<any>('/visitors/recognize', formData);
+    return res.data;
+  },
+
+  registerWithPhoto: async (photoBlob: Blob | null, data: any) => {
+    const formData = new FormData();
+    if (photoBlob) {
+      formData.append('photo', photoBlob, 'visitor_photo.jpg');
+    }
+    formData.append(
+      'data',
+      new Blob([JSON.stringify(data)], { type: 'application/json' })
+    );
+    const res = await api.post<ApiResponse<Visitor>>('/visitors/register-with-photo', formData);
+    return res.data.data;
+  },
 };

@@ -23,12 +23,16 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import com.pict.gatesecurity.dto.visitor.VisitorRecognitionResponse;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/visitors")
+@RequestMapping({"/api/v1/visitors", "/api/visitors"})
 @RequiredArgsConstructor
-@Tag(name = "Visitor Management", description = "Visitor Check-In, QR Pass Generation, Check-Out, and Active Visitor Tracking")
+@Tag(name = "Visitor Management", description = "Visitor Check-In, QR Pass Generation, Check-Out, and Face Recognition Tracking")
 public class VisitorController {
 
     private final VisitorService visitorService;
@@ -90,5 +94,26 @@ public class VisitorController {
 
         Page<VisitorResponse> visitorPage = visitorService.getVisitors(query, department, hostType, isBlacklisted, activeInside, pageable, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(visitorPage)));
+    }
+
+    @PostMapping(value = "/recognize", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF', 'USER')")
+    @Operation(summary = "Recognize Visitor Face", description = "Uploads photo to Python service to match existing visitor")
+    public ResponseEntity<VisitorRecognitionResponse> recognizeVisitor(
+            @RequestParam("photo") MultipartFile photo) {
+        VisitorRecognitionResponse response = visitorService.recognizeVisitorFace(photo);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/register-with-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF', 'USER')")
+    @Operation(summary = "Register Visitor with Photo & Face Enrollment", description = "Saves visitor record, photo, and registers face embedding")
+    public ResponseEntity<ApiResponse<VisitorResponse>> registerWithPhoto(
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @Valid @RequestPart("data") VisitorCheckInRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        VisitorResponse response = visitorService.registerVisitorWithPhoto(photo, request, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(response, "Visitor registered and face enrolled successfully"));
     }
 }

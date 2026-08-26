@@ -52,17 +52,29 @@ export const Gates: React.FC = () => {
     {
       header: 'Location Code',
       accessor: 'id',
-      render: (g) => <span className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">#LOC-{g.id}</span>,
+      render: (g) => (
+        <span className="font-mono text-indigo-600 font-bold">
+          #LOC-{g.id}
+        </span>
+      ),
     },
     {
       header: 'Location Name',
       accessor: 'name',
-      render: (g) => <span className="font-bold text-slate-900 dark:text-slate-100">{g.name}</span>,
+      render: (g) => (
+        <span className="font-semibold text-slate-900">
+          {g.name}
+        </span>
+      ),
     },
     {
       header: 'Location Details',
       accessor: 'location',
-      render: (g) => <span className="text-xs text-slate-500">{g.location || 'Campus Perimeter'}</span>,
+      render: (g) => (
+        <span className="text-xs text-slate-500">
+          {g.location || 'Campus Perimeter'}
+        </span>
+      ),
     },
     {
       header: 'Status',
@@ -74,13 +86,13 @@ export const Gates: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <MapPin className="w-6 h-6 text-indigo-600" /> Location Configuration
+          <h2 className="text-xl font-bold font-heading text-slate-900">
+            Location Gates
           </h2>
-          <p className="text-sm text-slate-500">Configure entry, exit, and guard assignment locations across campus.</p>
+          <p className="text-xs text-slate-500">Configure entry, exit, and guard assignment locations across campus.</p>
         </div>
         <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsCreateOpen(true)}>
-          Configure New Location
+          Add Location
         </Button>
       </div>
 
@@ -100,7 +112,7 @@ export const Gates: React.FC = () => {
             value={form.location} 
             onChange={(e) => setForm({ ...form, location: e.target.value })} 
           />
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={createMutation.isPending}>Save Location</Button>
           </div>

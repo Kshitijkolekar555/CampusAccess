@@ -104,12 +104,32 @@ export interface Visitor {
   idProofType: string;
   idProofNumber: string;
   photoUrl?: string;
+  photoPath?: string;
+  faceId?: string;
   isBlacklistedMatch: boolean;
   notes?: string;
   createdAt: string;
   createdByUsername?: string;
   passNumber?: string;
   qrCodeDataUrl?: string;
+}
+
+export interface VisitorRecognitionResponse {
+  matched: boolean;
+  visitorId?: number;
+  visitorName?: string;
+  mobileNumber?: string;
+  hostPersonOrDepartment?: string;
+  purpose?: string;
+  photoPath?: string;
+  hostName?: string;
+  hostType?: HostType;
+  hostDepartment?: HostDepartment;
+  studentPrn?: string;
+  idProofType?: string;
+  idProofNumber?: string;
+  vehicleNumber?: string;
+  confidenceDistance?: number;
 }
 
 export interface Gate {
@@ -126,7 +146,8 @@ export interface Guard {
   username: string;
   fullName: string;
   phone?: string;
-  badgeNumber: string;
+  employeeCode?: string;
+  badgeNumber?: string;
   assignedGateId?: number;
   assignedGateName?: string;
   active: boolean;

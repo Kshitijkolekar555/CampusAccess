@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Layout } from '../components/layout/Layout';
 import { Login } from '../pages/Login';
+import { LandingPage } from '../pages/LandingPage';
 import { Dashboard } from '../pages/Dashboard';
 import { Visitors } from '../pages/Visitors';
 import { Vehicles } from '../pages/Vehicles';
@@ -39,7 +40,8 @@ const ProtectedLayout: React.FC<{ allowedRoles?: UserRole[] }> = ({ allowedRoles
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public Route */}
+      {/* Public Routes */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
 
       {/* General Protected Routes */}

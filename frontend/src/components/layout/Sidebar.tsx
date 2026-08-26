@@ -1,108 +1,94 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { UserRole } from '../../types';
 import {
-  LayoutDashboard,
-  Users,
-  Car,
-  Truck,
-  GraduationCap,
-  Home,
-  ShieldCheck,
-  Clock,
-  UserCheck,
-  DoorClosed,
-  Bell,
-  User as UserIcon,
+  LayoutDashboard, Users, Car, Truck, GraduationCap, Home,
+  ShieldCheck, Clock, UserCheck, DoorClosed, Bell, User as UserIcon,
   LogOut,
-  ChevronRight,
-  Shield,
 } from 'lucide-react';
-import { clsx } from 'clsx';
 
 interface MenuItem {
   title: string;
   path: string;
   icon: React.ReactNode;
   roles?: UserRole[];
+  category?: 'overview' | 'gate' | 'academic' | 'admin';
 }
 
 const menuItems: MenuItem[] = [
-  {
-    title: 'Dashboard',
-    path: '/dashboard',
-    icon: <LayoutDashboard className="w-5 h-5" />,
-  },
-  {
-    title: 'Visitors',
-    path: '/visitors',
-    icon: <Users className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF'],
-  },
-  {
-    title: 'Vehicles',
-    path: '/vehicles',
-    icon: <Car className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD'],
-  },
-  {
-    title: 'Vendors & Delivery',
-    path: '/vendors',
-    icon: <Truck className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD'],
-  },
-  {
-    title: 'Student Passes',
-    path: '/student-passes',
-    icon: <GraduationCap className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'HOSTEL_WARDEN', 'STUDENT'],
-  },
-  {
-    title: 'Hostel Outpasses',
-    path: '/hostel-outpasses',
-    icon: <Home className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'HOSTEL_WARDEN', 'STUDENT'],
-  },
-  {
-    title: 'Guard Operations',
-    path: '/guards',
-    icon: <ShieldCheck className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD'],
-  },
-  {
-    title: 'Duty Shifts',
-    path: '/shifts',
-    icon: <Clock className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD'],
-  },
-  {
-    title: 'User Management',
-    path: '/users',
-    icon: <UserCheck className="w-5 h-5" />,
-    roles: ['ADMIN'],
-  },
-  {
-    title: 'Location Config',
-    path: '/gates',
-    icon: <DoorClosed className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD'],
-  },
-  {
-    title: 'Notifications',
-    path: '/notifications',
-    icon: <Bell className="w-5 h-5" />,
-    roles: ['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'HOSTEL_WARDEN'],
-  },
-  {
-    title: 'My Profile',
-    path: '/profile',
-    icon: <UserIcon className="w-5 h-5" />,
-  },
+  { title: 'Dashboard',        path: '/dashboard',       icon: <LayoutDashboard className="w-3.5 h-3.5" />, category: 'overview' },
+  { title: 'Visitors',         path: '/visitors',        icon: <Users className="w-3.5 h-3.5" />,          roles: ['ADMIN','SECURITY_OFFICER','SECURITY_GUARD','GUARD','STAFF'], category: 'gate' },
+  { title: 'Vehicles',         path: '/vehicles',        icon: <Car className="w-3.5 h-3.5" />,            roles: ['ADMIN','SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
+  { title: 'Vendors',          path: '/vendors',         icon: <Truck className="w-3.5 h-3.5" />,          roles: ['ADMIN','SECURITY_OFFICER'], category: 'gate' },
+  { title: 'Duty Shifts',      path: '/shifts',          icon: <Clock className="w-3.5 h-3.5" />,          roles: ['ADMIN','SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
+  { title: 'Student Passes',   path: '/student-passes',  icon: <GraduationCap className="w-3.5 h-3.5" />,  roles: ['ADMIN','SECURITY_OFFICER','SECURITY_GUARD','GUARD','HOSTEL_WARDEN','STUDENT'], category: 'academic' },
+  { title: 'Hostel Outpasses', path: '/hostel-outpasses',icon: <Home className="w-3.5 h-3.5" />,           roles: ['ADMIN','SECURITY_OFFICER','SECURITY_GUARD','GUARD','HOSTEL_WARDEN','STUDENT'], category: 'academic' },
+  { title: 'Gates',            path: '/gates',           icon: <DoorClosed className="w-3.5 h-3.5" />,     roles: ['ADMIN','SECURITY_OFFICER'], category: 'academic' },
+  { title: 'Guard Staff',      path: '/guards',          icon: <ShieldCheck className="w-3.5 h-3.5" />,    roles: ['ADMIN','SECURITY_OFFICER'], category: 'admin' },
+  { title: 'Users',            path: '/users',           icon: <UserCheck className="w-3.5 h-3.5" />,      roles: ['ADMIN'], category: 'admin' },
+  { title: 'Notifications',    path: '/notifications',   icon: <Bell className="w-3.5 h-3.5" />,           roles: ['ADMIN','SECURITY_OFFICER','SECURITY_GUARD','GUARD','STAFF','HOSTEL_WARDEN'], category: 'admin' },
+  { title: 'Profile',          path: '/profile',         icon: <UserIcon className="w-3.5 h-3.5" />,       category: 'admin' },
 ];
+
+const CATS = [
+  { key: 'overview',  label: 'Overview'      },
+  { key: 'gate',      label: 'Gate & Ops'    },
+  { key: 'academic',  label: 'Campus'        },
+  { key: 'admin',     label: 'Admin'         },
+];
+
+const S = {
+  sidebar: {
+    width: 220,
+    background: '#ffffff',
+    borderRight: '1px solid #e2e8f0',
+    height: '100vh',
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    flexShrink: 0,
+    position: 'sticky' as const,
+    top: 0,
+    zIndex: 30,
+    userSelect: 'none' as const,
+  },
+  brand: {
+    padding: '16px 18px',
+    borderBottom: '1px solid #e2e8f0',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  nav: { flex: 1, overflowY: 'auto' as const, padding: '12px 10px' },
+  catLabel: {
+    fontFamily: 'Inter, sans-serif',
+    fontSize: 10,
+    letterSpacing: '0.08em',
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
+    color: '#64748b',
+    padding: '12px 10px 6px',
+  },
+  footer: {
+    padding: '12px 14px',
+    borderTop: '1px solid #e2e8f0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  avatar: {
+    width: 30, height: 30, borderRadius: 4,
+    background: '#eef2ff',
+    border: '1px solid #c7d2fe',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: '#4f46e5',
+    flexShrink: 0,
+  },
+};
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
 
   const filteredMenu = menuItems.filter((item) => {
     if (!item.roles) return true;
@@ -110,63 +96,85 @@ export const Sidebar: React.FC = () => {
   });
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen sticky top-0 shrink-0 z-30 select-none">
-      {/* Brand Header */}
-      <div className="p-6 flex items-center gap-3 border-b border-slate-800/80">
-        <div className="p-2.5 bg-gradient-to-tr from-indigo-600 to-indigo-500 rounded-xl text-white shadow-lg shadow-indigo-500/20">
-          <Shield className="w-6 h-6" />
-        </div>
-        <div>
-          <h1 className="font-extrabold text-lg text-white tracking-wide">CampusAccess</h1>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-400">Enterprise SaaS</p>
-        </div>
+    <aside style={S.sidebar}>
+      {/* Brand */}
+      <div style={S.brand}>
+        <img
+          src="/logo.png"
+          alt="CampusAccess"
+          style={{ height: 38, width: 'auto', objectFit: 'contain', display: 'block' }}
+        />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-1.5">
-        <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-          Main Navigation
-        </div>
-        {filteredMenu.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              clsx(
-                'flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group',
-                isActive
-                  ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/30 font-semibold shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              )
-            }
-          >
-            <div className="flex items-center gap-3">
-              <span className="transition-transform duration-200 group-hover:scale-110">{item.icon}</span>
-              <span>{item.title}</span>
+      <nav style={S.nav}>
+        {CATS.map((cat) => {
+          const items = filteredMenu.filter((m) => m.category === cat.key);
+          if (items.length === 0) return null;
+
+          return (
+            <div key={cat.key} style={{ marginBottom: 8 }}>
+              <div style={S.catLabel}>{cat.label}</div>
+              {items.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  style={({ isActive }) => ({
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 9,
+                    padding: '8px 10px',
+                    borderRadius: 4,
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: 13,
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? '#4f46e5' : '#334155',
+                    textDecoration: 'none',
+                    borderLeft: isActive ? '3px solid #4f46e5' : '3px solid transparent',
+                    background: isActive ? '#eef2ff' : 'transparent',
+                    transition: 'color 0.12s, background 0.12s',
+                    marginBottom: 2,
+                  })}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span style={{ flexShrink: 0, color: isActive ? '#4f46e5' : '#64748b' }}>{item.icon}</span>
+                      <span>{item.title}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
             </div>
-            <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-slate-500" />
-          </NavLink>
-        ))}
+          );
+        })}
       </nav>
 
       {/* User Footer */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950/50 flex items-center justify-between">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-            {user?.fullName?.charAt(0) || 'U'}
-          </div>
-          <div className="truncate">
-            <p className="text-xs font-semibold text-slate-200 truncate">{user?.fullName || 'User'}</p>
-            <p className="text-[10px] font-medium text-slate-400 truncate uppercase">{user?.role || 'Guest'}</p>
+      <div style={S.footer}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, overflow: 'hidden' }}>
+          <div style={S.avatar}>{user?.fullName?.charAt(0) || 'U'}</div>
+          <div style={{ overflow: 'hidden' }}>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: '#0f172a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.fullName || 'User'}
+            </p>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#4f46e5', margin: 0 }}>
+              {user?.role || 'Guest'}
+            </p>
           </div>
         </div>
 
         <button
           onClick={logout}
           title="Sign out"
-          className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#64748b', padding: 4, display: 'flex',
+            borderRadius: 3, transition: 'color 0.12s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-3.5 h-3.5" />
         </button>
       </div>
     </aside>

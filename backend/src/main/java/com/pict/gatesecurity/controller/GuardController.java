@@ -70,7 +70,7 @@ public class GuardController {
     }
 
     @PostMapping("/shifts/start")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Clock-In Guard Shift", description = "Starts an ONGOING duty shift at a specified campus gate")
     public ResponseEntity<ApiResponse<ShiftResponse>> startShift(
             @Valid @RequestBody ShiftStartRequest request,
@@ -81,7 +81,7 @@ public class GuardController {
     }
 
     @PostMapping("/shifts/end")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Clock-Out Guard Shift", description = "Ends current ONGOING duty shift for logged-in guard")
     public ResponseEntity<ApiResponse<ShiftResponse>> endShift(@AuthenticationPrincipal UserDetails userDetails) {
         ShiftResponse response = guardService.endShift(userDetails.getUsername());
@@ -89,15 +89,27 @@ public class GuardController {
     }
 
     @GetMapping("/shifts/current")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Get Current Active Shift", description = "Returns active ONGOING shift details for current guard")
     public ResponseEntity<ApiResponse<ShiftResponse>> getCurrentShift(@AuthenticationPrincipal UserDetails userDetails) {
         ShiftResponse response = guardService.getCurrentShift(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/shifts/history")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @Operation(summary = "Get Guard Shift History", description = "Paginated list of historical duty shifts for logged-in guard")
+    public ResponseEntity<ApiResponse<PageResponse<ShiftResponse>>> getShiftHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("startTime").descending());
+        Page<ShiftResponse> historyPage = guardService.getShiftHistory(userDetails.getUsername(), pageable);
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(historyPage)));
+    }
+
     @PostMapping("/shifts/{shiftId}/logs")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Log Shift Activity", description = "Logs security check, incident, task, or general activity during active shift")
     public ResponseEntity<ApiResponse<ShiftLogResponse>> addShiftLog(
             @PathVariable Long shiftId,
@@ -109,7 +121,7 @@ public class GuardController {
     }
 
     @GetMapping("/shifts/{shiftId}/logs")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Get Shift Activity Logs", description = "Paginated activity log entries for a specific shift")
     public ResponseEntity<ApiResponse<PageResponse<ShiftLogResponse>>> getShiftLogs(
             @PathVariable Long shiftId,
@@ -121,7 +133,7 @@ public class GuardController {
     }
 
     @GetMapping("/dashboard")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Guard & Operations Dashboard Metrics", description = "Summary counts of active shifts, guards, active visitors inside, today's check-ins, and recent activity logs")
     public ResponseEntity<ApiResponse<GuardDashboardResponse>> getGuardDashboard() {
         GuardDashboardResponse response = guardService.getGuardDashboard();

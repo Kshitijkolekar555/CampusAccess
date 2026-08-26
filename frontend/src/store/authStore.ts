@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '../types';
+import type { User, UserRole } from '../types';
 
 interface AuthState {
   user: User | null;
@@ -13,6 +13,10 @@ interface AuthState {
   logout: () => void;
 }
 
+const normalizeRole = (role: UserRole): UserRole => {
+  return role === 'GUARD' ? 'SECURITY_GUARD' : role;
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -21,13 +25,17 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
 
-      setAuth: (user, token, refreshToken) =>
+      setAuth: (user, token, refreshToken) => {
+        const normalizedUser = user
+          ? { ...user, role: normalizeRole(user.role) }
+          : user;
         set({
-          user,
+          user: normalizedUser,
           token,
           refreshToken,
           isAuthenticated: true,
-        }),
+        });
+      },
 
       setTokens: (token, refreshToken) =>
         set({
@@ -36,7 +44,12 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
         }),
 
-      setUser: (user) => set({ user }),
+      setUser: (user) => {
+        const normalizedUser = user
+          ? { ...user, role: normalizeRole(user.role) }
+          : user;
+        set({ user: normalizedUser });
+      },
 
       logout: () =>
         set({

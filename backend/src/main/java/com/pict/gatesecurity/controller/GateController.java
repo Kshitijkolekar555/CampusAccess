@@ -48,7 +48,7 @@ public class GateController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "Get Gate Details", description = "Fetches gate information by ID")
     public ResponseEntity<ApiResponse<GateResponse>> getGateById(@PathVariable Long id) {
         GateResponse response = gateService.getGateById(id);
@@ -56,7 +56,7 @@ public class GateController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "List Campus Gates", description = "Returns all campus gates (optionally filter active gates only)")
     public ResponseEntity<ApiResponse<List<GateResponse>>> getAllGates(
             @RequestParam(required = false, defaultValue = "false") Boolean activeOnly) {

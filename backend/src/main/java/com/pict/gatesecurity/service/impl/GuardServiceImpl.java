@@ -221,6 +221,20 @@ public class GuardServiceImpl implements GuardService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<ShiftResponse> getShiftHistory(String performingUsername, Pageable pageable) {
+        User user = userRepository.findByUsername(performingUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
+
+        Guard guard = guardRepository.findByUserId(user.getId()).orElse(null);
+        if (guard == null) {
+            return Page.empty(pageable);
+        }
+
+        return shiftRepository.findByGuardId(guard.getId(), pageable).map(guardMapper::toShiftResponse);
+    }
+
+    @Override
     @Transactional
     public ShiftLogResponse addShiftLog(Long shiftId, ShiftLogCreateRequest request, String performingUsername) {
         Shift shift = shiftRepository.findById(shiftId)

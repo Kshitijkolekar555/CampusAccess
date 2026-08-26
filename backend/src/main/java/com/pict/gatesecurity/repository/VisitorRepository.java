@@ -26,6 +26,12 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
 
     Optional<Visitor> findFirstByMobileAndTimeOutIsNullOrderByTimeInDesc(String mobile);
 
+    Optional<Visitor> findFirstByMobileOrderByTimeInDesc(String mobile);
+
+    Optional<Visitor> findByFaceId(String faceId);
+
+    Optional<Visitor> findFirstByFaceIdOrderByTimeInDesc(String faceId);
+
     long countByTimeInBetweenAndGateId(OffsetDateTime start, OffsetDateTime end, Long gateId);
 
     long countByTimeOutBetween(OffsetDateTime start, OffsetDateTime end);

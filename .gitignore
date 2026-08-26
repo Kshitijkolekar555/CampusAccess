@@ -33,3 +33,7 @@ Thumbs.db
 *.log
 logs/
 *.sql
+__pycache__/
+*.pyc
+face-service/face_service.db
+backend/uploads/

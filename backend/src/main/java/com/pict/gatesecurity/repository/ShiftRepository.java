@@ -19,6 +19,8 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
 
     Optional<Shift> findByGuardIdAndStatus(Long guardId, ShiftStatus status);
 
+    Page<Shift> findByGuardId(Long guardId, Pageable pageable);
+
     long countByStatus(ShiftStatus status);
 
     long countByStatusAndDateBetween(ShiftStatus status, LocalDate start, LocalDate end);

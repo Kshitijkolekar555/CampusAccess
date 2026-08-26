@@ -33,8 +33,27 @@ export const guardApi = {
   },
 
   getCurrentShift: async () => {
-    const res = await api.get<ApiResponse<Shift>>('/guards/shifts/current');
-    return res.data.data;
+    try {
+      const res = await api.get<ApiResponse<Shift>>('/guards/shifts/current');
+      return res.data.data;
+    } catch (err: any) {
+      if (err.response?.status === 404 || err.response?.status === 400 || err.response?.status === 403) {
+        return null;
+      }
+      throw err;
+    }
+  },
+
+  getShiftHistory: async (params?: Record<string, any>) => {
+    try {
+      const res = await api.get<ApiResponse<PageResponse<Shift>>>('/guards/shifts/history', { params });
+      return res.data.data;
+    } catch (err: any) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        return { content: [], pageNumber: 0, pageSize: 20, totalElements: 0, totalPages: 0, last: true, first: true };
+      }
+      throw err;
+    }
   },
 
   addShiftLog: async (shiftId: number, data: { description: string; logType?: string }) => {
@@ -43,12 +62,26 @@ export const guardApi = {
   },
 
   getShiftLogs: async (shiftId: number, params?: Record<string, any>) => {
-    const res = await api.get<ApiResponse<PageResponse<ShiftLog>>>(`/guards/shifts/${shiftId}/logs`, { params });
-    return res.data.data;
+    try {
+      const res = await api.get<ApiResponse<PageResponse<ShiftLog>>>(`/guards/shifts/${shiftId}/logs`, { params });
+      return res.data.data;
+    } catch (err: any) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        return { content: [], pageNumber: 0, pageSize: 20, totalElements: 0, totalPages: 0, last: true, first: true };
+      }
+      throw err;
+    }
   },
 
   getDashboardMetrics: async () => {
-    const res = await api.get<ApiResponse<GuardDashboard>>('/guards/dashboard');
-    return res.data.data;
+    try {
+      const res = await api.get<ApiResponse<GuardDashboard>>('/guards/dashboard');
+      return res.data.data;
+    } catch (err: any) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        return null;
+      }
+      throw err;
+    }
   },
 };

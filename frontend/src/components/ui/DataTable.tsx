@@ -31,9 +31,9 @@ export function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   if (isLoading) {
     return (
-      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-6 flex flex-col gap-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full rounded-xl" />
+          <Skeleton key={i} className="h-10 w-full rounded-lg" />
         ))}
       </div>
     );
@@ -44,29 +44,38 @@ export function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-slate-50/80 dark:bg-slate-850 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[11px]">
-          <tr>
+    <div className="w-full overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+      <table className="w-full text-left text-sm border-collapse">
+        <thead>
+          <tr className="border-b border-slate-200 bg-slate-50">
             {columns.map((col, i) => (
-              <th key={i} className={clsx('px-6 py-4', col.className)}>
+              <th
+                key={i}
+                className={clsx(
+                  'px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap',
+                  col.className
+                )}
+              >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+        <tbody className="divide-y divide-slate-100">
           {data.map((item, rowIdx) => (
             <tr
               key={keyExtractor ? keyExtractor(item) : item.id || rowIdx}
               onClick={() => onRowClick && onRowClick(item)}
               className={clsx(
-                'transition-colors duration-150',
-                onRowClick ? 'cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/40' : 'hover:bg-slate-50/40 dark:hover:bg-slate-800/20'
+                'hover:bg-slate-50 transition-colors',
+                onRowClick && 'cursor-pointer'
               )}
             >
               {columns.map((col, colIdx) => (
-                <td key={colIdx} className={clsx('px-6 py-4 text-slate-700 dark:text-slate-200 whitespace-nowrap', col.className)}>
+                <td
+                  key={colIdx}
+                  className={clsx('px-4 py-3 text-slate-800 align-middle', col.className)}
+                >
                   {col.render ? col.render(item) : col.accessor ? item[col.accessor] : null}
                 </td>
               ))}

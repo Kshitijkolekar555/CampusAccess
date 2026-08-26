@@ -122,7 +122,7 @@ export const StudentPasses: React.FC = () => {
       header: 'Student',
       render: (p) => (
         <div>
-          <p className="font-bold text-slate-900 dark:text-slate-100">{p.studentName}</p>
+          <p className="font-bold text-slate-900">{p.studentName}</p>
           <p className="text-xs text-slate-400">PRN: {p.studentPrn} ({p.studentDepartment})</p>
         </div>
       ),
@@ -131,7 +131,7 @@ export const StudentPasses: React.FC = () => {
       header: 'Purpose & Destination',
       render: (p) => (
         <div>
-          <p className="text-xs font-medium text-slate-800 dark:text-slate-200">{p.purpose}</p>
+          <p className="text-xs font-medium text-slate-800">{p.purpose}</p>
           <p className="text-[11px] text-slate-400">Dest: {p.destination}</p>
         </div>
       ),
@@ -191,10 +191,10 @@ export const StudentPasses: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Student Gate Pass Management
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 22, color: 'var(--text)', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+            Student Passes
           </h2>
-          <p className="text-sm text-slate-500">Official gate exit/entry permits for students with warden approval workflow.</p>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Official gate exit/entry permits for students with warden approval workflow.</p>
         </div>
         <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsCreateOpen(true)}>
           New Gate Pass Request
@@ -227,7 +227,7 @@ export const StudentPasses: React.FC = () => {
           </div>
           <Input label="Purpose" required value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} />
           <Input label="Destination" required value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} />
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4" style={{ borderTop: '1px solid var(--line)' }}>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={createMutation.isPending}>Submit Pass</Button>
           </div>

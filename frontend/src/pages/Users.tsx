@@ -73,7 +73,7 @@ export const Users: React.FC = () => {
       header: 'User',
       render: (u) => (
         <div>
-          <p className="font-bold text-slate-900 dark:text-slate-100">{u.fullName}</p>
+          <p className="font-bold text-slate-900">{u.fullName}</p>
           <p className="text-xs text-slate-400">@{u.username}</p>
         </div>
       ),
@@ -86,7 +86,7 @@ export const Users: React.FC = () => {
       header: 'Contact',
       render: (u) => (
         <div>
-          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{u.email || 'No email'}</p>
+          <p className="text-xs font-semibold text-slate-800">{u.email || 'No email'}</p>
           <p className="text-[11px] text-slate-400">{u.phone || 'No phone'}</p>
         </div>
       ),
@@ -121,10 +121,10 @@ export const Users: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            User Account Management
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 22, color: 'var(--text)', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+            User Accounts
           </h2>
-          <p className="text-sm text-slate-500">Manage user accounts, roles, credentials, and access permissions.</p>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Manage user accounts, roles, credentials, and access permissions.</p>
         </div>
         <div className="flex items-center gap-3">
           {page > 0 && (
@@ -176,7 +176,7 @@ export const Users: React.FC = () => {
             <Input label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             <Input label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4" style={{ borderTop: '1px solid var(--line)' }}>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={createMutation.isPending}>Create User</Button>
           </div>

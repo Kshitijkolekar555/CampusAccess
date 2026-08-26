@@ -1,32 +1,34 @@
 import React from 'react';
 import { clsx } from 'clsx';
-import { motion } from 'framer-motion';
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
   hoverable?: boolean;
   onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
 export const Card: React.FC<CardProps> = ({
-  children,
-  className,
-  hoverable = false,
-  onClick,
+  children, className, hoverable = false, onClick, style,
 }) => {
   return (
-    <motion.div
-      whileHover={hoverable ? { y: -3 } : undefined}
-      transition={{ duration: 0.2 }}
+    <div
       onClick={onClick}
-      className={clsx(
-        'glass-card rounded-2xl p-6',
-        hoverable && 'cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-900',
-        className
-      )}
+      style={{
+        background: 'white',
+        border: '1px solid var(--line)',
+        borderRadius: 4,
+        padding: '20px',
+        transition: 'border-color 0.15s',
+        cursor: hoverable ? 'pointer' : undefined,
+        ...style,
+      }}
+      onMouseEnter={hoverable ? (e) => { e.currentTarget.style.borderColor = 'var(--mute)'; } : undefined}
+      onMouseLeave={hoverable ? (e) => { e.currentTarget.style.borderColor = 'var(--line)'; } : undefined}
+      className={clsx(className)}
     >
       {children}
-    </motion.div>
+    </div>
   );
 };

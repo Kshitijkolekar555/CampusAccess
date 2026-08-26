@@ -36,6 +36,15 @@ import com.pict.gatesecurity.config.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import java.util.stream.Collectors;
 
+import com.pict.gatesecurity.dto.visitor.FaceRecognitionResponse;
+import com.pict.gatesecurity.dto.visitor.VisitorRecognitionResponse;
+import com.pict.gatesecurity.service.FaceRecognitionService;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -47,42 +56,55 @@ public class VisitorServiceImpl implements VisitorService {
     private final WatchlistRepository watchlistRepository;
     private final VisitorMapper visitorMapper;
     private final AuditLogService auditLogService;
+    private final FaceRecognitionService faceRecognitionService;
 
     @Override
     @Transactional
     @CacheEvict(value = {CacheConfig.CACHE_ADMIN_DASHBOARD, CacheConfig.CACHE_GUARD_DASHBOARD}, allEntries = true)
     public VisitorResponse checkIn(VisitorCheckInRequest request, String performingUsername) {
-        Gate gate = gateRepository.findById(request.getGateId())
-                .orElseThrow(() -> new ResourceNotFoundException("Gate", "id", request.getGateId()));
+        Long gateId = request.getGateId() != null ? request.getGateId() : 1L;
+        Gate gate = gateRepository.findById(gateId)
+                .orElseGet(() -> gateRepository.findAll().stream().findFirst()
+                        .orElseThrow(() -> new ResourceNotFoundException("Gate", "id", gateId)));
 
         User createdBy = userRepository.findByUsername(performingUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
 
+        String cleanMobile = com.pict.gatesecurity.util.ValidationUtil.normalizePhone(request.getMobile());
+        String cleanName = com.pict.gatesecurity.util.ValidationUtil.normalizeName(request.getName());
+        String cleanHostName = com.pict.gatesecurity.util.ValidationUtil.normalizeName(request.getHostName());
+        String cleanVehicle = com.pict.gatesecurity.util.ValidationUtil.normalizeVehicleNumber(request.getVehicleNumber());
+        String cleanPurpose = request.getPurpose() != null ? request.getPurpose().trim() : "";
+
+        if (com.pict.gatesecurity.util.ValidationUtil.isMeaninglessText(cleanPurpose)) {
+            throw new BadRequestException("Please provide a valid, descriptive purpose for the visit");
+        }
+
         // Prevent duplicate active check-in
-        visitorRepository.findFirstByMobileAndTimeOutIsNullOrderByTimeInDesc(request.getMobile())
+        visitorRepository.findFirstByMobileAndTimeOutIsNullOrderByTimeInDesc(cleanMobile)
                 .ifPresent(v -> {
-                    throw new BadRequestException("Visitor with mobile " + request.getMobile()
+                    throw new BadRequestException("Visitor with mobile " + cleanMobile
                             + " is already checked in (Visitor ID: " + v.getId() + " at " + v.getTimeIn() + ")");
                 });
 
         // Automatic Watchlist Check
-        List<WatchlistEntry> matches = watchlistRepository.findMatchingEntries(request.getMobile(), request.getName());
+        List<WatchlistEntry> matches = watchlistRepository.findMatchingEntries(cleanMobile, cleanName);
         boolean isBlacklistedMatch = !matches.isEmpty();
 
         if (isBlacklistedMatch) {
-            log.warn("WATCHLIST WARNING: Visitor {} (Mobile: {}) matched watchlist entries!", request.getName(), request.getMobile());
+            log.warn("WATCHLIST WARNING: Visitor {} (Mobile: {}) matched watchlist entries!", cleanName, cleanMobile);
         }
 
         Visitor visitor = Visitor.builder()
-                .name(request.getName())
-                .mobile(request.getMobile())
-                .purpose(request.getPurpose())
-                .hostName(request.getHostName())
+                .name(cleanName)
+                .mobile(cleanMobile)
+                .purpose(cleanPurpose)
+                .hostName(cleanHostName)
                 .hostType(request.getHostType())
                 .hostDepartment(request.getHostDepartment())
-                .studentPrn(request.getStudentPrn())
+                .studentPrn(request.getStudentPrn() != null ? request.getStudentPrn().trim().toUpperCase() : null)
                 .gate(gate)
-                .vehicleNumber(request.getVehicleNumber())
+                .vehicleNumber(cleanVehicle)
                 .timeIn(OffsetDateTime.now())
                 .timeOut(null)
                 .idProofType(request.getIdProofType())
@@ -210,5 +232,120 @@ public class VisitorServiceImpl implements VisitorService {
         };
 
         return visitorRepository.findAll(spec, pageable).map(visitorMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public VisitorRecognitionResponse recognizeVisitorFace(MultipartFile photo) {
+        if (photo == null || photo.isEmpty()) {
+            throw new BadRequestException("Photo file is required for face recognition");
+        }
+
+        FaceRecognitionResponse matchResult = faceRecognitionService.recognize(photo);
+        log.info("Face recognition response score distance={}", matchResult.getDistance());
+
+        if (Boolean.TRUE.equals(matchResult.getMatched()) && StringUtils.hasText(matchResult.getFaceId())) {
+            var visitorOpt = visitorRepository.findFirstByFaceIdOrderByTimeInDesc(matchResult.getFaceId());
+            if (visitorOpt.isPresent()) {
+                Visitor v = visitorOpt.get();
+                log.info("Face matched to existing visitor: ID={}, Name={}", v.getId(), v.getName());
+                return VisitorRecognitionResponse.builder()
+                        .matched(true)
+                        .visitorId(v.getId())
+                        .visitorName(v.getName())
+                        .mobileNumber(v.getMobile())
+                        .hostPersonOrDepartment(v.getHostName() + " (" + v.getHostDepartment() + ")")
+                        .purpose(v.getPurpose())
+                        .photoPath(v.getPhotoPath())
+                        .hostName(v.getHostName())
+                        .hostType(v.getHostType())
+                        .hostDepartment(v.getHostDepartment())
+                        .studentPrn(v.getStudentPrn())
+                        .idProofType(v.getIdProofType())
+                        .idProofNumber(v.getIdProofNumber())
+                        .vehicleNumber(v.getVehicleNumber())
+                        .confidenceDistance(matchResult.getDistance())
+                        .build();
+            }
+        }
+
+        return VisitorRecognitionResponse.builder()
+                .matched(false)
+                .confidenceDistance(matchResult.getDistance())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {CacheConfig.CACHE_ADMIN_DASHBOARD, CacheConfig.CACHE_GUARD_DASHBOARD}, allEntries = true)
+    public VisitorResponse registerVisitorWithPhoto(MultipartFile photo, VisitorCheckInRequest request, String performingUsername) {
+        String photoPath = null;
+        String faceId = null;
+
+        if (photo != null && !photo.isEmpty()) {
+            try {
+                File dir = new File("uploads/visitor-photos");
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+                String filename = "visitor_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + ".jpg";
+                File destFile = new File(dir, filename);
+                try (FileOutputStream fos = new FileOutputStream(destFile)) {
+                    fos.write(photo.getBytes());
+                }
+                photoPath = "/uploads/visitor-photos/" + filename;
+                log.info("Saved visitor photo to {}", photoPath);
+
+                // Enroll face embedding with Python service
+                faceId = faceRecognitionService.enroll(destFile);
+                log.info("Enrolled face with faceId={}", faceId);
+            } catch (IOException e) {
+                log.error("Failed to save visitor photo file", e);
+            }
+        }
+
+        Long gateId = request.getGateId() != null ? request.getGateId() : 1L;
+        Gate gate = gateRepository.findById(gateId)
+                .orElseGet(() -> gateRepository.findAll().stream().findFirst()
+                        .orElseThrow(() -> new ResourceNotFoundException("Gate", "id", gateId)));
+
+        User createdBy = userRepository.findByUsername(performingUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
+
+        // Automatic Watchlist Check
+        List<WatchlistEntry> matches = watchlistRepository.findMatchingEntries(request.getMobile(), request.getName());
+        boolean isBlacklistedMatch = !matches.isEmpty();
+
+        Visitor visitor = Visitor.builder()
+                .name(request.getName())
+                .mobile(request.getMobile())
+                .purpose(request.getPurpose())
+                .hostName(request.getHostName())
+                .hostType(request.getHostType())
+                .hostDepartment(request.getHostDepartment())
+                .studentPrn(request.getStudentPrn())
+                .gate(gate)
+                .vehicleNumber(request.getVehicleNumber())
+                .timeIn(OffsetDateTime.now())
+                .timeOut(null)
+                .idProofType(request.getIdProofType())
+                .idProofNumber(request.getIdProofNumber())
+                .photoUrl(photoPath != null ? photoPath : request.getPhotoUrl())
+                .photoPath(photoPath)
+                .faceId(faceId)
+                .isBlacklistedMatch(isBlacklistedMatch)
+                .notes(request.getNotes())
+                .createdBy(createdBy)
+                .build();
+
+        Visitor savedVisitor = visitorRepository.save(visitor);
+
+        auditLogService.logAction(createdBy, "VISITOR_CHECK_IN_WITH_FACE", "Visitor", savedVisitor.getId(), null, Map.of(
+                "name", savedVisitor.getName(),
+                "mobile", savedVisitor.getMobile(),
+                "faceId", faceId != null ? faceId : "none"
+        ));
+
+        return visitorMapper.toResponse(savedVisitor);
     }
 }

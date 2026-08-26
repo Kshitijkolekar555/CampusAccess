@@ -68,31 +68,30 @@ export const Profile: React.FC = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-          User Profile & Security Settings
+        <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 22, color: 'var(--text)', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+          Profile & Security
         </h2>
-        <p className="text-sm text-slate-500">Manage your personal credentials, contact details, and account security.</p>
+        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Manage your credentials, contact details, and account password.</p>
       </div>
 
       {/* User Summary Card */}
-      <Card className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 flex items-center gap-6">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg">
+      <div style={{ background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 4, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#e8e6e2', flexShrink: 0 }}>
           {user?.fullName?.charAt(0) || 'U'}
         </div>
         <div>
-          <div className="flex items-center gap-3">
-            <h3 className="text-xl font-bold">{user?.fullName}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 17, color: '#f0ede8', margin: 0, letterSpacing: '-0.01em' }}>{user?.fullName}</h3>
             <Badge variant="purple">{user?.role}</Badge>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">@{user?.username} • System Account</p>
+          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>@{user?.username} · System Account</p>
         </div>
-      </Card>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Profile Information */}
         <Card>
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-            <UserIcon className="w-4 h-4 text-indigo-600" />
+          <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 18px 0', letterSpacing: '-0.01em' }}>
             Personal Details
           </h3>
 
@@ -109,8 +108,7 @@ export const Profile: React.FC = () => {
 
         {/* Change Password */}
         <Card>
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-            <Lock className="w-4 h-4 text-indigo-600" />
+          <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 18px 0', letterSpacing: '-0.01em' }}>
             Security & Password
           </h3>
 

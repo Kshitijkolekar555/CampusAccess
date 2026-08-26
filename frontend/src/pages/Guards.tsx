@@ -20,7 +20,7 @@ export const Guards: React.FC = () => {
 
   const [form, setForm] = useState({
     userId: 1,
-    badgeNumber: 'GUARD-001',
+    employeeCode: 'GUARD-001',
     assignedGateId: 1,
   });
 
@@ -45,21 +45,29 @@ export const Guards: React.FC = () => {
 
   const columns: Column<Guard>[] = [
     {
-      header: 'Badge Number',
-      render: (g) => <span className="font-mono font-bold text-xs text-indigo-600">{g.badgeNumber}</span>,
+      header: 'Employee Code',
+      render: (g) => (
+        <span className="font-mono text-indigo-600 font-bold">
+          {g.employeeCode || g.badgeNumber}
+        </span>
+      ),
     },
     {
       header: 'Guard Name',
       render: (g) => (
         <div>
-          <p className="font-bold text-slate-900 dark:text-slate-100">{g.fullName || g.username}</p>
-          <p className="text-xs text-slate-400">{g.phone || 'No phone'}</p>
+          <p className="font-semibold text-slate-900">{g.fullName || g.username}</p>
+          <p className="text-xs text-slate-500">{g.phone || 'No phone'}</p>
         </div>
       ),
     },
     {
       header: 'Assigned Gate',
-      render: (g) => <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{g.assignedGateName || 'Unassigned'}</span>,
+      render: (g) => (
+        <span className="text-slate-900 font-medium">
+          {g.assignedGateName || 'Unassigned'}
+        </span>
+      ),
     },
     {
       header: 'Status',
@@ -71,13 +79,13 @@ export const Guards: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Security Guard Management
+          <h2 className="text-xl font-bold font-sans text-slate-900">
+            Guard Staff
           </h2>
-          <p className="text-sm text-slate-500">Security personnel badge registration and gate duty assignments.</p>
+          <p className="text-xs text-slate-500">Security personnel badge registration and gate duty assignments.</p>
         </div>
         <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsCreateOpen(true)}>
-          Register Guard Profile
+          Register Guard
         </Button>
       </div>
 
@@ -96,14 +104,14 @@ export const Guards: React.FC = () => {
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Register Guard Employee Profile">
         <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4">
           <Input label="User ID (System Account)" type="number" required value={form.userId} onChange={(e) => setForm({ ...form, userId: Number(e.target.value) })} />
-          <Input label="Security Badge Number" required value={form.badgeNumber} onChange={(e) => setForm({ ...form, badgeNumber: e.target.value })} />
+          <Input label="Security Employee Code" required value={form.employeeCode} onChange={(e) => setForm({ ...form, employeeCode: e.target.value })} />
           <Select
             label="Assigned Gate"
             value={form.assignedGateId}
             onChange={(e) => setForm({ ...form, assignedGateId: Number(e.target.value) })}
             options={gates?.map((g) => ({ label: g.name, value: g.id }))}
           />
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={createMutation.isPending}>Register Guard</Button>
           </div>

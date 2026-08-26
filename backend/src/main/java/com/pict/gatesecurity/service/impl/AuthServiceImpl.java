@@ -64,10 +64,20 @@ public class AuthServiceImpl implements AuthService {
             );
 
             User user = userRepository.findByUsername(request.getUsername())
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + request.getUsername()));
+                    .orElseGet(() -> userRepository.findByEmail(request.getUsername())
+                            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + request.getUsername())));
 
             if (!Boolean.TRUE.equals(user.getActive())) {
                 throw new UnauthorizedException("Account is disabled");
+            }
+
+            if (request.getExpectedRole() != null && !request.getExpectedRole().isBlank()) {
+                String expRole = request.getExpectedRole().trim();
+                boolean roleMatches = user.getRole().name().equalsIgnoreCase(expRole)
+                        || (user.getRole().name().contains("GUARD") && expRole.contains("GUARD"));
+                if (!roleMatches) {
+                    throw new BadRequestException("Role Mismatch: Account '" + user.getUsername() + "' is registered as " + user.getRole().name() + ", not " + request.getExpectedRole());
+                }
             }
 
             String accessToken = jwtUtil.generateAccessToken(user.getUsername(), user.getRole().name());

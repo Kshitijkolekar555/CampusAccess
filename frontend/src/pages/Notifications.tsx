@@ -38,7 +38,7 @@ export const Notifications: React.FC = () => {
     {
       header: 'Recipient',
       accessor: 'recipient',
-      render: (n) => <span className="font-semibold text-slate-800 dark:text-slate-200">{n.recipient}</span>,
+      render: (n) => <span className="font-semibold text-slate-800">{n.recipient}</span>,
     },
     {
       header: 'Event Type',
@@ -47,7 +47,7 @@ export const Notifications: React.FC = () => {
     {
       header: 'Message',
       accessor: 'message',
-      render: (n) => <span className="text-xs text-slate-600 dark:text-slate-300 max-w-xs truncate block">{n.message}</span>,
+      render: (n) => <span className="text-xs text-slate-600 max-w-xs truncate block">{n.message}</span>,
     },
     {
       header: 'Status',
@@ -77,10 +77,10 @@ export const Notifications: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-          System Notifications & Audit Log
+        <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 22, color: 'var(--text)', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+          Notifications
         </h2>
-        <p className="text-sm text-slate-500">Audit trail of automated email, SMS, and push notifications sent across campus.</p>
+        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Audit trail of automated email, SMS, and push notifications sent across campus.</p>
       </div>
 
       <DataTable columns={columns} data={pageData?.content || []} isLoading={isLoading} />

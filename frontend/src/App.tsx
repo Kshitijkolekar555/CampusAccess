@@ -7,9 +7,23 @@ import { AppRoutes } from './router/AppRoutes';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      // Never retry on 403/401 — these are permission errors, not transient failures
+      retry: (failureCount, error: any) => {
+        const status = error?.response?.status;
+        if (status === 403 || status === 401) return false;
+        return failureCount < 1;
+      },
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 30, // 30 seconds
+      staleTime: 1000 * 30,
+      // 403 errors on queries are silenced — guards don't need to see access denied on background data fetches
+      throwOnError: (error: any) => {
+        const status = error?.response?.status;
+        return status !== 403 && status !== 401;
+      },
+    },
+    mutations: {
+      // Don't auto-throw on mutations — let each mutation's onError handle it
+      throwOnError: false,
     },
   },
 });

@@ -31,6 +31,7 @@ public class VisitorResponse {
     private String idProofType;
     private String idProofNumber;
     private String photoUrl;
+    private String faceId;
     private Boolean isBlacklistedMatch;
     private String notes;
     private OffsetDateTime createdAt;

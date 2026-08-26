@@ -122,13 +122,13 @@ export const HostelOutpasses: React.FC = () => {
   const columns: Column<HostelOutpass>[] = [
     {
       header: 'Outpass #',
-      render: (o) => <span className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">{o.outpassNumber || `OP-#${o.id}`}</span>,
+      render: (o) => <span className="font-mono font-bold text-xs text-indigo-600">{o.outpassNumber || `OP-#${o.id}`}</span>,
     },
     {
       header: 'Student & PRN',
       render: (o) => (
         <div>
-          <p className="font-bold text-slate-900 dark:text-slate-100">{o.studentName}</p>
+          <p className="font-bold text-slate-900">{o.studentName}</p>
           <p className="text-xs text-slate-500 font-mono">PRN: {o.studentPrn}</p>
           <p className="text-xs text-slate-400">{o.studentHostel || o.hostelBlock || 'Hostel'} ({o.studentRoom || o.roomNumber || 'Room'})</p>
         </div>
@@ -138,13 +138,13 @@ export const HostelOutpasses: React.FC = () => {
       header: 'Reason & Note',
       render: (o) => (
         <div className="max-w-xs space-y-1">
-          <p className="text-xs font-medium text-slate-800 dark:text-slate-200">{o.reason}</p>
+          <p className="text-xs font-medium text-slate-800">{o.reason}</p>
           {o.studentNote && (
-            <p className="text-[11px] text-amber-600 dark:text-amber-400 italic">Note: "{o.studentNote}"</p>
+            <p className="text-[11px] text-amber-600 italic">Note: "{o.studentNote}"</p>
           )}
           <p className="text-[11px] text-slate-400">Dest: {o.destination || o.destinationAddress}</p>
           {o.rejectionReason && (
-            <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold">Rejected Reason: {o.rejectionReason}</p>
+            <p className="text-[11px] text-rose-600 font-semibold">Rejected Reason: {o.rejectionReason}</p>
           )}
         </div>
       ),
@@ -190,10 +190,10 @@ export const HostelOutpasses: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Hostel Outpass Permits
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 22, color: 'var(--text)', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+            Hostel Outpasses
           </h2>
-          <p className="text-sm text-slate-500">Night outpasses and leave management with late return tracking.</p>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Night outpasses and leave management with late return tracking.</p>
         </div>
         {(user?.role === 'STUDENT' || user?.role === 'ADMIN') && (
           <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsCreateOpen(true)}>
@@ -234,7 +234,7 @@ export const HostelOutpasses: React.FC = () => {
           <Input label="Reason for Outpass" required value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
           <Input label="Student Note / Remarks (Optional)" placeholder="Any extra information for guard or warden..." value={form.studentNote} onChange={(e) => setForm({ ...form, studentNote: e.target.value })} />
           <Input label="Destination Address" required value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} />
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4" style={{ borderTop: '1px solid var(--line)' }}>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={createMutation.isPending}>Submit Outpass</Button>
           </div>
@@ -245,11 +245,11 @@ export const HostelOutpasses: React.FC = () => {
       <Modal isOpen={!!approveOutpass} onClose={() => setApproveOutpass(null)} title="Review Hostel Outpass Request" maxWidth="md">
         {approveOutpass && (
           <div className="space-y-4">
-            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-sm space-y-1">
+            <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 4, padding: '12px 14px', fontSize: 13 }} className="space-y-1">
               <p><strong>Student:</strong> {approveOutpass.studentName} ({approveOutpass.studentPrn})</p>
               <p><strong>Reason:</strong> {approveOutpass.reason}</p>
               {approveOutpass.studentNote && (
-                <p className="text-amber-600 dark:text-amber-400"><strong>Student Note:</strong> {approveOutpass.studentNote}</p>
+                <p className="text-amber-600"><strong>Student Note:</strong> {approveOutpass.studentNote}</p>
               )}
               <p><strong>Destination:</strong> {approveOutpass.destination}</p>
             </div>
@@ -268,7 +268,7 @@ export const HostelOutpasses: React.FC = () => {
               onChange={(e) => setRejectionReasonInput(e.target.value)} 
             />
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex justify-end gap-3 pt-4" style={{ borderTop: '1px solid var(--line)' }}>
               <Button 
                 variant="danger" 
                 isLoading={approveMutation.isPending}

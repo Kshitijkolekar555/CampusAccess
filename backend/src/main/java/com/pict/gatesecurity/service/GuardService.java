@@ -12,6 +12,7 @@ public interface GuardService {
     ShiftResponse startShift(ShiftStartRequest request, String performingUsername);
     ShiftResponse endShift(String performingUsername);
     ShiftResponse getCurrentShift(String performingUsername);
+    Page<ShiftResponse> getShiftHistory(String performingUsername, Pageable pageable);
     ShiftLogResponse addShiftLog(Long shiftId, ShiftLogCreateRequest request, String performingUsername);
     Page<ShiftLogResponse> getShiftLogs(Long shiftId, Pageable pageable);
     GuardDashboardResponse getGuardDashboard();

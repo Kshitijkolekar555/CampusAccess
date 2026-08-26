@@ -12,72 +12,95 @@ interface ModalProps {
 }
 
 export const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  subtitle,
-  children,
-  maxWidth = 'lg',
+  isOpen, onClose, title, subtitle, children, maxWidth = 'lg',
 }) => {
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) { document.body.style.overflow = 'hidden'; window.addEventListener('keydown', handleKey); }
+    return () => { document.body.style.overflow = 'unset'; window.removeEventListener('keydown', handleKey); };
   }, [isOpen, onClose]);
 
-  const widths = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
+  const widths: Record<string, string> = {
+    sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl', '2xl': 'max-w-2xl',
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 md:p-20 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-16 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/40"
           />
 
-          {/* Dialog Container */}
+          {/* Panel */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className={`relative w-full ${widths[maxWidth]} glass-panel rounded-2xl shadow-2xl p-6 overflow-hidden z-10`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className={`relative w-full ${widths[maxWidth]} z-10`}
+            style={{
+              background: 'white',
+              border: '1px solid var(--line)',
+              borderRadius: 4,
+            }}
           >
             {/* Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-slate-200/80 dark:border-slate-800">
+            <div
+              className="flex items-start justify-between px-6 py-4"
+              style={{ borderBottom: '1px solid var(--line)' }}
+            >
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{title}</h3>
-                {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+                <h3
+                  style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: 600,
+                    fontSize: 18,
+                    color: 'var(--text)',
+                    margin: 0,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {title}
+                </h3>
+                {subtitle && (
+                  <p
+                    className="mt-0.5 text-xs"
+                    style={{ fontFamily: 'Inter, sans-serif', color: 'var(--mute)' }}
+                  >
+                    {subtitle}
+                  </p>
+                )}
               </div>
+
               <button
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="ml-4 flex-shrink-0 transition-colors"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--mute)',
+                  padding: '2px 4px',
+                  fontSize: 18,
+                  lineHeight: 1,
+                }}
+                aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="pt-4 max-h-[80vh] overflow-y-auto pr-1">{children}</div>
+            <div className="px-6 py-5 max-h-[78vh] overflow-y-auto">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

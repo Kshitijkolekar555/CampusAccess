@@ -9,19 +9,19 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  title = 'No records found',
-  description = 'Try adjusting your filters or search query to find what you are looking for.',
+  title = 'No data found',
+  description = 'There are no items to display at this time.',
   icon,
   action,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-white/50 dark:bg-slate-900/50">
-      <div className="p-4 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-2xl mb-4">
-        {icon || <Inbox className="w-8 h-8" />}
+    <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-xl border border-dashed border-slate-200">
+      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-full mb-3">
+        {icon || <Inbox className="w-6 h-6" />}
       </div>
-      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h3>
-      <p className="text-sm text-slate-500 max-w-sm mt-1 mb-6">{description}</p>
-      {action}
+      <h3 className="text-base font-semibold text-slate-900 mb-1">{title}</h3>
+      <p className="text-sm text-slate-500 max-w-sm mb-4">{description}</p>
+      {action && <div>{action}</div>}
     </div>
   );
 };

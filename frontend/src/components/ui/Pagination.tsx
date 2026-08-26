@@ -20,18 +20,18 @@ export const Pagination: React.FC<PaginationProps> = ({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 text-sm text-slate-500">
-      <div>
+    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 rounded-b-xl">
+      <div className="text-sm text-slate-500">
         {totalElements !== undefined && pageSize !== undefined ? (
           <span>
-            Showing <span className="font-semibold text-slate-900 dark:text-slate-100">{currentPage * pageSize + 1}</span> to{' '}
-            <span className="font-semibold text-slate-900 dark:text-slate-100">{Math.min((currentPage + 1) * pageSize, totalElements)}</span> of{' '}
-            <span className="font-semibold text-slate-900 dark:text-slate-100">{totalElements}</span> results
+            Showing <span className="font-medium text-slate-900">{Math.min((currentPage - 1) * pageSize + 1, totalElements)}</span> to{' '}
+            <span className="font-medium text-slate-900">{Math.min(currentPage * pageSize, totalElements)}</span> of{' '}
+            <span className="font-medium text-slate-900">{totalElements}</span> results
           </span>
         ) : (
           <span>
-            Page <span className="font-semibold text-slate-900 dark:text-slate-100">{currentPage + 1}</span> of{' '}
-            <span className="font-semibold text-slate-900 dark:text-slate-100">{totalPages}</span>
+            Page <span className="font-medium text-slate-900">{currentPage}</span> of{' '}
+            <span className="font-medium text-slate-900">{totalPages}</span>
           </span>
         )}
       </div>
@@ -40,20 +40,21 @@ export const Pagination: React.FC<PaginationProps> = ({
         <Button
           variant="outline"
           size="sm"
-          disabled={currentPage === 0}
           onClick={() => onPageChange(currentPage - 1)}
-          leftIcon={<ChevronLeft className="w-4 h-4" />}
+          disabled={currentPage <= 1}
         >
+          <ChevronLeft className="w-4 h-4 mr-1" />
           Previous
         </Button>
+
         <Button
           variant="outline"
           size="sm"
-          disabled={currentPage >= totalPages - 1}
           onClick={() => onPageChange(currentPage + 1)}
-          rightIcon={<ChevronRight className="w-4 h-4" />}
+          disabled={currentPage >= totalPages}
         >
           Next
+          <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
     </div>

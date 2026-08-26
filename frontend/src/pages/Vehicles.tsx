@@ -12,6 +12,14 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Plus, ShieldAlert, LogOut, History, Car } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  validateVehicleNumber,
+  validatePhone,
+  validateName,
+  normalizeVehicleNumber,
+  normalizePhone,
+  normalizeName
+} from '../utils/validation';
 
 export const Vehicles: React.FC = () => {
   const queryClient = useQueryClient();
@@ -135,7 +143,7 @@ export const Vehicles: React.FC = () => {
       header: 'Registration',
       render: (v) => (
         <div>
-          <p className="font-extrabold text-slate-900 dark:text-slate-100 font-mono text-sm">{v.registrationNumber}</p>
+          <p className="font-extrabold text-slate-900 font-mono text-sm">{v.registrationNumber}</p>
           <p className="text-xs text-slate-400">{v.vehicleType || 'Vehicle'} {v.color ? `(${v.color})` : ''}</p>
         </div>
       ),
@@ -148,7 +156,7 @@ export const Vehicles: React.FC = () => {
       header: 'Owner Details',
       render: (v) => (
         <div>
-          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{v.ownerName || 'N/A'}</p>
+          <p className="text-xs font-bold text-slate-800">{v.ownerName || 'N/A'}</p>
           <p className="text-[11px] text-slate-400">{v.ownerContact || 'No contact'}</p>
         </div>
       ),
@@ -188,7 +196,7 @@ export const Vehicles: React.FC = () => {
   const logColumns: Column<VehicleLog>[] = [
     {
       header: 'Vehicle Reg #',
-      render: (l) => <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{l.registrationNumber}</span>,
+      render: (l) => <span className="font-mono font-bold text-slate-900">{l.registrationNumber}</span>,
     },
     {
       header: 'Purpose',
@@ -196,13 +204,13 @@ export const Vehicles: React.FC = () => {
     },
     {
       header: 'Location / Gate',
-      render: (l) => <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{l.gateName || 'Main Gate'}</span>,
+      render: (l) => <span className="text-xs font-medium text-slate-700">{l.gateName || 'Main Gate'}</span>,
     },
     {
       header: 'Driver & Contact',
       render: (l) => (
         <div>
-          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{l.driverName || 'Self'}</p>
+          <p className="text-xs font-semibold text-slate-800">{l.driverName || 'Self'}</p>
           <p className="text-[11px] text-slate-400">{l.driverContact || '-'}</p>
         </div>
       ),
@@ -245,10 +253,10 @@ export const Vehicles: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <Car className="w-6 h-6 text-indigo-600" /> Vehicle Record Entry & History
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2 font-heading">
+            <Car className="w-5 h-5 text-indigo-700" /> Vehicles Control & Logs
           </h2>
-          <p className="text-sm text-slate-500">Guard vehicle log management, entry/exit time recording, and movement history.</p>
+          <p className="text-xs text-slate-500">Guard vehicle log management, entry/exit time recording, and movement history.</p>
         </div>
 
         <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsRegisterOpen(true)}>
@@ -257,12 +265,12 @@ export const Vehicles: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex items-center gap-2 border-b border-slate-200">
         <button
           onClick={() => { setActiveTab('registered'); setPage(0); }}
           className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
             activeTab === 'registered'
-              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -272,7 +280,7 @@ export const Vehicles: React.FC = () => {
           onClick={() => { setActiveTab('logs'); setPage(0); }}
           className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
             activeTab === 'logs'
-              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -282,7 +290,7 @@ export const Vehicles: React.FC = () => {
           onClick={() => { setActiveTab('history'); setPage(0); }}
           className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-1.5 ${
             activeTab === 'history'
-              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -329,7 +337,35 @@ export const Vehicles: React.FC = () => {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            registerMutation.mutate(form);
+            const cleanReg = normalizeVehicleNumber(form.registrationNumber);
+            const vErr = validateVehicleNumber(cleanReg, true);
+            if (vErr) {
+              toast.error(vErr);
+              return;
+            }
+
+            if (form.ownerContact) {
+              const pErr = validatePhone(form.ownerContact);
+              if (pErr) {
+                toast.error(pErr);
+                return;
+              }
+            }
+
+            if (form.ownerName) {
+              const nErr = validateName(form.ownerName, 'Owner Name');
+              if (nErr) {
+                toast.error(nErr);
+                return;
+              }
+            }
+
+            registerMutation.mutate({
+              ...form,
+              registrationNumber: cleanReg,
+              ownerContact: form.ownerContact ? normalizePhone(form.ownerContact) : '',
+              ownerName: form.ownerName ? normalizeName(form.ownerName) : '',
+            });
           }}
           className="space-y-4"
         >
@@ -339,6 +375,11 @@ export const Vehicles: React.FC = () => {
             required
             value={form.registrationNumber}
             onChange={(e) => setForm({ ...form, registrationNumber: e.target.value.toUpperCase() })}
+            onBlur={() => {
+              if (form.registrationNumber) {
+                setForm({ ...form, registrationNumber: normalizeVehicleNumber(form.registrationNumber) });
+              }
+            }}
           />
           <div className="grid grid-cols-2 gap-4">
             <Select
@@ -372,6 +413,11 @@ export const Vehicles: React.FC = () => {
               placeholder="Mobile Number"
               value={form.ownerContact}
               onChange={(e) => setForm({ ...form, ownerContact: e.target.value })}
+              onBlur={() => {
+                if (form.ownerContact) {
+                  setForm({ ...form, ownerContact: normalizePhone(form.ownerContact) });
+                }
+              }}
             />
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">

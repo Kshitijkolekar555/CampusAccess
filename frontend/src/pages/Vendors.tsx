@@ -106,7 +106,7 @@ export const Vendors: React.FC = () => {
       header: 'Company / Vendor',
       render: (v) => (
         <div>
-          <p className="font-extrabold text-slate-900 dark:text-slate-100">{v.companyName}</p>
+          <p className="font-extrabold text-slate-900">{v.companyName}</p>
           <p className="text-xs text-slate-400">{v.assignedDepartment || v.serviceType || 'Vendor'}</p>
         </div>
       ),
@@ -115,7 +115,7 @@ export const Vendors: React.FC = () => {
       header: 'Contact Person',
       render: (v) => (
         <div>
-          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{v.contactPerson}</p>
+          <p className="text-xs font-bold text-slate-800">{v.contactPerson}</p>
           <p className="text-[11px] text-slate-400">{v.contactPhone || v.phone}</p>
         </div>
       ),
@@ -172,30 +172,43 @@ export const Vendors: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Vendor & Delivery Operations
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 22, color: 'var(--text)', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+            Vendors & Deliveries
           </h2>
-          <p className="text-sm text-slate-500">Contractor registry, material delivery logs, and worker headcounts.</p>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Contractor registry, material delivery logs, and worker headcounts.</p>
         </div>
         <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsRegisterOpen(true)}>
           Register Vendor
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
+      {/* Tab switcher */}
+      <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid var(--line)' }}>
         <button
           onClick={() => { setActiveTab('vendors'); setPage(0); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase border-b-2 ${
-            activeTab === 'vendors' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'
-          }`}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '0 0 10px 0',
+            fontFamily: 'Inter, sans-serif', fontSize: 13,
+            color: activeTab === 'vendors' ? 'var(--text)' : 'var(--mute)',
+            fontWeight: activeTab === 'vendors' ? 600 : 400,
+            borderBottom: activeTab === 'vendors' ? '2px solid var(--accent)' : '2px solid transparent',
+            transition: 'color .15s, border-color .15s',
+          }}
         >
           Approved Vendors
         </button>
         <button
           onClick={() => { setActiveTab('visits'); setPage(0); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase border-b-2 ${
-            activeTab === 'visits' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'
-          }`}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '0 0 10px 0',
+            fontFamily: 'Inter, sans-serif', fontSize: 13,
+            color: activeTab === 'visits' ? 'var(--text)' : 'var(--mute)',
+            fontWeight: activeTab === 'visits' ? 600 : 400,
+            borderBottom: activeTab === 'visits' ? '2px solid var(--accent)' : '2px solid transparent',
+            transition: 'color .15s, border-color .15s',
+          }}
         >
           Visit & Work Logs
         </button>
@@ -215,7 +228,7 @@ export const Vendors: React.FC = () => {
           <Input label="Contact Email" type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
           <Input label="Department" value={form.assignedDepartment} onChange={(e) => setForm({ ...form, assignedDepartment: e.target.value })} />
           <Input label="Work Description" value={form.workDescription} onChange={(e) => setForm({ ...form, workDescription: e.target.value })} />
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4" style={{ borderTop: '1px solid var(--line)' }}>
             <Button variant="outline" onClick={() => setIsRegisterOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={registerMutation.isPending}>Save Vendor</Button>
           </div>
