@@ -34,6 +34,14 @@ public interface NotificationService {
 
     void sendSecurityAlert(User recipient, String message);
 
+    void sendMeetingRequestToFaculty(User faculty, String visitorName, String purpose, String gateName, Long requestId);
+
+    void sendMeetingApproved(User faculty, String visitorName, String location, Long requestId);
+
+    void sendMeetingRejected(User faculty, String visitorName, String reason, Long requestId);
+
+    void sendMeetingRescheduled(User faculty, String visitorName, String suggestedTime, Long requestId);
+
     void retryFailedNotifications();
 
     NotificationResponse getNotificationById(Long id);

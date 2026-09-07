@@ -74,7 +74,9 @@ public class AuthServiceImpl implements AuthService {
             if (request.getExpectedRole() != null && !request.getExpectedRole().isBlank()) {
                 String expRole = request.getExpectedRole().trim();
                 boolean roleMatches = user.getRole().name().equalsIgnoreCase(expRole)
-                        || (user.getRole().name().contains("GUARD") && expRole.contains("GUARD"));
+                        || (user.getRole().name().contains("GUARD") && expRole.contains("GUARD"))
+                        || (user.getRole().name().equals("FACULTY") && (expRole.equalsIgnoreCase("STAFF") || expRole.equalsIgnoreCase("FACULTY")))
+                        || (user.getRole().name().equals("STAFF") && (expRole.equalsIgnoreCase("FACULTY") || expRole.equalsIgnoreCase("STAFF")));
                 if (!roleMatches) {
                     throw new BadRequestException("Role Mismatch: Account '" + user.getUsername() + "' is registered as " + user.getRole().name() + ", not " + request.getExpectedRole());
                 }

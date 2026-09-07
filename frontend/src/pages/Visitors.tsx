@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { visitorApi } from '../api/visitors';
 import { gateApi } from '../api/gates';
+import { facultyApi } from '../api/faculty';
+import { meetingRequestsApi } from '../api/meetingRequests';
 import { useAuthStore } from '../store/authStore';
-import { Visitor, HostType, HostDepartment, VisitorRecognitionResponse } from '../types';
+import { Visitor, HostType, HostDepartment, VisitorRecognitionResponse, PurposeType, FacultyListItem, FacultyAvailabilityStatus } from '../types';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { Pagination } from '../components/ui/Pagination';
 import { Button } from '../components/ui/Button';
@@ -14,7 +16,7 @@ import { Select } from '../components/ui/Select';
 import { Card } from '../components/ui/Card';
 import { QRCodeDisplay } from '../components/ui/QRCodeDisplay';
 import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
-import { UserPlus, LogOut, Search, QrCode, CheckCircle, Shield, ScanFace, Camera, Sparkles } from 'lucide-react';
+import { UserPlus, LogOut, Search, QrCode, CheckCircle, Shield, ScanFace, Camera, Sparkles, AlertTriangle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   validatePhone,
@@ -98,6 +100,10 @@ export const Visitors: React.FC = () => {
     idProofType: 'Aadhaar Card',
     idProofNumber: '',
     notes: '',
+    purposeType: 'CAMPUS_VISIT' as PurposeType,
+    facultyDepartment: 'CE' as HostDepartment,
+    selectedFacultyId: undefined as number | undefined,
+    facultySearch: '',
   };
 
   const [form, setForm] = useState(initialFormState);
@@ -122,6 +128,10 @@ export const Visitors: React.FC = () => {
 
     const hostErr = validateName(form.hostName, 'Host Name');
     if (hostErr) errs.hostName = hostErr;
+
+    if (form.purposeType === 'MEET_FACULTY' && !form.selectedFacultyId) {
+      errs.selectedFacultyId = 'Please select a faculty member from the list';
+    }
 
     if (form.vehicleNumber) {
       const vehicleErr = validateVehicleNumber(form.vehicleNumber);
@@ -163,18 +173,50 @@ export const Visitors: React.FC = () => {
     queryFn: () => gateApi.getAllGates(true),
   });
 
-  // CheckIn Mutation with Photo Support
+  // Query Faculty for Meeting Purpose (Database-driven & searchable)
+  const { data: facultyList, isLoading: isFacultyLoading } = useQuery({
+    queryKey: ['faculty-list-lookup', form.facultyDepartment, form.facultySearch],
+    queryFn: () => facultyApi.getFacultyList(form.facultyDepartment, form.facultySearch || undefined),
+    enabled: isCheckInOpen && form.purposeType === 'MEET_FACULTY',
+  });
+
+  const selectedFaculty = facultyList?.find((f) => f.id === form.selectedFacultyId);
+
+  // CheckIn Mutation with Photo Support & Meeting Request Workflow
   const checkInMutation = useMutation({
     mutationFn: async (data: typeof form) => {
+      let createdVisitor: Visitor;
       if (capturedPhotoBlob) {
-        return visitorApi.registerWithPhoto(capturedPhotoBlob, data);
+        createdVisitor = await visitorApi.registerWithPhoto(capturedPhotoBlob, data);
+      } else {
+        createdVisitor = await visitorApi.checkIn(data);
       }
-      return visitorApi.checkIn(data);
+
+      // If Purpose is MEET_FACULTY and faculty was selected, create the Meeting Request
+      if (data.purposeType === 'MEET_FACULTY' && data.selectedFacultyId) {
+        try {
+          await meetingRequestsApi.createRequest({
+            visitorId: createdVisitor.id,
+            purposeType: 'MEET_FACULTY',
+            department: data.facultyDepartment,
+            facultyId: data.selectedFacultyId,
+            gateId: data.gateId,
+          });
+        } catch (e: any) {
+          console.error('Failed to create meeting request:', e);
+        }
+      }
+
+      return createdVisitor;
     },
     onSuccess: (data) => {
       toast.success('Visitor checked in successfully!');
+      if (form.purposeType === 'MEET_FACULTY') {
+        toast.info(`Meeting request forwarded to ${form.hostName} for approval`);
+      }
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       queryClient.invalidateQueries({ queryKey: ['visitors-active'] });
+      queryClient.invalidateQueries({ queryKey: ['security-meeting-monitor'] });
       setIsCheckInOpen(false);
       resetForm();
       setQrVisitor(data);
@@ -218,6 +260,10 @@ export const Visitors: React.FC = () => {
         idProofNumber: match.idProofNumber || '',
         vehicleNumber: match.vehicleNumber || '',
         notes: '',
+        purposeType: 'CAMPUS_VISIT' as PurposeType,
+        facultyDepartment: match.hostDepartment || 'CE',
+        selectedFacultyId: undefined,
+        facultySearch: '',
       });
       setIsWebcamOpen(false);
       setIsCheckInOpen(true);
@@ -572,6 +618,7 @@ export const Visitors: React.FC = () => {
                 { label: 'Electronics & Telecomm (ENTC)', value: 'ENTC' },
                 { label: 'Electronics & Computer (ECE)', value: 'ECE' },
                 { label: 'AI & Data Science (AIDS)', value: 'AIDS' },
+                { label: 'Basic Science & Engineering (BSE)', value: 'BSE' },
                 { label: 'Administrative Office (ADMIN)', value: 'ADMIN' },
               ]}
             />
@@ -624,6 +671,136 @@ export const Visitors: React.FC = () => {
                 }
               }}
             />
+
+            {/* PURPOSE TYPE WORKFLOW EXTENSION */}
+            <div className="col-span-1 md:col-span-2 pt-3 pb-2 border-t border-slate-200 dark:border-slate-800">
+              <label className="block text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
+                Visit Purpose Classification
+              </label>
+              <Select
+                label="Purpose Type"
+                value={form.purposeType}
+                onChange={(e) => {
+                  const pt = e.target.value as PurposeType;
+                  setForm({
+                    ...form,
+                    purposeType: pt,
+                    hostType: pt === 'MEET_FACULTY' ? 'FACULTY' : form.hostType,
+                  });
+                }}
+                options={[
+                  { label: '1. Campus Visit (General Campus Entry)', value: 'CAMPUS_VISIT' },
+                  { label: '2. Meet Faculty (Faculty Approval Required)', value: 'MEET_FACULTY' },
+                  { label: '3. Meet Administration (Administrative Office)', value: 'MEET_ADMINISTRATION' },
+                  { label: '4. Other Purpose', value: 'OTHER' },
+                ]}
+              />
+
+              {/* MEET FACULTY DYNAMIC WORKFLOW */}
+              {form.purposeType === 'MEET_FACULTY' && (
+                <div className="mt-3 p-4 bg-indigo-50/60 dark:bg-slate-900/60 border border-indigo-100 dark:border-slate-800 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Faculty Lookup & Real-Time Availability Check
+                    </span>
+                    {selectedFaculty && (
+                      <Badge
+                        variant={
+                          selectedFaculty.todayStatus === 'AVAILABLE'
+                            ? 'success'
+                            : selectedFaculty.todayStatus === 'BUSY'
+                            ? 'warning'
+                            : selectedFaculty.todayStatus === 'OUT_OF_CAMPUS'
+                            ? 'default'
+                            : 'danger'
+                        }
+                        className="text-[11px] font-bold uppercase"
+                      >
+                        Status: {selectedFaculty.todayStatus.replace(/_/g, ' ')}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Select
+                      label="Department"
+                      value={form.facultyDepartment}
+                      onChange={(e) => {
+                        const dept = e.target.value as HostDepartment;
+                        setForm({
+                          ...form,
+                          facultyDepartment: dept,
+                          hostDepartment: dept,
+                          selectedFacultyId: undefined,
+                        });
+                      }}
+                      options={[
+                        { label: 'Computer Engineering (CE)', value: 'CE' },
+                        { label: 'Information Technology (IT)', value: 'IT' },
+                        { label: 'Electronics & Telecomm (ENTC)', value: 'ENTC' },
+                        { label: 'Electronics & Computer (ECE)', value: 'ECE' },
+                        { label: 'AI & Data Science (AIDS)', value: 'AIDS' },
+                        { label: 'Basic Science & Engineering (BSE)', value: 'BSE' },
+                        { label: 'Administrative Office (ADMIN)', value: 'ADMIN' },
+                      ]}
+                    />
+
+                    <div>
+                      <Select
+                        label="Faculty Name (Searchable from DB) *"
+                        value={form.selectedFacultyId || ''}
+                        error={formErrors.selectedFacultyId}
+                        onChange={(e) => {
+                          const fId = Number(e.target.value);
+                          const f = facultyList?.find((item) => item.id === fId);
+                          setForm({
+                            ...form,
+                            selectedFacultyId: fId,
+                            hostName: f ? f.fullName : form.hostName,
+                          });
+                          if (formErrors.selectedFacultyId) {
+                            setFormErrors({ ...formErrors, selectedFacultyId: '' });
+                          }
+                        }}
+                        options={[
+                          {
+                            label: isFacultyLoading
+                              ? 'Loading faculty from DB...'
+                              : (facultyList || []).filter((f) => f.todayStatus === 'AVAILABLE').length === 0
+                              ? '-- No Available Faculty in Department --'
+                              : `-- Select Available Faculty (${(facultyList || []).filter((f) => f.todayStatus === 'AVAILABLE').length} Available) --`,
+                            value: '',
+                          },
+                          ...(facultyList || [])
+                            .filter((f) => f.todayStatus === 'AVAILABLE')
+                            .map((f) => ({
+                              label: `${f.fullName} (Available)`,
+                              value: f.id,
+                            })),
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* REAL-TIME AVAILABILITY WARNING BANNER */}
+                  {selectedFaculty && selectedFaculty.todayStatus !== 'AVAILABLE' && (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg flex items-start gap-2.5 text-amber-800 dark:text-amber-200 text-xs">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold">
+                          This faculty member is currently unavailable ({selectedFaculty.todayStatus.replace(/_/g, ' ')}).
+                        </p>
+                        {selectedFaculty.todayNote ? (
+                          <p className="mt-0.5 opacity-90 italic">Note from faculty: "{selectedFaculty.todayNote}"</p>
+                        ) : (
+                          <p className="mt-0.5 opacity-80">You may still proceed with submitting your request, but approval might be delayed.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">

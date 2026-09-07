@@ -2,15 +2,20 @@ package com.pict.gatesecurity.config;
 
 import com.pict.gatesecurity.entity.Gate;
 import com.pict.gatesecurity.entity.User;
+import com.pict.gatesecurity.entity.enums.HostDepartment;
 import com.pict.gatesecurity.entity.enums.UserRole;
 import com.pict.gatesecurity.repository.GateRepository;
 import com.pict.gatesecurity.repository.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -20,6 +25,7 @@ public class DataInitializer implements CommandLineRunner {
     private final GateRepository gateRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -127,5 +133,50 @@ public class DataInitializer implements CommandLineRunner {
                     .active(true)
                     .build());
         }
+
+        // Seed faculty directory from institutional data
+        seedFacultyDirectory();
+    }
+
+    private void seedFacultyDirectory() {
+        try (var is = getClass().getResourceAsStream("/data/faculty_seed.json")) {
+            if (is != null) {
+                List<FacultySeedRecord> list = objectMapper.readValue(is, new TypeReference<List<FacultySeedRecord>>() {});
+                String defaultPassHash = passwordEncoder.encode("Faculty123!");
+                int seeded = 0;
+                for (FacultySeedRecord f : list) {
+                    if (userRepository.findByUsername(f.getUsername()).isEmpty() && userRepository.findByEmail(f.getEmail()).isEmpty()) {
+                        HostDepartment dept = null;
+                        try {
+                            dept = HostDepartment.valueOf(f.getDepartment().toUpperCase().trim());
+                        } catch (Exception ignored) {}
+
+                        userRepository.save(User.builder()
+                                .username(f.getUsername())
+                                .passwordHash(defaultPassHash)
+                                .role(UserRole.FACULTY)
+                                .fullName(f.getFullName())
+                                .email(f.getEmail())
+                                .phone(f.getPhone() != null && !f.getPhone().isBlank() ? f.getPhone() : null)
+                                .department(dept)
+                                .active(true)
+                                .build());
+                        seeded++;
+                    }
+                }
+                log.info("Successfully verified faculty directory: {} new faculty accounts seeded, total in directory: {}", seeded, list.size());
+            }
+        } catch (Exception e) {
+            log.error("Failed to seed faculty directory from JSON", e);
+        }
+    }
+
+    @lombok.Data
+    public static class FacultySeedRecord {
+        private String department;
+        private String fullName;
+        private String email;
+        private String username;
+        private String phone;
     }
 }

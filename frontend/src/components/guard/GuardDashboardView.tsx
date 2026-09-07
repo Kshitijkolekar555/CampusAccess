@@ -23,6 +23,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { MeetingRequestMonitor } from '../security/MeetingRequestMonitor';
 
 interface GuardDashboardViewProps {
   user: any;
@@ -384,6 +385,9 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* LIVE GATE FACULTY MEETING APPROVALS MONITOR */}
+      <MeetingRequestMonitor gateId={guardSummary?.gateId || 1} />
 
       {/* LIVE ACTIVE VISITORS GRID */}
       <div className="bg-white border border-slate-200 rounded-md p-5 shadow-xs space-y-4">

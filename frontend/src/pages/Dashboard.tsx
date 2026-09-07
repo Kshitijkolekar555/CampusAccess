@@ -46,6 +46,9 @@ import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
 import { GuardDashboardView } from '../components/guard/GuardDashboardView';
+import { FacultyAvailabilityPanel } from '../components/faculty/FacultyAvailabilityPanel';
+import { PendingMeetingRequests } from '../components/faculty/PendingMeetingRequests';
+import { MeetingRequestMonitor } from '../components/security/MeetingRequestMonitor';
 
 const chartData = [
   { time: '08:00', visitors: 12 },
@@ -68,6 +71,7 @@ export const Dashboard: React.FC = () => {
   const isStudent = role === 'STUDENT';
   const isVisitor = role === 'VISITOR';
   const isStaff = role === 'STAFF';
+  const isFaculty = role === 'FACULTY';
 
   const [isSimplifiedGuardView, setIsSimplifiedGuardView] = useState(true);
 
@@ -393,6 +397,9 @@ export const Dashboard: React.FC = () => {
           <StatsCard title="Student Passes Processed Today" value={summary.studentPassesProcessedToday ?? 0} icon={<Ticket className="w-6 h-6" />} colorTheme="indigo" description="Student gate passes" />
         </div>
 
+        {/* Live Gate Meeting Request Approvals Monitor */}
+        <MeetingRequestMonitor gateId={summary.gateId || 1} />
+
         {/* Live Active Visitors Table on Guard Panel */}
         <Card>
           <div className="flex items-center justify-between mb-4">
@@ -535,6 +542,16 @@ export const Dashboard: React.FC = () => {
             </div>
           </Card>
         </div>
+      </div>
+    );
+  }
+
+  // RENDER FACULTY DASHBOARD (Availability Management & Visitor Meeting Approvals)
+  if (isFaculty) {
+    return (
+      <div className="space-y-6">
+        <FacultyAvailabilityPanel />
+        <PendingMeetingRequests />
       </div>
     );
   }

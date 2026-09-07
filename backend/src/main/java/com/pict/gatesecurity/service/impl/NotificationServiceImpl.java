@@ -233,6 +233,50 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
+    public void sendMeetingRequestToFaculty(User faculty, String visitorName, String purpose, String gateName, Long requestId) {
+        String subject = "Visitor Meeting Request: " + visitorName;
+        String body = String.format("Visitor %s has requested a meeting for purpose: '%s' at %s (Request ID: %d). Please review in your Faculty Dashboard.",
+                visitorName, purpose, gateName, requestId);
+        Notification notification = buildNotification(faculty, faculty.getEmail() != null ? faculty.getEmail() : "faculty@pict.edu",
+                NotificationEventType.VISITOR_MEETING_REQUEST, subject, body);
+        send(notification);
+    }
+
+    @Override
+    @Transactional
+    public void sendMeetingApproved(User faculty, String visitorName, String location, Long requestId) {
+        String subject = "Meeting Request Approved: " + visitorName;
+        String body = String.format("Meeting request #%d for visitor %s has been APPROVED by %s. Location: %s.",
+                requestId, visitorName, faculty.getFullName(), location);
+        Notification notification = buildNotification(faculty, faculty.getEmail() != null ? faculty.getEmail() : "faculty@pict.edu",
+                NotificationEventType.MEETING_APPROVED, subject, body);
+        send(notification);
+    }
+
+    @Override
+    @Transactional
+    public void sendMeetingRejected(User faculty, String visitorName, String reason, Long requestId) {
+        String subject = "Meeting Request Rejected: " + visitorName;
+        String body = String.format("Meeting request #%d for visitor %s was REJECTED by %s. Reason: %s.",
+                requestId, visitorName, faculty.getFullName(), reason);
+        Notification notification = buildNotification(faculty, faculty.getEmail() != null ? faculty.getEmail() : "faculty@pict.edu",
+                NotificationEventType.MEETING_REJECTED, subject, body);
+        send(notification);
+    }
+
+    @Override
+    @Transactional
+    public void sendMeetingRescheduled(User faculty, String visitorName, String suggestedTime, Long requestId) {
+        String subject = "Meeting Request Rescheduled: " + visitorName;
+        String body = String.format("Meeting request #%d for visitor %s was RESCHEDULED by %s to: %s.",
+                requestId, visitorName, faculty.getFullName(), suggestedTime);
+        Notification notification = buildNotification(faculty, faculty.getEmail() != null ? faculty.getEmail() : "faculty@pict.edu",
+                NotificationEventType.MEETING_RESCHEDULED, subject, body);
+        send(notification);
+    }
+
+    @Override
+    @Transactional
     public void retryFailedNotifications() {
         Page<Notification> failed = notificationRepository
                 .findByStatusAndRetryCountLessThan(NotificationStatus.FAILED, 3, Pageable.unpaged());

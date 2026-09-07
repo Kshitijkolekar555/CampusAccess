@@ -15,7 +15,7 @@ import {
 } from '../utils/validation';
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
-type UserRole = 'STUDENT' | 'SECURITY_GUARD' | 'STAFF' | 'ADMIN' | 'VISITOR' | 'HOSTEL_WARDEN';
+type UserRole = 'STUDENT' | 'SECURITY_GUARD' | 'STAFF' | 'ADMIN' | 'VISITOR' | 'HOSTEL_WARDEN' | 'FACULTY';
 type ActionMode = 'LOGIN' | 'SIGNUP';
 
 /* ─── colour tokens (CSS custom properties used inline) ─────────────────── */
@@ -33,14 +33,14 @@ const ROLES: { id: UserRole; label: string }[] = [
   { id: 'STUDENT',        label: 'Student'  },
   { id: 'SECURITY_GUARD', label: 'Guard'    },
   { id: 'HOSTEL_WARDEN',  label: 'Warden'   },
-  { id: 'STAFF',          label: 'Faculty'  },
+  { id: 'FACULTY',        label: 'Faculty'  },
   { id: 'ADMIN',          label: 'Admin'    },
   { id: 'VISITOR',        label: 'Visitor'  },
 ];
 
 const ROLE_TITLE: Record<UserRole, string> = {
   STUDENT: 'Student', SECURITY_GUARD: 'Guard',
-  STAFF: 'Faculty', ADMIN: 'Admin', VISITOR: 'Visitor', HOSTEL_WARDEN: 'Warden',
+  STAFF: 'Faculty', FACULTY: 'Faculty', ADMIN: 'Admin', VISITOR: 'Visitor', HOSTEL_WARDEN: 'Warden',
 };
 
 /* ─── underline input ────────────────────────────────────────────────────── */
@@ -138,7 +138,7 @@ export const Login: React.FC = () => {
       : u === 'guard1' || u.includes('guard') ? 'Security Guard Ramesh'
       : u === 'student1' || role === 'STUDENT' ? 'Rohan Patil'
       : u === 'warden1' || role === 'HOSTEL_WARDEN' ? 'Mrs. S. Kulkarni (Warden Block B)'
-      : u === 'staff1' || role === 'STAFF' ? 'Prof. S. Sharma'
+      : u === 'staff1' || role === 'STAFF' || role === 'FACULTY' ? 'Prof. S. Sharma'
       : `${u} (${role})`,
     email: `${u.toLowerCase().replace(/[^a-z0-9]/g, '')}@pict.edu`,
     phone: '9876543210',
@@ -156,7 +156,9 @@ export const Login: React.FC = () => {
     try {
       const data = await authApi.login({ username: u, password, expectedRole: selectedRole });
       const match = data.user.role === selectedRole ||
-        (data.user.role.includes('GUARD') && selectedRole.includes('GUARD'));
+        (data.user.role.includes('GUARD') && selectedRole.includes('GUARD')) ||
+        (data.user.role === 'FACULTY' && (selectedRole === 'STAFF' || selectedRole === 'FACULTY')) ||
+        (data.user.role === 'STAFF' && (selectedRole === 'STAFF' || selectedRole === 'FACULTY'));
       if (!match) {
         toast.error(`Role mismatch: account is registered as [${data.user.role}], not [${selectedRole}].`);
         return;

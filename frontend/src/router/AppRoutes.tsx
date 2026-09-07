@@ -16,6 +16,7 @@ import { Users } from '../pages/Users';
 import { Gates } from '../pages/Gates';
 import { Notifications } from '../pages/Notifications';
 import { Profile } from '../pages/Profile';
+import { MeetingStatus } from '../pages/MeetingStatus';
 import type { UserRole } from '../types';
 
 // Protected Route Component with strict role checks
@@ -43,6 +44,7 @@ export const AppRoutes: React.FC = () => {
       {/* Public Routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/meeting-status" element={<MeetingStatus />} />
 
       {/* General Protected Routes */}
       <Route element={<ProtectedLayout />}>
@@ -68,7 +70,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/hostel-outpasses" element={<HostelOutpasses />} />
       </Route>
 
-      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'HOSTEL_WARDEN']} />}>
+      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'HOSTEL_WARDEN', 'FACULTY']} />}>
         <Route path="/notifications" element={<Notifications />} />
       </Route>
 

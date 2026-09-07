@@ -1,5 +1,6 @@
 package com.pict.gatesecurity.entity;
 
+import com.pict.gatesecurity.entity.enums.HostDepartment;
 import com.pict.gatesecurity.entity.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,6 +43,10 @@ public class User {
 
     @Column(length = 100)
     private String email;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private HostDepartment department;
 
     @Column(nullable = false)
     @Builder.Default

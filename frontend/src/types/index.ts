@@ -28,7 +28,27 @@ export type UserRole =
   | 'VISITOR'
   | 'STUDENT'
   | 'STAFF'
-  | 'GUARD';
+  | 'GUARD'
+  | 'FACULTY';
+
+export type PurposeType =
+  | 'CAMPUS_VISIT'
+  | 'MEET_FACULTY'
+  | 'MEET_ADMINISTRATION'
+  | 'OTHER';
+
+export type MeetingRequestStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RESCHEDULED';
+
+export type FacultyAvailabilityStatus =
+  | 'AVAILABLE'
+  | 'BUSY'
+  | 'HALF_DAY_LEAVE'
+  | 'FULL_DAY_LEAVE'
+  | 'OUT_OF_CAMPUS';
 
 export type HostType =
   | 'FACULTY'
@@ -45,6 +65,7 @@ export type HostDepartment =
   | 'ENTC'
   | 'ECE'
   | 'AIDS'
+  | 'BSE'
   | 'ADMIN';
 
 export type VehicleCategory = 'STUDENT' | 'STAFF' | 'VISITOR' | 'CONTRACTOR' | 'VIP';
@@ -74,6 +95,7 @@ export interface User {
   fullName: string;
   phone?: string;
   email?: string;
+  department?: HostDepartment;
   active: boolean;
   isLateComerPermitted?: boolean;
   createdAt: string;
@@ -380,4 +402,69 @@ export interface StaffBreak {
   note?: string;
   createdAt: string;
 }
+
+export interface FacultyListItem {
+  id: number;
+  username: string;
+  fullName: string;
+  department?: HostDepartment;
+  email?: string;
+  phone?: string;
+  todayStatus: FacultyAvailabilityStatus;
+  todayNote?: string;
+}
+
+export interface FacultyAvailability {
+  id?: number;
+  facultyId: number;
+  facultyName?: string;
+  facultyUsername?: string;
+  availabilityDate: string;
+  status: FacultyAvailabilityStatus;
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MeetingResponse {
+  id: number;
+  status: MeetingRequestStatus;
+  meetingLocation?: string;
+  building?: string;
+  floor?: string;
+  roomNumber?: string;
+  notes?: string;
+  rejectionReason?: string;
+  suggestedDate?: string;
+  suggestedTime?: string;
+  rescheduleReason?: string;
+  respondedById: number;
+  respondedByName: string;
+  respondedByUsername: string;
+  respondedAt: string;
+  createdAt: string;
+}
+
+export interface VisitorMeetingRequest {
+  id: number;
+  visitorId: number;
+  visitorName: string;
+  visitorMobile: string;
+  visitorPurpose: string;
+  visitorIdProofType?: string;
+  visitorIdProofNumber?: string;
+  visitorVehicleNumber?: string;
+  purposeType: PurposeType;
+  department?: HostDepartment;
+  facultyId?: number;
+  facultyName?: string;
+  facultyUsername?: string;
+  gateId: number;
+  gateName?: string;
+  requestTime: string;
+  status: MeetingRequestStatus;
+  latestResponse?: MeetingResponse;
+  createdAt: string;
+}
+
 
