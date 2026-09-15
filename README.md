@@ -229,11 +229,11 @@ The system automatically seeds demo accounts upon database startup:
 
 | Role | Username | Password | Purpose |
 | :--- | :--- | :--- | :--- |
-| **System Admin** | `admin` | `admin123` | Full system control & user management |
-| **Security Guard** | `guard1` | `guard123` | Gate terminal check-ins & QR pass verification |
+| **System Admin** | `admin` | `ChangeMe@123` | Full system control & user management |
+| **Security Guard** | `guard1` | `Guard123!` | Gate terminal check-ins & QR pass verification |
 | **Staff / Faculty** | `staff1` | `staff123` | Faculty portal & staff break logging |
-| **Hostel Warden** | `warden1` | `warden123` | Hostel outpass approvals |
-| **Student** | `student1` | `student123` | Outpass applications & student portal |
+| **Hostel Warden** | `warden1` | `Warden123!` | Hostel outpass approvals |
+| **Student** | `student1` | `Student123!` | Outpass applications & student portal |
 
 ---
 
