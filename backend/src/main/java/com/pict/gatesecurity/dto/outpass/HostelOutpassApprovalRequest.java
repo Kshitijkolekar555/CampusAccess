@@ -14,7 +14,7 @@ public class HostelOutpassApprovalRequest {
 
     private boolean approved;
 
-    private String remarks;
+    private String wardenRemarks;
 
     @NotBlank(message = "Rejection reason is required when rejecting")
     private String rejectionReason;

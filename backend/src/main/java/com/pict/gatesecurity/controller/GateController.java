@@ -26,8 +26,8 @@ public class GateController {
     private final GateService gateService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Create Campus Gate", description = "Creates a new physical entry/exit gate (ADMIN only)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @Operation(summary = "Create Campus Gate", description = "Creates a new physical entry/exit gate (ADMIN/OFFICER)")
     public ResponseEntity<ApiResponse<GateResponse>> createGate(
             @Valid @RequestBody GateCreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -37,8 +37,8 @@ public class GateController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Update Campus Gate", description = "Updates gate name, location, or active status (ADMIN only)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @Operation(summary = "Update Campus Gate", description = "Updates gate name, location, or active status (ADMIN/OFFICER)")
     public ResponseEntity<ApiResponse<GateResponse>> updateGate(
             @PathVariable Long id,
             @Valid @RequestBody GateCreateRequest request,

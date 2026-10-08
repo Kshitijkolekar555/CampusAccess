@@ -113,7 +113,7 @@ class HostelOutpassServiceImplTest {
     @Test
     void approveOutpass_shouldSucceed() {
         HostelOutpassApprovalRequest request = HostelOutpassApprovalRequest.builder()
-                .approved(true).remarks("Approved").build();
+                .approved(true).wardenRemarks("Approved").build();
 
         when(hostelOutpassRepository.findById(1L)).thenReturn(Optional.of(testOutpass));
         when(userRepository.findByUsername("warden1")).thenReturn(Optional.of(testWarden));
@@ -187,6 +187,6 @@ class HostelOutpassServiceImplTest {
     @Test
     void getOutpassById_shouldFailWhenNotFound() {
         when(hostelOutpassRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> outpassService.getOutpassById(99L));
+        assertThrows(ResourceNotFoundException.class, () -> outpassService.getOutpassById(99L, "warden1"));
     }
 }

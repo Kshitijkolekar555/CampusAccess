@@ -18,5 +18,6 @@ public enum HostDepartment {
     ENTC,
     ECE,
     AIDS,
+    BSE,
     ADMIN
 }

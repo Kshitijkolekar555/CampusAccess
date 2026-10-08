@@ -87,7 +87,7 @@ class AuthServiceImplTest {
 
     @Test
     void login_shouldSucceed() {
-        LoginRequest request = new LoginRequest("testuser", "password123");
+        LoginRequest request = LoginRequest.builder().username("testuser").password("password123").build();
         when(authenticationManager.authenticate(any())).thenReturn(null);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
         when(jwtUtil.generateAccessToken("testuser", "VISITOR")).thenReturn("access_token");
@@ -105,7 +105,7 @@ class AuthServiceImplTest {
 
     @Test
     void login_shouldFailWithBadCredentials() {
-        LoginRequest request = new LoginRequest("testuser", "wrong_password");
+        LoginRequest request = LoginRequest.builder().username("testuser").password("wrong_password").build();
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("Invalid credentials"));
 
@@ -115,7 +115,7 @@ class AuthServiceImplTest {
     @Test
     void login_shouldFailWhenDisabled() {
         testUser.setActive(false);
-        LoginRequest request = new LoginRequest("testuser", "password123");
+        LoginRequest request = LoginRequest.builder().username("testuser").password("password123").build();
         when(authenticationManager.authenticate(any())).thenReturn(null);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
@@ -175,7 +175,11 @@ class AuthServiceImplTest {
         when(passwordEncoder.matches("old_pass", "encoded_password")).thenReturn(true);
         when(passwordEncoder.encode("new_pass")).thenReturn("new_encoded");
 
-        ChangePasswordRequest request = new ChangePasswordRequest("old_pass", "new_pass");
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("old_pass")
+                .newPassword("new_pass")
+                .confirmPassword("new_pass")
+                .build();
         authService.changePassword("testuser", request);
 
         verify(userRepository).save(any(User.class));
@@ -186,7 +190,11 @@ class AuthServiceImplTest {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrong_pass", "encoded_password")).thenReturn(false);
 
-        ChangePasswordRequest request = new ChangePasswordRequest("wrong_pass", "new_pass");
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("wrong_pass")
+                .newPassword("new_pass")
+                .confirmPassword("new_pass")
+                .build();
         assertThrows(BadRequestException.class, () -> authService.changePassword("testuser", request));
     }
 

@@ -28,8 +28,8 @@ public class GuardController {
     private final GuardService guardService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Register Guard Profile", description = "Maps an existing user account to a guard employee profile (ADMIN only)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @Operation(summary = "Register Guard Profile", description = "Maps an existing user account to a guard employee profile (ADMIN/OFFICER)")
     public ResponseEntity<ApiResponse<GuardResponse>> createGuard(
             @Valid @RequestBody GuardCreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -39,8 +39,8 @@ public class GuardController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Update Guard Assignment", description = "Updates guard's assigned gate or active status (ADMIN only)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @Operation(summary = "Update Guard Assignment", description = "Updates guard's assigned gate or active status (ADMIN/OFFICER)")
     public ResponseEntity<ApiResponse<GuardResponse>> updateGuard(
             @PathVariable Long id,
             @Valid @RequestBody GuardUpdateRequest request,
@@ -50,15 +50,15 @@ public class GuardController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get Guard Details", description = "Fetches guard profile by ID (ADMIN only)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @Operation(summary = "Get Guard Details", description = "Fetches guard profile by ID (ADMIN/OFFICER)")
     public ResponseEntity<ApiResponse<GuardResponse>> getGuardById(@PathVariable Long id) {
         GuardResponse response = guardService.getGuardById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
     @Operation(summary = "List Security Guards", description = "Paginated list of guard profiles (ADMIN only)")
     public ResponseEntity<ApiResponse<PageResponse<GuardResponse>>> getGuards(
             @RequestParam(required = false, defaultValue = "false") Boolean activeOnly,

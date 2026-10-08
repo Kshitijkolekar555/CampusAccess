@@ -111,7 +111,7 @@ public class HostelOutpassServiceImpl implements HostelOutpassService {
         if (request.isApproved()) {
             outpass.setStatus(OutpassStatus.APPROVED);
             outpass.setWarden(warden);
-            outpass.setWardenRemarks(request.getRemarks());
+            outpass.setWardenRemarks(request.getWardenRemarks());
             outpass.setWardenActedAt(OffsetDateTime.now());
         } else {
             outpass.setStatus(OutpassStatus.REJECTED);

@@ -1,0 +1,932 @@
+[
+  {
+    "department": "AIDS",
+    "name": "Dr. Shweta C. Dharmadhikari",
+    "email": "hodaids@pict.edu; scdharmadhikari@pict.edu",
+    "phone": "+91-9011042683"
+  },
+  {
+    "department": "AIDS",
+    "name": "Ms. Anjali Deshpande",
+    "email": "aadeshpande@pict.edu",
+    "phone": "+91-9876543210"
+  },
+  {
+    "department": "AIDS",
+    "name": "Ms. Deepa B. Mane",
+    "email": "dbmane@pict.edu",
+    "phone": "+91-8149122625"
+  },
+  {
+    "department": "AIDS",
+    "name": "Ms. Divya Chechani",
+    "email": "ddchechani@pict.edu",
+    "phone": "+91-9422200236"
+  },
+  {
+    "department": "AIDS",
+    "name": "Ms. Mrunal Mule",
+    "email": "mmmule@pict.edu",
+    "phone": "+91-8668868010"
+  },
+  {
+    "department": "AIDS",
+    "name": "Ms.Tanuja S. Mulla",
+    "email": "tsmulla@pict.edu",
+    "phone": "+91-9730478003"
+  },
+  {
+    "department": "AIDS",
+    "name": "Prof. Manjushri Vilas Raut",
+    "email": "mvraut@pict.edu",
+    "phone": "+91-9834204526"
+  },
+  {
+    "department": "BSE",
+    "name": "Abhishek M. Kulkarni",
+    "email": "abhishekmkulkarni@pict.edu",
+    "phone": "+91-9623450226"
+  },
+  {
+    "department": "BSE",
+    "name": "Asmita Ajay Joshi",
+    "email": "aajoshi@pict.edu",
+    "phone": "+91-9421000587"
+  },
+  {
+    "department": "BSE",
+    "name": "Dr. A. M. Deshmukh",
+    "email": "amdeshmukh@pict.edu",
+    "phone": "+91-9422310513"
+  },
+  {
+    "department": "BSE",
+    "name": "Dr. Jayant Yadav",
+    "email": "jsyadav@pict.edu",
+    "phone": "+91-9422559827"
+  },
+  {
+    "department": "BSE",
+    "name": "Dr. Prashant Ganpat Umape",
+    "email": "pgumape@pict.edu",
+    "phone": "+91-9987876501"
+  },
+  {
+    "department": "BSE",
+    "name": "Dr. S. T. Gawhale",
+    "email": "stgawhale@pict.edu",
+    "phone": "+91-9226744094"
+  },
+  {
+    "department": "BSE",
+    "name": "Dr. Shivaji Vitthalrao Mundhe",
+    "email": "svmundhe@pict.edu",
+    "phone": "+91-9011024143"
+  },
+  {
+    "department": "BSE",
+    "name": "Emani Maheswara Reddy",
+    "email": "emreddy@pict.edu",
+    "phone": "+91-9850495787"
+  },
+  {
+    "department": "BSE",
+    "name": "Mandrekar Tanvesh Sandip",
+    "email": "tsmandrekar@pict.edu",
+    "phone": "+91-7304975653"
+  },
+  {
+    "department": "BSE",
+    "name": "Mohini Sadashiv Ghadage",
+    "email": "msghadage@pict.edu",
+    "phone": "+91-9890671239"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. A. S. Bodhe",
+    "email": "asbodhe@pict.edu",
+    "phone": ""
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Amol Ashok Chavan",
+    "email": "aachavan@pict.edu",
+    "phone": "+91-9890790959"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. B. P. Kumbhare",
+    "email": "bpkumbhare@pict.edu",
+    "phone": ""
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Hrushikesh Khatri",
+    "email": "hskhatri@pict.edu",
+    "phone": "+91-8805300887"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Hrushikesh M Hiwase",
+    "email": "hmhiwase@pict.edu",
+    "phone": "+91-9011004381"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. K. L. Bhoite",
+    "email": "klbhoite@pict.edu",
+    "phone": "+91-7385000654"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Kaustubh Diliprao Kulkarni",
+    "email": "kdkulkarni@pict.edu",
+    "phone": ""
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. M. K. Kadam",
+    "email": "mkkadam@pict.edu",
+    "phone": "+91-9822142412"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Nadeem Anwer Nisar Ahmed",
+    "email": "nadeemanwer@pict.edu",
+    "phone": "+91-8087605185"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Niteen P. Sapkal",
+    "email": "npsapkal@pict.edu",
+    "phone": "+91-9970317454"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Prashant Dadasaheb Jadhav",
+    "email": "pdjadhav@pict.edu",
+    "phone": "+91-9226419331"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Rohan Ravindra Vardhaman",
+    "email": "rrvardhaman@pict.edu",
+    "phone": "+91-9763207282"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Sagar A. Kale",
+    "email": "sakale@pict.edu",
+    "phone": "+91-8483863380"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Shrikant Dinkar Hade",
+    "email": "sdhade@pict.edu",
+    "phone": "+91-9975240230"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. Sumit Uttam Bagade",
+    "email": "subagade@pict.edu",
+    "phone": "+91-7972594423"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr. V. B. Patole",
+    "email": "vbpatole@pict.edu",
+    "phone": "+91-9730472432"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr.Makrand Dinanath Bandkar",
+    "email": "mdbandkar@pict.edu",
+    "phone": "+91-9766135058"
+  },
+  {
+    "department": "BSE",
+    "name": "Mr.Rohidas Tukaram Mali",
+    "email": "rtmali@pict.edu",
+    "phone": "+91-9168813116"
+  },
+  {
+    "department": "BSE",
+    "name": "Mrs.K.K. Kolhatkar",
+    "email": "kkkolhatkar@pict.edu",
+    "phone": "+91-8446905684"
+  },
+  {
+    "department": "BSE",
+    "name": "Ms. Sujata Ashok Barde",
+    "email": "sabarde@pict.edu",
+    "phone": "+91-8805163878"
+  },
+  {
+    "department": "BSE",
+    "name": "Ms. Sujata S. Patil",
+    "email": "sujataspatil@pict.edu",
+    "phone": "+91-9860538861"
+  },
+  {
+    "department": "BSE",
+    "name": "Ms.Kranti Ramrao Jadhav",
+    "email": "Krjadhav@pict.edu",
+    "phone": "+91-9975713448"
+  },
+  {
+    "department": "BSE",
+    "name": "Nikhil Vasant Sangade",
+    "email": "nvsangade@pict.edu",
+    "phone": "+91-9762172013"
+  },
+  {
+    "department": "BSE",
+    "name": "Pankaj S. Patil",
+    "email": "pspatil@pict.edu",
+    "phone": "+91-9960198995"
+  },
+  {
+    "department": "BSE",
+    "name": "Sayyad Asma Nasar",
+    "email": "ansayyad@pict.edu",
+    "phone": "+91-7620295753"
+  },
+  {
+    "department": "CE",
+    "name": ": RAJANI RAJESH JADHAV",
+    "email": "rrjadhav@pict.edu",
+    "phone": "+91-9922555458"
+  },
+  {
+    "department": "CE",
+    "name": "AGPhakatkar",
+    "email": "agphakatkar@pict.edu",
+    "phone": ""
+  },
+  {
+    "department": "CE",
+    "name": "Dr. Arati R Deshpande",
+    "email": "ardeshpande@pict.edu",
+    "phone": "+91-9860487525"
+  },
+  {
+    "department": "CE",
+    "name": "Dr. Archana Ghotkar",
+    "email": "aaghotkar@pict.edu",
+    "phone": "+91-9124371101"
+  },
+  {
+    "department": "CE",
+    "name": "Dr. Balwant Ambadas Sonkamble",
+    "email": "basonkamble@pict.edu",
+    "phone": "+91-8975948710"
+  },
+  {
+    "department": "CE",
+    "name": "Dr. Mukta Sunil Takalikar",
+    "email": "mstakalikar@pict.edu",
+    "phone": "+91-9860076259"
+  },
+  {
+    "department": "CE",
+    "name": "Dr. Rekha A Kulkarni",
+    "email": "rakulkarni@pict.edu",
+    "phone": "+91-9970411550"
+  },
+  {
+    "department": "CE",
+    "name": "Dr. Sheetal Sonawane",
+    "email": "sssonawane@pict.edu",
+    "phone": "+91-9890146320"
+  },
+  {
+    "department": "CE",
+    "name": "Jayshree Sachin Mahajan",
+    "email": "jsmahajan@pict.edu",
+    "phone": "+91-9921432681"
+  },
+  {
+    "department": "CE",
+    "name": "KCWaghmare",
+    "email": "kcwaghmare@pict.edu",
+    "phone": "+91-8975284900"
+  },
+  {
+    "department": "CE",
+    "name": "Kumari Deepika",
+    "email": "kdeepika@pict.edu",
+    "phone": "+91-9608335390"
+  },
+  {
+    "department": "CE",
+    "name": "Madhuri Sachin Wakode",
+    "email": "mswakode@pict.edu",
+    "phone": ""
+  },
+  {
+    "department": "CE",
+    "name": "Manish Ravindra Jansari",
+    "email": "mrjansari@pict.edu",
+    "phone": "+91-9022199009"
+  },
+  {
+    "department": "CE",
+    "name": "Mayur Subhash Chavan",
+    "email": "mschavan@pict.edu",
+    "phone": "+91-9561602456"
+  },
+  {
+    "department": "CE",
+    "name": "Mr. Parag Jaygopal Jambhulkar",
+    "email": "pjjambhulkar@pict.edu",
+    "phone": "+91-9945676843"
+  },
+  {
+    "department": "CE",
+    "name": "Mr. Samadhan Walu Jadhav",
+    "email": "swjadhav@pict.edu",
+    "phone": "+91-9850667308"
+  },
+  {
+    "department": "CE",
+    "name": "Mr. Vijayendra S. Gaikwad",
+    "email": "vsgaikwad@pict.edu",
+    "phone": "+91-9049081101"
+  },
+  {
+    "department": "CE",
+    "name": "Mr. Yogesh Ashok Handge",
+    "email": "yahandge@pict.edu",
+    "phone": "+91-9423077963"
+  },
+  {
+    "department": "CE",
+    "name": "Mrs. Achala R. Deshpande",
+    "email": "achaladeshpande@pict.edu",
+    "phone": "+91-8605882683"
+  },
+  {
+    "department": "CE",
+    "name": "Mrs. Arundhati A. Chandorkar",
+    "email": "aachandorkar@pict.edu",
+    "phone": "+91-9588628992"
+  },
+  {
+    "department": "CE",
+    "name": "Mrs. Hema Sagar Kumbhar",
+    "email": "hskumbhar@pict.edu",
+    "phone": "+91-7558502478"
+  },
+  {
+    "department": "CE",
+    "name": "Mrs. Madhuri S. Patil.",
+    "email": "mspatil@pict.edu",
+    "phone": "+91-9637324543"
+  },
+  {
+    "department": "CE",
+    "name": "Mrs. Madhuri Vikas Mane",
+    "email": "mvmane@pict.edu",
+    "phone": "+91-9028857476"
+  },
+  {
+    "department": "CE",
+    "name": "Mrs. Rutuja A. Kulkarni",
+    "email": "rutujakulkarni@pict.edu",
+    "phone": "+91-9604402310"
+  },
+  {
+    "department": "CE",
+    "name": "Mrs.Pooja Atul Chavan",
+    "email": "ptkohok@pict.edu",
+    "phone": "+91-9403255819"
+  },
+  {
+    "department": "CE",
+    "name": "Ms. Dipika Dilip Raigar",
+    "email": "ddraigar@pict.edu",
+    "phone": "+91-9075704297"
+  },
+  {
+    "department": "CE",
+    "name": "Ms. Kopal Gangrade",
+    "email": "kgangrade@pict.edu",
+    "phone": "+91-8269947432"
+  },
+  {
+    "department": "CE",
+    "name": "Ms. Pranali R. Navghare",
+    "email": "prnavghare@pict.edu",
+    "phone": "+91-7066121972"
+  },
+  {
+    "department": "CE",
+    "name": "Ms. Shweta Shah",
+    "email": "sshah@pict.edu",
+    "phone": "+91-9039184087"
+  },
+  {
+    "department": "CE",
+    "name": "Nikita Yogesh Kapadnis",
+    "email": "nykapadnis@pict.edu",
+    "phone": "+91-8668473447"
+  },
+  {
+    "department": "CE",
+    "name": "PSShahane",
+    "email": "psshahane@pict.edu",
+    "phone": "+91-7796831759"
+  },
+  {
+    "department": "CE",
+    "name": "Pranjali P. Joshi",
+    "email": "ppjoshi@pict.edu",
+    "phone": "+91-9420178119"
+  },
+  {
+    "department": "CE",
+    "name": "Prof. Ashwini Bundele",
+    "email": "aajewalikar@pict.edu",
+    "phone": "+91-8830794311"
+  },
+  {
+    "department": "CE",
+    "name": "Prof. Pallavi Joshi",
+    "email": "psjoshi@pict.edu",
+    "phone": ""
+  },
+  {
+    "department": "CE",
+    "name": "Prof. Sarang Joshi",
+    "email": "sajoshi@pict.edu",
+    "phone": "+91-9604913652"
+  },
+  {
+    "department": "CE",
+    "name": "Sarika Abhijit Pawar",
+    "email": "sapawar@pict.edu",
+    "phone": "+91-9665808504"
+  },
+  {
+    "department": "CE",
+    "name": "Sumit S Shevtekar",
+    "email": "ssshevtekar@pict.edu",
+    "phone": "+91-8087480881"
+  },
+  {
+    "department": "CE",
+    "name": "URMILA SHRIKANT PAWAR",
+    "email": "uspawar@pict.edu",
+    "phone": "+91-7083664201"
+  },
+  {
+    "department": "CE",
+    "name": "Vaishali Ramesh Kandekar",
+    "email": "vrkandekar@pict.edu",
+    "phone": "+91-7558633928"
+  },
+  {
+    "department": "CE",
+    "name": "Virendra V Bagade",
+    "email": "vvbagade@pict.edu",
+    "phone": "+91-8668383071"
+  },
+  {
+    "department": "ECE",
+    "name": "Dr. Anjali Abhijit Yadav",
+    "email": "aayadav@pict.edu",
+    "phone": "+91-7722081837"
+  },
+  {
+    "department": "ECE",
+    "name": "Mr. Ashok Dnyandeo Vidhate",
+    "email": "advidhate@pict.edu",
+    "phone": "+91-7028589689"
+  },
+  {
+    "department": "ECE",
+    "name": "Mr. Sudershan Prakash Dolli",
+    "email": "spdolli@pict.edu",
+    "phone": "+91-9970969414"
+  },
+  {
+    "department": "ECE",
+    "name": "Mr.Mohan Annaso Chimanna",
+    "email": "machimanna@pict.edu",
+    "phone": "+91-9673612299"
+  },
+  {
+    "department": "ECE",
+    "name": "Mrs. Tejasweeni G. Hampe",
+    "email": "tghampe@pict.edu",
+    "phone": "+91-9923508802"
+  },
+  {
+    "department": "ECE",
+    "name": "Ms. Rupali A. Patil",
+    "email": "rapatil@pict.edu",
+    "phone": "+91-9822625305"
+  },
+  {
+    "department": "ECE",
+    "name": "Ms. Sneha C. Nahatkar",
+    "email": "scnahatkar@pict.edu",
+    "phone": "+91-8484936356"
+  },
+  {
+    "department": "ECE",
+    "name": "Sunil Moon",
+    "email": "skmoon@pict.edu",
+    "phone": "+91-9579343940"
+  },
+  {
+    "department": "ENTC",
+    "name": "Amol Sukhadeorao Ingole",
+    "email": "asingole@pict.edu",
+    "phone": ""
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Anagha Vijaysinha Rajput",
+    "email": "avrajput@pict.edu",
+    "phone": "+91-7530006604"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Jaiswal Rupesh Chandrakant",
+    "email": "rcjaiswal@pict.edu",
+    "phone": "+91-8208259231"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Mahesh A. Gangarde",
+    "email": "magangarde@pict.edu",
+    "phone": "+91-9822792755"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Mandar Kakade",
+    "email": "mnkakade@pict.edu",
+    "phone": "+91-9850706789"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Mousami V. Munot",
+    "email": "mvmunot@pict.edu",
+    "phone": "+91-9822607538"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Rajendra Yelalwar",
+    "email": "rgyelalwar@pict.edu",
+    "phone": "+91-9890912278"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Sachin Dattatraya Shingade",
+    "email": "sdshingade@pict.edu",
+    "phone": "+91-9527706269"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Shaveta Thakral",
+    "email": "shavetathakral@pict.edu",
+    "phone": "+91-9871625234"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Shridevi S. Vasekar",
+    "email": "ssvasekar@pict.edu",
+    "phone": "+91-9272826229"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Sonali Vijay Shinkar",
+    "email": "svshinkar@pict.edu",
+    "phone": "+91-8698129732"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Vaibhav B. Vaijapurkar",
+    "email": "vbvaijapurkar@pict.edu",
+    "phone": "+91-9822865220"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr. Vaishali S. Kulkarni",
+    "email": "vaishalikulkarni@pict.edu",
+    "phone": "+91-9890160173"
+  },
+  {
+    "department": "ENTC",
+    "name": "Dr.Mousami Prashant Turuk",
+    "email": "mpturuk@pict.edu",
+    "phone": "+91-9850711131"
+  },
+  {
+    "department": "ENTC",
+    "name": "GIRISH S. MUNDADA",
+    "email": "gsmundada@pict.edu",
+    "phone": "020-24371101"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr Nitin Barsu Patil",
+    "email": "nbpatil@pict.edu",
+    "phone": "+91-9689881159"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr. Deepak M. Shinde",
+    "email": "dmshinde@pict.edu",
+    "phone": "+91-9822418556"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr. HARSH SHARADKUMAR THAKAR",
+    "email": "hsthakar@pict.edu",
+    "phone": "+91-9881740472"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr. Hemantkumar B. Mali",
+    "email": "hbmali@pict.edu",
+    "phone": "+91-9850097068"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr. Lalit Purushottam Patil",
+    "email": "lppatil@pict.edu",
+    "phone": "+91-9922503853"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr. Siddhesh N. Upasani",
+    "email": "snupasani@pict.edu",
+    "phone": "+91-7972925204"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr. Sunil S.Khot",
+    "email": "sskhot@pict.edu",
+    "phone": "+91-8605799698"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr. Swapnil V. Tathe",
+    "email": "svtathe@pict.edu",
+    "phone": "+91-9096782531"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mr.Nilesh George Nirmal",
+    "email": "ngnirmal@pict.edu",
+    "phone": "+91-7709044899"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mrs. Ankita Ben Patel",
+    "email": "akpatel@pict.edu",
+    "phone": "+91-9834492277"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mrs. K. P. Joshi",
+    "email": "kpjoshi@pict.edu",
+    "phone": "+91-9923706633"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mrs.Sakshi M.Hosamani",
+    "email": "smhosamani@pict.edu",
+    "phone": "+91-9975167161"
+  },
+  {
+    "department": "ENTC",
+    "name": "Mrs.Tanisha S.Londhe",
+    "email": "tslondhe@pict.edu",
+    "phone": "+91-9552527879"
+  },
+  {
+    "department": "ENTC",
+    "name": "Ms. Annagha A. Bidkar",
+    "email": "aabidkar@pict.edu",
+    "phone": "+91-9422000410"
+  },
+  {
+    "department": "ENTC",
+    "name": "Ms. Ashwini R. Bankar",
+    "email": "arbankar@pict.edu",
+    "phone": "+91-9561660534"
+  },
+  {
+    "department": "ENTC",
+    "name": "Ms. Bhakti D. Kadam",
+    "email": "bdkadam@pict.edu",
+    "phone": "+91-9028889753"
+  },
+  {
+    "department": "ENTC",
+    "name": "Ms. Komal M. Masal",
+    "email": "kmmasal@pict.edu",
+    "phone": "+91-8421948718"
+  },
+  {
+    "department": "ENTC",
+    "name": "Ms. Manisha Jayant Sagade",
+    "email": "mjsagade@pict.edu",
+    "phone": "+91-9890054954"
+  },
+  {
+    "department": "ENTC",
+    "name": "Ms.Pragtee Bhagvan Tathe",
+    "email": "pbtathe@pict.edu",
+    "phone": "+91-9637351651"
+  },
+  {
+    "department": "ENTC",
+    "name": "Nilesh Suresh Shirude",
+    "email": "nsshirude@pict.edu",
+    "phone": "+91-8956210124"
+  },
+  {
+    "department": "ENTC",
+    "name": "Pradeep Varade",
+    "email": "psvarade@pict.edu",
+    "phone": "+91-9822748570"
+  },
+  {
+    "department": "ENTC",
+    "name": "Rishikesh Janardan Sutar",
+    "email": "rjsutar@pict.edu",
+    "phone": "+91-8087239187"
+  },
+  {
+    "department": "ENTC",
+    "name": "Sandip Gaikwad",
+    "email": "svgaikwad@pict.edu",
+    "phone": "+91-9763858666"
+  },
+  {
+    "department": "ENTC",
+    "name": "Shahadev Dattatraya Hake",
+    "email": "sdhake@pict.edu",
+    "phone": "+91-7588078839"
+  },
+  {
+    "department": "ENTC",
+    "name": "Y Ravinder",
+    "email": "yravinder@pict.edu",
+    "phone": "+91-9850463493"
+  },
+  {
+    "department": "IT",
+    "name": "Asst. Prof. Rachna A. Karnavat",
+    "email": "rrchhajed@pict.edu",
+    "phone": "+91-7588591055"
+  },
+  {
+    "department": "IT",
+    "name": "Dr .Emmanuel Mark",
+    "email": "emmanuelm@pict.edu",
+    "phone": "+91-9124371101"
+  },
+  {
+    "department": "IT",
+    "name": "Dr. Shyam Deshmukh",
+    "email": "sbdeshmukh@pict.edu",
+    "phone": "+91-7709602019"
+  },
+  {
+    "department": "IT",
+    "name": "Hrucha.C.Deshmukh",
+    "email": "hcdeshmukh@pict.edu",
+    "phone": "+91-9011183929"
+  },
+  {
+    "department": "IT",
+    "name": "MR. NAMAN VIJAY BURADKAR",
+    "email": "nvburadkar@pict.edu",
+    "phone": "+91-9822343256"
+  },
+  {
+    "department": "IT",
+    "name": "Mr. Abhijeet Chandrakant Karve",
+    "email": "ackarve@pict.edu",
+    "phone": "+91-9850596521"
+  },
+  {
+    "department": "IT",
+    "name": "Mr. Abhinay G. Dhamankar",
+    "email": "agdhamankar@pict.edu",
+    "phone": "+91-9850069485"
+  },
+  {
+    "department": "IT",
+    "name": "Mr. Jagadish Kashinath Kamble",
+    "email": "jkkamble@pict.edu",
+    "phone": "+91-9561963055"
+  },
+  {
+    "department": "IT",
+    "name": "Mr. Manish R Khodaskar",
+    "email": "mrkhodaskar@pict.edu",
+    "phone": "+91-9822074520"
+  },
+  {
+    "department": "IT",
+    "name": "Mr. Ravindra B. Murumkar",
+    "email": "rbmurumkar@pict.edu",
+    "phone": "+91-9850774272"
+  },
+  {
+    "department": "IT",
+    "name": "Mr. Sachin S.Pande",
+    "email": "sspande@pict.edu",
+    "phone": "+91-8766808467"
+  },
+  {
+    "department": "IT",
+    "name": "Mr. Vishal Ramesh Jaiswal",
+    "email": "vrjaiswal@pict.edu",
+    "phone": "+91-9881890974"
+  },
+  {
+    "department": "IT",
+    "name": "Mrs. Amruta Patil",
+    "email": "asawati@pict.edu",
+    "phone": "+91-9975624765"
+  },
+  {
+    "department": "IT",
+    "name": "Mrs. Bhagyashree Kadam",
+    "email": "bskadam@pict.edu",
+    "phone": "+91-9594790225"
+  },
+  {
+    "department": "IT",
+    "name": "Mrs. Kirti Yogesh Digholkar",
+    "email": "kydigholkar@pict.edu",
+    "phone": "+91-9823184163"
+  },
+  {
+    "department": "IT",
+    "name": "Mrs. Punam Ashish Shinde",
+    "email": "pashinde@pict.edu",
+    "phone": "+91-8421027484"
+  },
+  {
+    "department": "IT",
+    "name": "Mrs.Deepali P.Salapurkar",
+    "email": "dpsalapurkar@pict.edu",
+    "phone": "+91-7498226284"
+  },
+  {
+    "department": "IT",
+    "name": "Ms. Ameya Anil Kadam",
+    "email": "ameyakadam@pict.edu",
+    "phone": "+91-9657956415"
+  },
+  {
+    "department": "IT",
+    "name": "Ms. Arti G. Ghule",
+    "email": "agghule@pict.edu",
+    "phone": "+91-9096881508"
+  },
+  {
+    "department": "IT",
+    "name": "Ms. Jyoti H. Jadhav",
+    "email": "jhjadhav@pict.edu",
+    "phone": "+91-9665322346"
+  },
+  {
+    "department": "IT",
+    "name": "Ms. Neha Jamdar",
+    "email": "nnjamdar@pict.edu",
+    "phone": "+91-9890601840"
+  },
+  {
+    "department": "IT",
+    "name": "Ms. Sayali G Gaikwad",
+    "email": "sggaikwad@pict.edu",
+    "phone": "+91-9326814340"
+  },
+  {
+    "department": "IT",
+    "name": "Prajakta Shinde",
+    "email": "psshinde@pict.edu",
+    "phone": "+91-8329513390"
+  },
+  {
+    "department": "IT",
+    "name": "SACHIN DASHARATH SHELKE",
+    "email": "sachindshelke@pict.edu",
+    "phone": "+91-9975614005"
+  },
+  {
+    "department": "IT",
+    "name": "Vinit Tribhuvan",
+    "email": "vrtribhuvan@pict.edu",
+    "phone": ""
+  }
+]
