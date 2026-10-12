@@ -10,4 +10,5 @@ public interface FaceRecognitionService {
     FaceRecognitionResponse recognize(File photoFile);
     String enroll(MultipartFile photo);
     String enroll(File photoFile);
+    boolean deleteEmbedding(String faceId);
 }

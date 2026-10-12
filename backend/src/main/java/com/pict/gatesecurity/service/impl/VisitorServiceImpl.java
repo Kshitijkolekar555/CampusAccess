@@ -265,6 +265,11 @@ public class VisitorServiceImpl implements VisitorService {
                         .idProofNumber(v.getIdProofNumber())
                         .vehicleNumber(v.getVehicleNumber())
                         .confidenceDistance(matchResult.getDistance())
+                        .similarity(matchResult.getSimilarity())
+                        .numFaces(matchResult.getNumFaces())
+                        .isAmbiguous(matchResult.getIsAmbiguous())
+                        .message(matchResult.getMessage())
+                        .quality(matchResult.getQuality())
                         .build();
             }
         }
@@ -272,6 +277,11 @@ public class VisitorServiceImpl implements VisitorService {
         return VisitorRecognitionResponse.builder()
                 .matched(false)
                 .confidenceDistance(matchResult.getDistance())
+                .similarity(matchResult.getSimilarity())
+                .numFaces(matchResult.getNumFaces())
+                .isAmbiguous(matchResult.getIsAmbiguous())
+                .message(matchResult.getMessage())
+                .quality(matchResult.getQuality())
                 .build();
     }
 
@@ -331,8 +341,8 @@ public class VisitorServiceImpl implements VisitorService {
                 .idProofType(request.getIdProofType())
                 .idProofNumber(request.getIdProofNumber())
                 .photoUrl(photoPath != null ? photoPath : request.getPhotoUrl())
-                .photoPath(photoPath)
-                .faceId(faceId)
+                .photoPath(photoPath != null ? photoPath : request.getPhotoUrl())
+                .faceId(faceId != null ? faceId : (StringUtils.hasText(request.getPhotoUrl()) ? visitorRepository.findFirstByMobileOrderByTimeInDesc(request.getMobile()).map(Visitor::getFaceId).orElse(null) : null))
                 .isBlacklistedMatch(isBlacklistedMatch)
                 .notes(request.getNotes())
                 .createdBy(createdBy)
@@ -347,5 +357,29 @@ public class VisitorServiceImpl implements VisitorService {
         ));
 
         return visitorMapper.toResponse(savedVisitor);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {CacheConfig.CACHE_ADMIN_DASHBOARD, CacheConfig.CACHE_GUARD_DASHBOARD}, allEntries = true)
+    public void deleteVisitor(Long id, String performingUsername) {
+        Visitor visitor = visitorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Visitor", "id", id));
+
+        String faceId = visitor.getFaceId();
+        visitorRepository.delete(visitor);
+
+        // Also purge biometric embedding from the face service if enrolled
+        if (faceId != null && !faceId.isBlank()) {
+            boolean embeddingDeleted = faceRecognitionService.deleteEmbedding(faceId);
+            log.info("Face embedding purge for faceId={} during visitor deletion: deleted={}", faceId, embeddingDeleted);
+        }
+
+        User performer = userRepository.findByUsername(performingUsername).orElse(null);
+        auditLogService.logAction(performer, "VISITOR_DELETED", "Visitor", id, null, Map.of(
+                "name", visitor.getName(),
+                "mobile", visitor.getMobile(),
+                "faceId", faceId != null ? faceId : "none"
+        ));
     }
 }

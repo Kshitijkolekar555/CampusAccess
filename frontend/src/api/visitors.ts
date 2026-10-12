@@ -46,4 +46,9 @@ export const visitorApi = {
     const res = await api.post<ApiResponse<Visitor>>('/visitors/register-with-photo', formData);
     return res.data.data;
   },
+
+  deleteVisitor: async (id: number) => {
+    const res = await api.delete<ApiResponse<void>>(`/visitors/${id}`);
+    return res.data;
+  },
 };

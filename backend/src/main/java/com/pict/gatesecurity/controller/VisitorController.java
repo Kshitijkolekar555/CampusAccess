@@ -116,4 +116,14 @@ public class VisitorController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(response, "Visitor registered and face enrolled successfully"));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'GUARD', 'SECURITY_GUARD')")
+    @Operation(summary = "Delete Visitor Record", description = "Deletes visitor entry by ID")
+    public ResponseEntity<ApiResponse<Void>> deleteVisitor(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        visitorService.deleteVisitor(id, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(null, "Visitor deleted successfully"));
+    }
 }

@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,4 +31,9 @@ public class VisitorRecognitionResponse {
     private String idProofNumber;
     private String vehicleNumber;
     private Double confidenceDistance;
+    private Double similarity;
+    private Integer numFaces;
+    private Boolean isAmbiguous;
+    private String message;
+    private Map<String, Object> quality;
 }

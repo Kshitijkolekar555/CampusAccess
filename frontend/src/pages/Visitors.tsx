@@ -16,6 +16,7 @@ import { QRCodeDisplay } from '../components/ui/QRCodeDisplay';
 import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
 import { UserPlus, LogOut, Search, QrCode, CheckCircle, Shield, ScanFace, Camera, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import facultiesData from '../data/faculties.json';
 import {
   validatePhone,
   validateName,
@@ -40,7 +41,7 @@ const VisitorAvatar: React.FC<{ photoUrl?: string; name: string }> = ({ photoUrl
       return url;
     }
     const clean = url.startsWith('/') ? url : `/${url}`;
-    return `http://localhost:8080${clean}`;
+    return `http://localhost:8081${clean}`;
   };
 
   const resolvedUrl = !imgError ? getResolvedUrl(photoUrl) : null;
@@ -84,6 +85,8 @@ export const Visitors: React.FC = () => {
   const [checkoutVisitor, setCheckoutVisitor] = useState<Visitor | null>(null);
   const [qrVisitor, setQrVisitor] = useState<Visitor | null>(null);
 
+  const [returningVisitor, setReturningVisitor] = useState<{ isReturning: boolean; name: string; photoUrl?: string } | null>(null);
+
   // Form State Default
   const initialFormState = {
     name: '',
@@ -97,6 +100,7 @@ export const Visitors: React.FC = () => {
     vehicleNumber: '',
     idProofType: 'Aadhaar Card',
     idProofNumber: '',
+    photoUrl: '',
     notes: '',
   };
 
@@ -107,6 +111,7 @@ export const Visitors: React.FC = () => {
     setForm(initialFormState);
     setFormErrors({});
     setCapturedPhotoBlob(null);
+    setReturningVisitor(null);
   };
 
   const validateVisitorForm = () => {
@@ -205,6 +210,11 @@ export const Visitors: React.FC = () => {
       setCapturedPhotoBlob(blob);
     }
     if (match.matched && match.visitorName) {
+      setReturningVisitor({
+        isReturning: true,
+        name: match.visitorName,
+        photoUrl: match.photoPath,
+      });
       setForm({
         name: match.visitorName || '',
         mobile: match.mobileNumber || '',
@@ -217,11 +227,16 @@ export const Visitors: React.FC = () => {
         idProofType: match.idProofType || 'Aadhaar Card',
         idProofNumber: match.idProofNumber || '',
         vehicleNumber: match.vehicleNumber || '',
-        notes: '',
+        photoUrl: match.photoPath || '',
+        notes: 'Returning Visitor (Verified via Biometric)',
       });
       setIsWebcamOpen(false);
       setIsCheckInOpen(true);
-      toast.success(`Auto-filled details for ${match.visitorName}`);
+      toast.success(`Returning visitor identified: ${match.visitorName}. Details loaded.`);
+    } else {
+      setReturningVisitor(null);
+      setIsWebcamOpen(false);
+      setIsCheckInOpen(true);
     }
   };
 
@@ -230,6 +245,7 @@ export const Visitors: React.FC = () => {
     if (blob) {
       setCapturedPhotoBlob(blob);
     }
+    setReturningVisitor(null);
     setIsWebcamOpen(false);
     setIsCheckInOpen(true);
   };
@@ -239,7 +255,7 @@ export const Visitors: React.FC = () => {
       header: 'Visitor',
       render: (v) => (
         <div className="flex items-center gap-3">
-          <VisitorAvatar photoUrl={v.photoUrl} name={v.name} />
+          <VisitorAvatar photoUrl={v.photoUrl || v.photoPath} name={v.name} />
           <div>
             <div className="flex items-center gap-1.5">
               <p className="font-bold text-slate-900">{v.name}</p>
@@ -458,15 +474,37 @@ export const Visitors: React.FC = () => {
           }}
           className="space-y-4"
         >
-          {capturedPhotoBlob && (
+          {returningVisitor?.isReturning ? (
+            <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl shadow-xs">
+              <div className="flex items-center gap-3">
+                <VisitorAvatar photoUrl={returningVisitor.photoUrl} name={returningVisitor.name} />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                      Returning Visitor Identified
+                    </span>
+                    <Badge variant="success" className="text-[10px] py-0 px-1.5">
+                      Verified Identity
+                    </Badge>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-800">
+                    {returningVisitor.name} — Registered Photo & Profile Loaded
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] text-slate-500 hidden sm:inline">
+                Update visit purpose/host below
+              </span>
+            </div>
+          ) : capturedPhotoBlob ? (
             <div className="flex items-center justify-between p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
               <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                 <Camera className="w-4 h-4" />
-                <span>Facial photo attached for AI enrollment</span>
+                <span>New Visitor: Live camera capture attached for biometric enrollment</span>
               </div>
               <Badge variant="purple" className="text-[10px]">Photo Ready</Badge>
             </div>
-          )}
+          ) : null}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -514,21 +552,96 @@ export const Visitors: React.FC = () => {
                 if (err) setFormErrors((prev) => ({ ...prev, purpose: err }));
               }}
             />
-            <Input
-              label="Host Person Name"
-              placeholder="Prof. Sharma / Admin Officer"
-              required
-              value={form.hostName}
-              error={formErrors.hostName}
+            <Select
+              label="Host Department"
+              value={form.hostDepartment}
               onChange={(e) => {
-                setForm({ ...form, hostName: e.target.value });
+                const newDept = e.target.value as HostDepartment;
+                setForm({
+                  ...form,
+                  hostDepartment: newDept,
+                  hostName: '', // reset selected teacher when department changes
+                });
                 if (formErrors.hostName) setFormErrors({ ...formErrors, hostName: '' });
               }}
-              onBlur={() => {
-                const err = validateName(form.hostName, 'Host Name');
-                if (err) setFormErrors((prev) => ({ ...prev, hostName: err }));
-              }}
+              options={[
+                { label: 'Computer Engineering (CE)', value: 'CE' },
+                { label: 'Information Technology (IT)', value: 'IT' },
+                { label: 'Electronics & Telecomm (ENTC)', value: 'ENTC' },
+                { label: 'Electronics & Computer (ECE)', value: 'ECE' },
+                { label: 'AI & Data Science (AIDS)', value: 'AIDS' },
+                { label: 'Administrative Office (ADMIN)', value: 'ADMIN' },
+              ]}
             />
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                Host Person Name ({form.hostDepartment}) <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                {(() => {
+                  const deptFaculties = facultiesData.filter(
+                    (f) => f.department.toUpperCase() === form.hostDepartment.toUpperCase()
+                  );
+                  const isListed = deptFaculties.some(
+                    (f) => f.name.toLowerCase() === form.hostName.toLowerCase()
+                  );
+
+                  return (
+                    <>
+                      <select
+                        value={isListed ? form.hostName : form.hostName ? '__OTHER__' : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '__OTHER__') {
+                            setForm({ ...form, hostName: '' });
+                          } else if (val) {
+                            setForm({
+                              ...form,
+                              hostName: val,
+                              hostType: 'FACULTY',
+                            });
+                          } else {
+                            setForm({ ...form, hostName: '' });
+                          }
+                          if (formErrors.hostName) setFormErrors({ ...formErrors, hostName: '' });
+                        }}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-600 text-slate-900 dark:text-white shadow-xs"
+                      >
+                        <option value="">
+                          {deptFaculties.length > 0
+                            ? `-- Select ${form.hostDepartment} Faculty (${deptFaculties.length} available) --`
+                            : `-- No pre-loaded faculty for ${form.hostDepartment} --`}
+                        </option>
+                        {deptFaculties.map((f, idx) => (
+                          <option key={idx} value={f.name}>
+                            {f.name}
+                          </option>
+                        ))}
+                        <option value="__OTHER__">Other (Enter Name Manually)</option>
+                      </select>
+
+                      {(!isListed || !form.hostName) && (
+                        <Input
+                          placeholder={`Enter Host Name in ${form.hostDepartment} manually`}
+                          required
+                          value={form.hostName}
+                          error={formErrors.hostName}
+                          onChange={(e) => {
+                            setForm({ ...form, hostName: e.target.value });
+                            if (formErrors.hostName) setFormErrors({ ...formErrors, hostName: '' });
+                          }}
+                          onBlur={() => {
+                            const err = validateName(form.hostName, 'Host Name');
+                            if (err) setFormErrors((prev) => ({ ...prev, hostName: err }));
+                          }}
+                        />
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
 
             <Select
               label="Host Category"
@@ -561,20 +674,6 @@ export const Visitors: React.FC = () => {
                 }}
               />
             )}
-
-            <Select
-              label="Host Department"
-              value={form.hostDepartment}
-              onChange={(e) => setForm({ ...form, hostDepartment: e.target.value as HostDepartment })}
-              options={[
-                { label: 'Computer Engineering (CE)', value: 'CE' },
-                { label: 'Information Technology (IT)', value: 'IT' },
-                { label: 'Electronics & Telecomm (ENTC)', value: 'ENTC' },
-                { label: 'Electronics & Computer (ECE)', value: 'ECE' },
-                { label: 'AI & Data Science (AIDS)', value: 'AIDS' },
-                { label: 'Administrative Office (ADMIN)', value: 'ADMIN' },
-              ]}
-            />
 
             <Select
               label="Gate"
@@ -656,51 +755,44 @@ export const Visitors: React.FC = () => {
                 <Badge variant="purple" className="font-mono text-xs">{qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`}</Badge>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              <div className="flex flex-col sm:flex-row items-center gap-5 pt-1">
                 {qrVisitor.qrCodeDataUrl ? (
-                  <div className="bg-white p-3 rounded-2xl shrink-0 shadow-lg">
-                    <img src={qrVisitor.qrCodeDataUrl} alt="QR Digital Pass Code" className="w-40 h-40" />
+                  <div className="bg-white p-2.5 rounded-xl shrink-0 shadow-md">
+                    <img src={qrVisitor.qrCodeDataUrl} alt="QR Digital Pass Code" className="w-32 h-32" />
                   </div>
                 ) : (
-                  <QRCodeDisplay
-                    value={JSON.stringify({
-                      system: 'CampusAccess Visitor Pass',
-                      passNo: qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`,
-                      name: qrVisitor.name,
-                      mobile: qrVisitor.mobile,
-                      host: qrVisitor.hostName,
-                      dept: qrVisitor.hostDepartment,
-                      purpose: qrVisitor.purpose,
-                    })}
-                    size={140}
-                    title="VISITOR ACCESS QR"
-                    subtitle={qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`}
-                  />
+                  <div className="shrink-0">
+                    <QRCodeDisplay
+                      value={JSON.stringify({
+                        system: 'CampusAccess Visitor Pass',
+                        passNo: qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`,
+                        name: qrVisitor.name,
+                        mobile: qrVisitor.mobile,
+                        host: qrVisitor.hostName,
+                        dept: qrVisitor.hostDepartment,
+                      })}
+                      size={128}
+                      title="VISITOR ACCESS QR"
+                      subtitle={qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`}
+                    />
+                  </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 text-xs w-full">
-                  <div>
-                    <p className="text-slate-400">Mobile</p>
-                    <p className="font-semibold">{qrVisitor.mobile}</p>
+                <div className="space-y-2.5 text-xs w-full min-w-0">
+                  <div className="flex justify-between items-center py-1 border-b border-slate-800">
+                    <span className="text-slate-400">Mobile</span>
+                    <span className="font-semibold text-slate-200">{qrVisitor.mobile}</span>
                   </div>
-                  <div>
-                    <p className="text-slate-400">Visiting Host</p>
-                    <p className="font-semibold text-indigo-300">{qrVisitor.hostName}</p>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-800">
+                    <span className="text-slate-400">Host</span>
+                    <span className="font-semibold text-indigo-300 truncate max-w-[140px] text-right" title={qrVisitor.hostName}>{qrVisitor.hostName}</span>
                   </div>
-                  <div>
-                    <p className="text-slate-400">Department</p>
-                    <p className="font-semibold">{qrVisitor.hostDepartment}</p>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-800">
+                    <span className="text-slate-400">Department</span>
+                    <span className="font-semibold text-slate-200">{qrVisitor.hostDepartment}</span>
                   </div>
-                  <div>
-                    <p className="text-slate-400">Host Type</p>
-                    <p className="font-semibold text-emerald-400">{qrVisitor.hostType || 'FACULTY'}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400">Purpose</p>
-                    <p className="font-semibold truncate">{qrVisitor.purpose}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400">Status</p>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-slate-400">Status</span>
                     <Badge variant={qrVisitor.timeOut ? 'default' : 'success'}>
                       {qrVisitor.timeOut ? 'Checked Out' : 'Active Inside'}
                     </Badge>

@@ -20,4 +20,5 @@ public interface VisitorService {
 
     VisitorRecognitionResponse recognizeVisitorFace(org.springframework.web.multipart.MultipartFile photo);
     VisitorResponse registerVisitorWithPhoto(org.springframework.web.multipart.MultipartFile photo, VisitorCheckInRequest request, String performingUsername);
+    void deleteVisitor(Long id, String performingUsername);
 }

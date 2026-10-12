@@ -63,19 +63,34 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                 Boolean matched = Boolean.TRUE.equals(resMap.get("matched"));
                 String faceId = (String) resMap.get("faceId");
                 Number distance = (Number) resMap.get("distance");
+                Number similarity = (Number) resMap.get("similarity");
+                Number numFaces = (Number) resMap.get("numFaces");
+                Boolean isAmbiguous = Boolean.TRUE.equals(resMap.get("isAmbiguous"));
+                String message = (String) resMap.get("message");
+                Map<String, Object> quality = (Map<String, Object>) resMap.get("quality");
 
-                log.info("Face recognition service response: matched={}, faceId={}, distance={}", matched, faceId, distance);
+                log.info("Face recognition service response: matched={}, faceId={}, distance={}, similarity={}", matched, faceId, distance, similarity);
                 return FaceRecognitionResponse.builder()
                         .matched(matched)
                         .faceId(faceId)
                         .distance(distance != null ? distance.doubleValue() : 1.0)
+                        .similarity(similarity != null ? similarity.doubleValue() : 0.0)
+                        .numFaces(numFaces != null ? numFaces.intValue() : 0)
+                        .isAmbiguous(isAmbiguous)
+                        .message(message)
+                        .quality(quality)
                         .build();
             }
         } catch (Exception e) {
             log.error("Error communicating with Face Recognition service at {}: {}", faceServiceUrl, e.getMessage());
         }
 
-        return FaceRecognitionResponse.builder().matched(false).distance(1.0).build();
+        return FaceRecognitionResponse.builder()
+                .matched(false)
+                .distance(1.0)
+                .similarity(0.0)
+                .message("Face recognition microservice is currently unreachable")
+                .build();
     }
 
     @Override
@@ -126,5 +141,21 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
             fos.write(file.getBytes());
         }
         return convFile;
+    }
+
+    @Override
+    public boolean deleteEmbedding(String faceId) {
+        if (faceId == null || faceId.isBlank()) {
+            return false;
+        }
+        try {
+            String url = faceServiceUrl + "/embedding/" + faceId;
+            restTemplate.delete(url);
+            log.info("Face embedding deleted for faceId={}", faceId);
+            return true;
+        } catch (Exception e) {
+            log.warn("Could not delete face embedding for faceId={}: {}", faceId, e.getMessage());
+            return false;
+        }
     }
 }

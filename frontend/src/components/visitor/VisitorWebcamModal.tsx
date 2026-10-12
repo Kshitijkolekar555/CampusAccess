@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Camera, RefreshCw, CheckCircle2, UserCheck, UserPlus, AlertCircle, Video, ScanFace, Sparkles } from 'lucide-react';
+import { Badge } from '../ui/Badge';
+import {
+  Camera, RefreshCw, CheckCircle2, UserCheck, UserPlus,
+  AlertCircle, Video, ScanFace, Sparkles, AlertTriangle, ShieldCheck
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { visitorApi } from '../../api/visitors';
 import { VisitorRecognitionResponse } from '../../types';
@@ -29,6 +33,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [isRecognizing, setIsRecognizing] = useState<boolean>(false);
   const [recognitionResult, setRecognitionResult] = useState<VisitorRecognitionResponse | null>(null);
+  const [qualityFeedback, setQualityFeedback] = useState<string[]>([]);
 
   const getDevices = async () => {
     try {
@@ -56,10 +61,14 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
   const startCamera = async (deviceId?: string) => {
     stopCamera();
     try {
+      // Enforce high-definition constraints for optimal biometric landmark extraction
       const constraints: MediaStreamConstraints = {
-        video: deviceId
-          ? { deviceId: { exact: deviceId } }
-          : { facingMode: 'user' },
+        video: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          facingMode: 'user',
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+        },
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       if (videoRef.current) {
@@ -68,9 +77,9 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
       }
       setIsCameraOn(true);
       await getDevices();
-    } catch (err: any) {
-      console.error('Failed to access camera:', err);
-      toast.error('Camera access denied or device unavailable');
+    } catch (err) {
+      console.error('Camera access error:', err);
+      toast.error('Unable to access camera. Please verify device permissions and connection.');
       setIsCameraOn(false);
     }
   };
@@ -87,45 +96,45 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
   const handleDeviceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newDeviceId = e.target.value;
     setSelectedDeviceId(newDeviceId);
-    if (isCameraOn) {
-      startCamera(newDeviceId);
-    }
+    startCamera(newDeviceId);
   };
 
   const capturePhoto = (): Promise<{ dataUrl: string; blob: Blob }> => {
     return new Promise((resolve, reject) => {
-      if (!videoRef.current || !canvasRef.current) {
-        reject(new Error('Video element not available'));
-        return;
-      }
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
+      if (!video || !canvas) {
+        return reject(new Error('Video or canvas elements are unavailable'));
+      }
+
+      const width = video.videoWidth || 1280;
+      const height = video.videoHeight || 720;
+      canvas.width = width;
+      canvas.height = height;
 
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        reject(new Error('Canvas context not found'));
-        return;
+        return reject(new Error('Failed to obtain canvas 2D rendering context'));
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
       canvas.toBlob(
         (blob) => {
           if (blob) {
             resolve({ dataUrl, blob });
           } else {
-            reject(new Error('Failed to capture image blob'));
+            reject(new Error('Failed to capture high-resolution image blob'));
           }
         },
         'image/jpeg',
-        0.9
+        0.95
       );
     });
   };
 
   const handleCaptureAndRecognize = async () => {
+    if (isRecognizing) return;
     try {
       let currentBlob = capturedBlob;
       let currentDataUrl = capturedImage;
@@ -145,17 +154,24 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
 
       setIsRecognizing(true);
       setRecognitionResult(null);
+      setQualityFeedback([]);
 
       const result = await visitorApi.recognizeFace(currentBlob);
       setRecognitionResult(result);
       setIsRecognizing(false);
 
-      if (result.matched) {
-        toast.success(`Face Matched! Visitor: ${result.visitorName || 'Registered Visitor'}`);
-        onRecognized(result, currentBlob);
+      if (result.quality?.issues && result.quality.issues.length > 0) {
+        setQualityFeedback(result.quality.issues);
+      }
+
+      if (result.matched && result.visitorName) {
+        toast.success(`Returning Visitor Recognized: ${result.visitorName}!`);
+      } else if (result.isAmbiguous) {
+        toast.warning(result.message || 'Multiple similar facial candidates found. Manual confirmation required.');
+      } else if (result.numFaces === 0) {
+        toast.error('No human face detected. Please face the camera and try again.');
       } else {
-        toast.info('No facial match found. You can register as a new visitor.');
-        onRecognized(result, currentBlob);
+        toast.info(result.message || 'First-time visitor. Please proceed to entry form.');
       }
     } catch (err: any) {
       setIsRecognizing(false);
@@ -165,10 +181,21 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
     }
   };
 
+  const handleProceedWithResult = () => {
+    if (!capturedBlob && !recognitionResult) return;
+    stopCamera();
+    if (recognitionResult?.matched) {
+      onRecognized(recognitionResult, capturedBlob);
+    } else {
+      onRegisterNew(capturedBlob);
+    }
+  };
+
   const handleRetake = () => {
     setCapturedImage(null);
     setCapturedBlob(null);
     setRecognitionResult(null);
+    setQualityFeedback([]);
     if (!isCameraOn) {
       startCamera(selectedDeviceId);
     }
@@ -178,6 +205,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
     setCapturedImage(null);
     setCapturedBlob(null);
     setRecognitionResult(null);
+    setQualityFeedback([]);
     setIsRecognizing(false);
   };
 
@@ -188,8 +216,8 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
         stopCamera();
         onClose();
       }}
-      title="Facial Recognition Terminal"
-      subtitle="Capture live visitor photo to verify identity or enroll new visitor"
+      title="High-Accuracy Facial Recognition Terminal"
+      subtitle="CNN YuNet & SFace 128-D Biometric Gate Verification"
       maxWidth="lg"
     >
       <div className="space-y-4">
@@ -197,7 +225,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
             <Video className="w-4 h-4 text-indigo-600" />
-            <span>Select Camera Device:</span>
+            <span>Active Camera Device:</span>
           </div>
           <select
             value={selectedDeviceId}
@@ -212,7 +240,22 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
           </select>
         </div>
 
-        {/* Camera Display Box with Custom UI Backdrop */}
+        {/* Quality Feedback Alerts */}
+        {qualityFeedback.length > 0 && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-amber-800 text-xs">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Camera Quality Guidance:</p>
+              <ul className="list-disc list-inside mt-0.5 text-amber-700">
+                {qualityFeedback.map((issue, idx) => (
+                  <li key={idx}>{issue}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Camera Display Box */}
         <div className="relative aspect-video bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center shadow-xl">
           <video
             ref={videoRef}
@@ -231,11 +274,14 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
 
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* Scanner Grid Overlay effect when camera is live */}
+          {/* Biometric Target Guide Overlay */}
           {isCameraOn && !capturedImage && (
-            <div className="pointer-events-none absolute inset-0 border-2 border-indigo-500/30 rounded-2xl flex items-center justify-center">
-              <div className="w-48 h-48 border border-indigo-400/40 rounded-full animate-pulse flex items-center justify-center">
-                <ScanFace className="w-10 h-10 text-indigo-400/60" />
+            <div className="pointer-events-none absolute inset-0 border-2 border-indigo-500/20 rounded-2xl flex items-center justify-center">
+              <div className="w-56 h-72 border-2 border-dashed border-indigo-400/50 rounded-full animate-pulse flex flex-col items-center justify-center bg-indigo-500/5">
+                <ScanFace className="w-12 h-12 text-indigo-400/80 mb-2" />
+                <span className="text-[11px] font-semibold text-indigo-200 uppercase tracking-wider bg-slate-900/60 px-2.5 py-0.5 rounded-full">
+                  Align Face Inside Oval
+                </span>
               </div>
             </div>
           )}
@@ -271,31 +317,55 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                     <UserCheck className="w-6 h-6" />
                   </div>
                   <div>
-                    <span className="inline-flex items-center gap-1 text-[10px] uppercase font-extrabold text-emerald-400 tracking-wider">
-                      <Sparkles className="w-3 h-3" /> Identity Verified
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-[10px] uppercase font-extrabold text-emerald-400 tracking-wider">
+                        <Sparkles className="w-3 h-3" /> Returning Visitor Verified
+                      </span>
+                      {recognitionResult.similarity !== undefined && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded">
+                          {(recognitionResult.similarity * 100).toFixed(1)}% Match
+                        </span>
+                      )}
+                    </div>
                     <h5 className="font-extrabold text-sm text-white">
                       {recognitionResult.visitorName} ({recognitionResult.mobileNumber})
                     </h5>
                     <p className="text-[11px] text-slate-300">
-                      Host: {recognitionResult.hostPersonOrDepartment} | Match Score: {recognitionResult.confidenceDistance ?? 'N/A'}
+                      Host: {recognitionResult.hostPersonOrDepartment} | Photo On File
+                    </p>
+                  </div>
+                </div>
+              ) : recognitionResult.isAmbiguous ? (
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-400 border border-amber-500/30">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">
+                      Ambiguous Candidates
+                    </span>
+                    <h5 className="font-semibold text-xs text-slate-200">
+                      Manual Identity Verification Required
+                    </h5>
+                    <p className="text-[11px] text-slate-400">
+                      Multiple registered visitors show similar facial features.
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-400 border border-amber-500/30">
+                  <div className="p-2.5 bg-indigo-500/20 rounded-xl text-indigo-400 border border-indigo-500/30">
                     <AlertCircle className="w-6 h-6" />
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">
-                      New Visitor Detected
+                    <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">
+                      New Visitor (First Visit)
                     </span>
                     <h5 className="font-semibold text-xs text-slate-200">
-                      No match score under threshold ({recognitionResult.confidenceDistance ?? 'N/A'})
+                      No matching registered facial record found
                     </h5>
                     <p className="text-[11px] text-slate-400">
-                      Click 'Enroll & Register' to save visitor details.
+                      Proceed to enter visitor details and enroll photo.
                     </p>
                   </div>
                 </div>
@@ -338,16 +408,13 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
               </Button>
             )}
 
-            {capturedBlob && !recognitionResult?.matched && (
+            {recognitionResult && (
               <Button
-                variant="secondary"
-                leftIcon={<UserPlus className="w-4 h-4" />}
-                onClick={() => {
-                  stopCamera();
-                  onRegisterNew(capturedBlob);
-                }}
+                variant={recognitionResult.matched ? "primary" : "secondary"}
+                leftIcon={recognitionResult.matched ? <ShieldCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                onClick={handleProceedWithResult}
               >
-                Enroll & Register
+                {recognitionResult.matched ? "Confirm & Auto-Fill Form" : "Enroll & Fill Form"}
               </Button>
             )}
           </div>

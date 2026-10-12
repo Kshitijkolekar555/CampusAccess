@@ -37,3 +37,4 @@ __pycache__/
 *.pyc
 face-service/face_service.db
 backend/uploads/
+*.onnx

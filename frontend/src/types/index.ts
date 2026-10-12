@@ -130,6 +130,16 @@ export interface VisitorRecognitionResponse {
   idProofNumber?: string;
   vehicleNumber?: string;
   confidenceDistance?: number;
+  similarity?: number;
+  numFaces?: number;
+  isAmbiguous?: boolean;
+  message?: string;
+  quality?: {
+    suitable?: boolean;
+    blur_score?: number;
+    brightness?: number;
+    issues?: string[];
+  };
 }
 
 export interface Gate {
