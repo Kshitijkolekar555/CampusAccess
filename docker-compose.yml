@@ -1,37 +1,31 @@
 # ============================================================
 # docker-compose.yml — Local Development
-# Services: PostgreSQL + Spring Boot Backend
-# Frontend (Phase 8) will be added here.
-#
-# Usage:
-#   1. Copy .env.example to .env and fill in values
-#   2. docker-compose up --build
+# Services: MySQL + Spring Boot Backend + Frontend
 # ============================================================
 
 version: "3.9"
 
 services:
   # ----------------------------------------------------------
-  # PostgreSQL 16
+  # MySQL 8.0
   # ----------------------------------------------------------
-  postgres:
-    image: postgres:16-alpine
+  mysql:
+    image: mysql:8.0
     container_name: pict_gatesecurity_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-acampusaccessdb}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-Purva@2118_}
     ports:
-      - "5432:5432"
+      - "3307:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-Purva@2118_}"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 20s
     networks:
       - gatesecurity_net
 
@@ -45,17 +39,18 @@ services:
     container_name: pict_gatesecurity_backend
     restart: unless-stopped
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
+      faceservice:
+        condition: service_started
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${DB_NAME:-acampusaccessdb}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-Purva@2118_}
       JWT_SECRET: ${JWT_SECRET}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      FACE_SERVICE_URL: http://faceservice:8001
     ports:
       - "8080:8080"
     healthcheck:
@@ -67,11 +62,41 @@ services:
     networks:
       - gatesecurity_net
 
+  # ----------------------------------------------------------
+  # Frontend
+  # ----------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pict_gatesecurity_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - gatesecurity_net
+
+  # ----------------------------------------------------------
+  # Face Service
+  # ----------------------------------------------------------
+  faceservice:
+    build:
+      context: ./face-service
+      dockerfile: Dockerfile
+    container_name: pict_gatesecurity_faceservice
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    networks:
+      - gatesecurity_net
+
 # ----------------------------------------------------------
 # Volumes & Networks
 # ----------------------------------------------------------
 volumes:
-  postgres_data:
+  mysql_data:
     driver: local
 
 networks:
