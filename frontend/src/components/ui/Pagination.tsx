@@ -20,18 +20,18 @@ export const Pagination: React.FC<PaginationProps> = ({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 rounded-b-xl">
-      <div className="text-sm text-slate-500">
+    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-[--line]">
+      <div className="text-xs text-[--mute]" style={{ fontFamily: 'Inter, sans-serif' }}>
         {totalElements !== undefined && pageSize !== undefined ? (
           <span>
-            Showing <span className="font-medium text-slate-900">{Math.min((currentPage - 1) * pageSize + 1, totalElements)}</span> to{' '}
-            <span className="font-medium text-slate-900">{Math.min(currentPage * pageSize, totalElements)}</span> of{' '}
-            <span className="font-medium text-slate-900">{totalElements}</span> results
+            Showing <span className="font-semibold text-[--text] font-mono">{Math.min(currentPage * pageSize + 1, totalElements)}</span> to{' '}
+            <span className="font-semibold text-[--text] font-mono">{Math.min((currentPage + 1) * pageSize, totalElements)}</span> of{' '}
+            <span className="font-semibold text-[--text] font-mono">{totalElements}</span> results
           </span>
         ) : (
           <span>
-            Page <span className="font-medium text-slate-900">{currentPage}</span> of{' '}
-            <span className="font-medium text-slate-900">{totalPages}</span>
+            Page <span className="font-semibold text-[--text] font-mono">{currentPage + 1}</span> of{' '}
+            <span className="font-semibold text-[--text] font-mono">{totalPages}</span>
           </span>
         )}
       </div>

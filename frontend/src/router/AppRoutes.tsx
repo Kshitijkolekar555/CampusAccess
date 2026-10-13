@@ -4,6 +4,9 @@ import { useAuthStore } from '../store/authStore';
 import { Layout } from '../components/layout/Layout';
 import { Login } from '../pages/Login';
 import { LandingPage } from '../pages/LandingPage';
+import { EnterSystem } from '../pages/EnterSystem';
+import { StudentPortal } from '../pages/StudentPortal';
+import { VisitorPortal } from '../pages/VisitorPortal';
 import { Dashboard } from '../pages/Dashboard';
 import { Visitors } from '../pages/Visitors';
 import { Vehicles } from '../pages/Vehicles';
@@ -26,6 +29,12 @@ const ProtectedLayout: React.FC<{ allowedRoles?: UserRole[] }> = ({ allowedRoles
     return <Navigate to="/login" replace />;
   }
 
+  // Block unsupported roles (Admin, Faculty, Warden, etc.) from accessing the app
+  const supportedRoles: UserRole[] = ['STUDENT', 'SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER'];
+  if (user && !supportedRoles.includes(user.role)) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -40,44 +49,47 @@ const ProtectedLayout: React.FC<{ allowedRoles?: UserRole[] }> = ({ allowedRoles
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* ── Public Routes ─────────────────────────────────────────────── */}
       <Route path="/" element={<LandingPage />} />
+
+      {/* Enter System selection page */}
+      <Route path="/enter" element={<EnterSystem />} />
+
+      {/* Student portal (student login/register — STUDENT role only) */}
+      <Route path="/student/login"    element={<StudentPortal />} />
+      <Route path="/student/register" element={<StudentPortal />} />
+
+      {/* Visitor portal (public, unauthenticated camera-first flow) */}
+      <Route path="/visitor" element={<VisitorPortal />} />
+
+      {/* Guard/legacy login route — used by guards and as fallback */}
       <Route path="/login" element={<Login />} />
 
-      {/* General Protected Routes */}
+      {/* ── General Protected Routes ──────────────────────────────────── */}
       <Route element={<ProtectedLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile"   element={<Profile />} />
       </Route>
 
-      {/* Role Protected Routes */}
-      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF']} />}>
+      {/* ── Guard-Only Routes ─────────────────────────────────────────── */}
+      <Route element={<ProtectedLayout allowedRoles={['SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER']} />}>
         <Route path="/visitors" element={<Visitors />} />
-      </Route>
-
-      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD']} />}>
         <Route path="/vehicles" element={<Vehicles />} />
-        <Route path="/vendors" element={<Vendors />} />
-        <Route path="/guards" element={<Guards />} />
-        <Route path="/shifts" element={<Shifts />} />
-        <Route path="/gates" element={<Gates />} />
+        <Route path="/vendors"  element={<Vendors />} />
+        <Route path="/guards"   element={<Guards />} />
+        <Route path="/shifts"   element={<Shifts />} />
+        <Route path="/gates"    element={<Gates />} />
       </Route>
 
-      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'HOSTEL_WARDEN', 'STUDENT']} />}>
-        <Route path="/student-passes" element={<StudentPasses />} />
+      {/* ── Guard + Student Routes ────────────────────────────────────── */}
+      <Route element={<ProtectedLayout allowedRoles={['SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'STUDENT']} />}>
+        <Route path="/student-passes"   element={<StudentPasses />} />
         <Route path="/hostel-outpasses" element={<HostelOutpasses />} />
+        <Route path="/notifications"    element={<Notifications />} />
       </Route>
 
-      <Route element={<ProtectedLayout allowedRoles={['ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'HOSTEL_WARDEN']} />}>
-        <Route path="/notifications" element={<Notifications />} />
-      </Route>
-
-      <Route element={<ProtectedLayout allowedRoles={['ADMIN']} />}>
-        <Route path="/users" element={<Users />} />
-      </Route>
-
-      {/* Default Catch All */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* ── Default Catch-All ─────────────────────────────────────────── */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

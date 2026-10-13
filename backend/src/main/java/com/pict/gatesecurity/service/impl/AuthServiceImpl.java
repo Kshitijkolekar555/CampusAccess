@@ -6,6 +6,7 @@ import com.pict.gatesecurity.dto.user.UserResponse;
 import com.pict.gatesecurity.entity.PasswordResetToken;
 import com.pict.gatesecurity.entity.RefreshToken;
 import com.pict.gatesecurity.entity.User;
+import com.pict.gatesecurity.entity.enums.UserRole;
 import com.pict.gatesecurity.exception.BadRequestException;
 import com.pict.gatesecurity.exception.DuplicateResourceException;
 import com.pict.gatesecurity.exception.ResourceNotFoundException;
@@ -48,6 +49,8 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
+    private final com.pict.gatesecurity.repository.StudentGatePassRepository studentGatePassRepository;
+    private final com.pict.gatesecurity.repository.HostelOutpassRepository hostelOutpassRepository;
 
     @Value("${app.jwt.refresh-token-expiry-ms}")
     private long refreshTokenExpiryMs;
@@ -69,6 +72,18 @@ public class AuthServiceImpl implements AuthService {
 
             if (!Boolean.TRUE.equals(user.getActive())) {
                 throw new UnauthorizedException("Account is disabled");
+            }
+
+            // Enforce supported login roles: Only Guard and Student are permitted to authenticate
+            UserRole role = user.getRole();
+            boolean isAllowedRole = role == UserRole.STUDENT
+                    || role == UserRole.GUARD
+                    || role == UserRole.SECURITY_GUARD
+                    || role == UserRole.SECURITY_OFFICER;
+
+            if (!isAllowedRole) {
+                log.warn("Blocked login attempt for unsupported role: {} (user={})", role, user.getUsername());
+                throw new UnauthorizedException("Login is restricted to Security Guard and Student accounts only. Admin, Faculty, and Warden accounts are not permitted to log in.");
             }
 
             if (request.getExpectedRole() != null && !request.getExpectedRole().isBlank()) {
@@ -122,6 +137,17 @@ public class AuthServiceImpl implements AuthService {
         User user = storedToken.getUser();
         if (!Boolean.TRUE.equals(user.getActive())) {
             throw new UnauthorizedException("Account is disabled");
+        }
+
+        UserRole role = user.getRole();
+        boolean isAllowedRole = role == UserRole.STUDENT
+                || role == UserRole.GUARD
+                || role == UserRole.SECURITY_GUARD
+                || role == UserRole.SECURITY_OFFICER;
+
+        if (!isAllowedRole) {
+            log.warn("Blocked refresh token attempt for unsupported role: {} (user={})", role, user.getUsername());
+            throw new UnauthorizedException("Token refresh is restricted to Security Guard and Student accounts only.");
         }
 
         storedToken.setRevoked(true);
@@ -248,8 +274,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponse register(UserCreateRequest request) {
-        if (request.getRole() == com.pict.gatesecurity.entity.enums.UserRole.ADMIN) {
-            throw new BadRequestException("Self-registration as ADMIN is not permitted. Contact system admin.");
+        UserRole regRole = request.getRole();
+        if (regRole != UserRole.STUDENT && regRole != UserRole.GUARD && regRole != UserRole.SECURITY_GUARD) {
+            throw new BadRequestException("Registration is restricted to Student and Guard accounts only. Admin, Faculty, and Warden registration is not permitted.");
         }
 
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -306,12 +333,48 @@ public class AuthServiceImpl implements AuthService {
 
         persistRefreshToken(studentUser, refreshTokenStr);
 
+        String branchYear = null;
+        String hostelRoom = null;
+        String mobileNumber = studentUser.getPhone();
+
+        if (studentGatePassRepository != null) {
+            java.util.Optional<com.pict.gatesecurity.entity.StudentGatePass> latestGatePass =
+                    studentGatePassRepository.findFirstByStudentPrnOrderByIdDesc(normalizedPrn);
+            if (latestGatePass.isPresent()) {
+                com.pict.gatesecurity.entity.StudentGatePass gp = latestGatePass.get();
+                if (gp.getStudentDepartment() != null && gp.getStudentClass() != null) {
+                    branchYear = gp.getStudentDepartment() + " - " + gp.getStudentClass();
+                } else if (gp.getStudentDepartment() != null) {
+                    branchYear = gp.getStudentDepartment();
+                }
+                if (mobileNumber == null) {
+                    mobileNumber = gp.getStudentMobile();
+                }
+            }
+        }
+
+        if (hostelOutpassRepository != null) {
+            java.util.Optional<com.pict.gatesecurity.entity.HostelOutpass> latestOutpass =
+                    hostelOutpassRepository.findFirstByStudentPrnOrderByIdDesc(normalizedPrn);
+            if (latestOutpass.isPresent()) {
+                com.pict.gatesecurity.entity.HostelOutpass ho = latestOutpass.get();
+                if (ho.getStudentHostel() != null && ho.getStudentRoom() != null) {
+                    hostelRoom = ho.getStudentHostel() + " • " + ho.getStudentRoom();
+                } else if (ho.getStudentRoom() != null) {
+                    hostelRoom = ho.getStudentRoom();
+                }
+                if (mobileNumber == null) {
+                    mobileNumber = ho.getStudentMobile();
+                }
+            }
+        }
+
         return StudentAuthDto.builder()
                 .prn(normalizedPrn)
                 .studentName(studentUser.getFullName())
-                .branchYear("COMP - TE")
-                .hostelRoom("B-304")
-                .mobileNumber(studentUser.getPhone() != null ? studentUser.getPhone() : "9876543210")
+                .branchYear(branchYear)
+                .hostelRoom(hostelRoom)
+                .mobileNumber(mobileNumber)
                 .active(studentUser.getActive())
                 .accessToken(accessToken)
                 .refreshToken(refreshTokenStr)

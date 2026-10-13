@@ -2,6 +2,7 @@ package com.pict.gatesecurity.entity;
 
 import com.pict.gatesecurity.entity.enums.HostDepartment;
 import com.pict.gatesecurity.entity.enums.HostType;
+import com.pict.gatesecurity.entity.enums.PassStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -86,6 +87,11 @@ public class Visitor {
     @Column(name = "is_blacklisted_match", nullable = false)
     @Builder.Default
     private Boolean isBlacklistedMatch = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 30)
+    @Builder.Default
+    private PassStatus status = PassStatus.APPROVED;
 
     @Column(columnDefinition = "TEXT")
     private String notes;

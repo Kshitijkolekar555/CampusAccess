@@ -26,33 +26,49 @@ export const HostelOutpasses: React.FC = () => {
     return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
   };
 
-  const getInitialForm = () => ({
-    studentName: user?.fullName || '',
-    studentPrn: user?.username || '',
-    studentRoom: 'A-102',
-    studentHostel: 'Block A',
-    studentClass: 'BE',
-    studentDivision: '1',
-    studentMobile: user?.phone || '9876543210',
-    parentContact: '9876543210',
-    emergencyContact: '9876543210',
-    reason: '',
-    studentNote: '',
-    destination: '',
-    departureTime: toLocalISOString(new Date()),
-    expectedReturnTime: toLocalISOString(new Date(Date.now() + 86400000)),
-  });
-
-  const [form, setForm] = useState(getInitialForm());
-
-  React.useEffect(() => {
-    setForm(getInitialForm());
-  }, [user]);
-
+  // Query — declared first so pageData is available in form init/effects
   const { data: pageData, isLoading, refetch } = useQuery({
     queryKey: ['hostel-outpasses', page],
     queryFn: () => hostelOutpassApi.getOutpasses({ page, size: 10 }),
   });
+
+  const getInitialForm = () => {
+    const existing = pageData?.content?.find((o: any) => o.studentPrn === user?.username);
+    return {
+      studentName: user?.fullName || '',
+      studentPrn: user?.username || '',
+      studentRoom: existing?.studentRoom || '',
+      studentHostel: existing?.studentHostel || '',
+      studentClass: existing?.studentClass || '',
+      studentDivision: existing?.studentDivision || '',
+      studentMobile: user?.phone || existing?.studentMobile || '',
+      parentContact: existing?.parentContact || '',
+      emergencyContact: existing?.emergencyContact || '',
+      reason: '',
+      studentNote: '',
+      destination: '',
+      departureTime: toLocalISOString(new Date()),
+      expectedReturnTime: toLocalISOString(new Date(Date.now() + 86400000)),
+    };
+  };
+
+  const [form, setForm] = useState(getInitialForm());
+
+  React.useEffect(() => {
+    const existing = pageData?.content?.find((o: any) => o.studentPrn === user?.username);
+    setForm((prev) => ({
+      ...prev,
+      studentName: user?.fullName || prev.studentName,
+      studentPrn: user?.username || prev.studentPrn,
+      studentRoom: prev.studentRoom || existing?.studentRoom || '',
+      studentHostel: prev.studentHostel || existing?.studentHostel || '',
+      studentClass: prev.studentClass || existing?.studentClass || '',
+      studentDivision: prev.studentDivision || existing?.studentDivision || '',
+      studentMobile: prev.studentMobile || user?.phone || existing?.studentMobile || '',
+      parentContact: prev.parentContact || existing?.parentContact || '',
+      emergencyContact: prev.emergencyContact || existing?.emergencyContact || '',
+    }));
+  }, [user, pageData]);
 
   const createMutation = useMutation({
     mutationFn: (data: typeof form) => hostelOutpassApi.createOutpass({
@@ -215,14 +231,31 @@ export const HostelOutpasses: React.FC = () => {
 
       {/* Create Modal */}
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Issue Hostel Outpass Request">
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!form.studentHostel.trim() || !form.studentRoom.trim() || !form.parentContact.trim() || !form.studentMobile.trim() || !form.studentClass.trim()) {
+              toast.error('Please fill in Hostel Block, Room Number, Parent Contact, and Mobile before submitting');
+              return;
+            }
+            createMutation.mutate(form);
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Input label="Student Name" required value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })} disabled={user?.role === 'STUDENT'} />
             <Input label="Student PRN" required value={form.studentPrn} onChange={(e) => setForm({ ...form, studentPrn: e.target.value })} disabled={user?.role === 'STUDENT'} />
-            <Input label="Hostel Block" required value={form.studentHostel} onChange={(e) => setForm({ ...form, studentHostel: e.target.value })} />
-            <Input label="Room Number" required value={form.studentRoom} onChange={(e) => setForm({ ...form, studentRoom: e.target.value })} />
-            <Input label="Student Mobile" required value={form.studentMobile} onChange={(e) => setForm({ ...form, studentMobile: e.target.value })} disabled={user?.role === 'STUDENT'} />
-            <Input label="Parent Contact" required value={form.parentContact} onChange={(e) => setForm({ ...form, parentContact: e.target.value })} />
+            <Input label="Hostel Block" required placeholder="e.g. Block A" value={form.studentHostel} onChange={(e) => setForm({ ...form, studentHostel: e.target.value })} />
+            <Input label="Room Number" required placeholder="e.g. 102" value={form.studentRoom} onChange={(e) => setForm({ ...form, studentRoom: e.target.value })} />
+            <Input
+              label="Student Mobile"
+              required
+              placeholder="e.g. 9822012345"
+              value={form.studentMobile}
+              onChange={(e) => setForm({ ...form, studentMobile: e.target.value })}
+              disabled={user?.role === 'STUDENT' && !!user?.phone}
+            />
+            <Input label="Parent Contact" required placeholder="e.g. 9822054321" value={form.parentContact} onChange={(e) => setForm({ ...form, parentContact: e.target.value })} />
             <Input label="Emergency Contact" value={form.emergencyContact} onChange={(e) => setForm({ ...form, emergencyContact: e.target.value })} />
             <Input label="Class & Div" value={`${form.studentClass}-${form.studentDivision}`} onChange={(e) => {
               const parts = e.target.value.split('-');

@@ -48,8 +48,8 @@ export type HostDepartment =
   | 'ADMIN';
 
 export type VehicleCategory = 'STUDENT' | 'STAFF' | 'VISITOR' | 'CONTRACTOR' | 'VIP';
-export type PassStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'COMPLETED';
-export type OutpassStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'COMPLETED';
+export type PassStatus = 'PENDING' | 'APPROVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'REJECTED' | 'EXPIRED';
+export type OutpassStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXITED' | 'RETURNED' | 'EXPIRED' | 'COMPLETED';
 export type ShiftStatus = 'ONGOING' | 'COMPLETED' | 'ABORTED';
 export type LogType = 'GENERAL' | 'INCIDENT' | 'CHECK_ROUNDS' | 'HANDOVER' | 'MAINTENANCE';
 export type NotificationEventType =
@@ -112,6 +112,8 @@ export interface Visitor {
   createdByUsername?: string;
   passNumber?: string;
   qrCodeDataUrl?: string;
+  faceEnrolled?: boolean;
+  status?: 'PENDING' | 'APPROVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'REJECTED' | 'EXPIRED';
 }
 
 export interface VisitorRecognitionResponse {
@@ -363,6 +365,7 @@ export interface GuardSelfDashboardResponse {
   vehiclesExitedToday: number;
   materialsProcessedToday: number;
   studentPassesProcessedToday?: number;
+  hostelVerifications?: number;
   activeVisitorsInsideCampus: number;
   recentLogs: ShiftLog[];
 }

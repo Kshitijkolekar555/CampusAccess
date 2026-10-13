@@ -74,7 +74,7 @@ export const Users: React.FC = () => {
       render: (u) => (
         <div>
           <p className="font-bold text-slate-900">{u.fullName}</p>
-          <p className="text-xs text-slate-400">@{u.username}</p>
+          <p className="text-xs text-slate-400 font-mono">@{u.username}</p>
         </div>
       ),
     },
@@ -87,7 +87,7 @@ export const Users: React.FC = () => {
       render: (u) => (
         <div>
           <p className="text-xs font-semibold text-slate-800">{u.email || 'No email'}</p>
-          <p className="text-[11px] text-slate-400">{u.phone || 'No phone'}</p>
+          <p className="text-[11px] text-slate-400 font-mono">{u.phone || 'No phone'}</p>
         </div>
       ),
     },

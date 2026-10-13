@@ -16,6 +16,8 @@ public interface HostelOutpassRepository extends JpaRepository<HostelOutpass, Lo
 
     List<HostelOutpass> findByStudentPrnAndStatusIn(String studentPrn, List<OutpassStatus> statuses);
 
+    java.util.Optional<HostelOutpass> findFirstByStudentPrnOrderByIdDesc(String studentPrn);
+
     @Query("SELECT ho FROM HostelOutpass ho WHERE ho.status = 'APPROVED' AND ho.expectedReturnTime < :now")
     List<HostelOutpass> findOverdueApprovedOutpasses(@Param("now") OffsetDateTime now);
 

@@ -48,7 +48,7 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER')")
     @Operation(summary = "Search & Filter Users", description = "Paginated list of users filtered by query, role, or active status (ADMIN only)")
     public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getUsers(
             @RequestParam(required = false) String query,

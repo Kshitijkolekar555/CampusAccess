@@ -9,6 +9,8 @@ import com.pict.gatesecurity.entity.Visitor;
 import com.pict.gatesecurity.entity.WatchlistEntry;
 import com.pict.gatesecurity.entity.enums.HostDepartment;
 import com.pict.gatesecurity.entity.enums.HostType;
+import com.pict.gatesecurity.entity.enums.PassStatus;
+import java.util.UUID;
 import com.pict.gatesecurity.exception.BadRequestException;
 import com.pict.gatesecurity.exception.ResourceNotFoundException;
 import com.pict.gatesecurity.mapper.VisitorMapper;
@@ -320,7 +322,8 @@ public class VisitorServiceImpl implements VisitorService {
                         .orElseThrow(() -> new ResourceNotFoundException("Gate", "id", gateId)));
 
         User createdBy = userRepository.findByUsername(performingUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
+                .or(() -> userRepository.findFirstByOrderByIdAsc())
+                .orElse(null);
 
         // Automatic Watchlist Check
         List<WatchlistEntry> matches = watchlistRepository.findMatchingEntries(request.getMobile(), request.getName());
@@ -338,8 +341,8 @@ public class VisitorServiceImpl implements VisitorService {
                 .vehicleNumber(request.getVehicleNumber())
                 .timeIn(OffsetDateTime.now())
                 .timeOut(null)
-                .idProofType(request.getIdProofType())
-                .idProofNumber(request.getIdProofNumber())
+                .idProofType(StringUtils.hasText(request.getIdProofType()) ? request.getIdProofType() : "Digital Pass")
+                .idProofNumber(StringUtils.hasText(request.getIdProofNumber()) ? request.getIdProofNumber() : "VT-" + (System.currentTimeMillis() % 1000000))
                 .photoUrl(photoPath != null ? photoPath : request.getPhotoUrl())
                 .photoPath(photoPath != null ? photoPath : request.getPhotoUrl())
                 .faceId(faceId != null ? faceId : (StringUtils.hasText(request.getPhotoUrl()) ? visitorRepository.findFirstByMobileOrderByTimeInDesc(request.getMobile()).map(Visitor::getFaceId).orElse(null) : null))
@@ -381,5 +384,168 @@ public class VisitorServiceImpl implements VisitorService {
                 "mobile", visitor.getMobile(),
                 "faceId", faceId != null ? faceId : "none"
         ));
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {CacheConfig.CACHE_ADMIN_DASHBOARD, CacheConfig.CACHE_GUARD_DASHBOARD}, allEntries = true)
+    public VisitorResponse requestToken(MultipartFile photo, VisitorCheckInRequest request, String performingUsername) {
+        if (request == null) {
+            throw new BadRequestException("Visit request details are required");
+        }
+        String cleanName = com.pict.gatesecurity.util.ValidationUtil.normalizeName(request.getName());
+        String cleanMobile = com.pict.gatesecurity.util.ValidationUtil.normalizePhone(request.getMobile());
+        String cleanPurpose = request.getPurpose() != null ? request.getPurpose().trim() : "";
+        if (cleanName.isBlank() || cleanMobile.isBlank() || cleanPurpose.isBlank()) {
+            throw new BadRequestException("Name, Mobile number, and Purpose are required");
+        }
+
+        String photoPath = null;
+        String faceId = null;
+
+        if (photo != null && !photo.isEmpty()) {
+            try {
+                File dir = new File("uploads/visitor-photos");
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+                String filename = "visitor_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + ".jpg";
+                File destFile = new File(dir, filename);
+                try (FileOutputStream fos = new FileOutputStream(destFile)) {
+                    fos.write(photo.getBytes());
+                }
+                photoPath = "/uploads/visitor-photos/" + filename;
+                log.info("Saved visitor token request photo to {}", photoPath);
+
+                // Enroll face embedding with Python service
+                faceId = faceRecognitionService.enroll(destFile);
+                log.info("Enrolled face embedding for token request: faceId={}", faceId);
+            } catch (Exception e) {
+                log.warn("Face enrollment during token generation could not be completed: {}", e.getMessage());
+            }
+        }
+
+        // If no new face enrolled, check if this mobile was already enrolled in past
+        if (faceId == null) {
+            faceId = visitorRepository.findFirstByMobileOrderByTimeInDesc(cleanMobile)
+                    .map(Visitor::getFaceId).orElse(null);
+            if (photoPath == null) {
+                photoPath = visitorRepository.findFirstByMobileOrderByTimeInDesc(cleanMobile)
+                        .map(Visitor::getPhotoPath).orElse(null);
+            }
+        }
+
+        Long gateId = request.getGateId() != null ? request.getGateId() : 1L;
+        Gate gate = gateRepository.findById(gateId)
+                .orElseGet(() -> gateRepository.findAll().stream().findFirst()
+                        .orElseThrow(() -> new ResourceNotFoundException("Gate", "id", gateId)));
+
+        User createdBy = userRepository.findByUsername(performingUsername)
+                .or(() -> userRepository.findFirstByOrderByIdAsc())
+                .orElse(null);
+
+        // Automatic Watchlist Check
+        List<WatchlistEntry> matches = watchlistRepository.findMatchingEntries(cleanMobile, cleanName);
+        boolean isBlacklistedMatch = !matches.isEmpty();
+
+        Visitor visitor = Visitor.builder()
+                .name(cleanName)
+                .mobile(cleanMobile)
+                .purpose(cleanPurpose)
+                .hostName(StringUtils.hasText(request.getHostName()) ? request.getHostName().trim() : "General Inquiry")
+                .hostType(request.getHostType() != null ? request.getHostType() : HostType.FACULTY)
+                .hostDepartment(request.getHostDepartment() != null ? request.getHostDepartment() : HostDepartment.ADMIN)
+                .studentPrn(request.getStudentPrn())
+                .gate(gate)
+                .vehicleNumber(com.pict.gatesecurity.util.ValidationUtil.normalizeVehicleNumber(request.getVehicleNumber()))
+                .timeIn(OffsetDateTime.now())
+                .timeOut(null)
+                .idProofType(StringUtils.hasText(request.getIdProofType()) ? request.getIdProofType() : "Digital Token")
+                .idProofNumber(StringUtils.hasText(request.getIdProofNumber()) ? request.getIdProofNumber() : "VT-" + (System.currentTimeMillis() % 1000000))
+                .photoUrl(photoPath != null ? photoPath : request.getPhotoUrl())
+                .photoPath(photoPath != null ? photoPath : request.getPhotoUrl())
+                .faceId(faceId)
+                .isBlacklistedMatch(isBlacklistedMatch)
+                .status(PassStatus.PENDING)
+                .notes(request.getNotes() != null ? request.getNotes() : "Self-requested digital token — pending guard approval")
+                .createdBy(createdBy)
+                .build();
+
+        Visitor savedVisitor = visitorRepository.save(visitor);
+        auditLogService.logAction(createdBy, "DIGITAL_TOKEN_REQUESTED", "Visitor", savedVisitor.getId(), null, Map.of(
+                "name", savedVisitor.getName(),
+                "mobile", savedVisitor.getMobile(),
+                "status", "PENDING"
+        ));
+
+        return visitorMapper.toResponse(savedVisitor);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VisitorResponse> getPendingTokens() {
+        return visitorRepository.findByStatusOrderByCreatedAtDesc(PassStatus.PENDING)
+                .stream()
+                .map(visitorMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {CacheConfig.CACHE_ADMIN_DASHBOARD, CacheConfig.CACHE_GUARD_DASHBOARD}, allEntries = true)
+    public VisitorResponse approveToken(Long id, String performingUsername) {
+        Visitor visitor = visitorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Visitor", "id", id));
+        visitor.setStatus(PassStatus.APPROVED);
+        visitor.setTimeIn(OffsetDateTime.now());
+        visitor.setNotes((visitor.getNotes() != null ? visitor.getNotes() + " | " : "") + "Approved by Guard @" + performingUsername);
+        Visitor saved = visitorRepository.save(visitor);
+
+        User performer = userRepository.findByUsername(performingUsername).orElse(null);
+        auditLogService.logAction(performer, "DIGITAL_TOKEN_APPROVED", "Visitor", saved.getId(), null, Map.of(
+                "name", saved.getName(),
+                "status", "APPROVED"
+        ));
+        return visitorMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {CacheConfig.CACHE_ADMIN_DASHBOARD, CacheConfig.CACHE_GUARD_DASHBOARD}, allEntries = true)
+    public VisitorResponse rejectToken(Long id, String performingUsername) {
+        Visitor visitor = visitorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Visitor", "id", id));
+        visitor.setStatus(PassStatus.REJECTED);
+        visitor.setTimeOut(OffsetDateTime.now());
+        visitor.setNotes((visitor.getNotes() != null ? visitor.getNotes() + " | " : "") + "Rejected by Guard @" + performingUsername);
+        Visitor saved = visitorRepository.save(visitor);
+
+        User performer = userRepository.findByUsername(performingUsername).orElse(null);
+        auditLogService.logAction(performer, "DIGITAL_TOKEN_REJECTED", "Visitor", saved.getId(), null, Map.of(
+                "name", saved.getName(),
+                "status", "REJECTED"
+        ));
+        return visitorMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public VisitorResponse getMyActiveToken(String performingUsername) {
+        User user = userRepository.findByUsername(performingUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
+
+        var tokenOpt = visitorRepository.findFirstByCreatedByIdOrderByCreatedAtDesc(user.getId());
+        if (tokenOpt.isPresent()) {
+            return visitorMapper.toResponse(tokenOpt.get());
+        }
+
+        if (StringUtils.hasText(user.getPhone())) {
+            var tokenByPhoneOpt = visitorRepository.findFirstByMobileOrderByCreatedAtDesc(user.getPhone());
+            if (tokenByPhoneOpt.isPresent()) {
+                return visitorMapper.toResponse(tokenByPhoneOpt.get());
+            }
+        }
+
+        return null;
     }
 }

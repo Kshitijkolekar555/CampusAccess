@@ -75,16 +75,16 @@ export const Profile: React.FC = () => {
       </div>
 
       {/* User Summary Card */}
-      <div style={{ background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5" style={{ background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4 }}>
         <div style={{ width: 44, height: 44, borderRadius: 4, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#e8e6e2', flexShrink: 0 }}>
           {user?.fullName?.charAt(0) || 'U'}
         </div>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="flex flex-wrap items-center gap-2">
             <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 17, color: '#f0ede8', margin: 0, letterSpacing: '-0.01em' }}>{user?.fullName}</h3>
             <Badge variant="purple">{user?.role}</Badge>
           </div>
-          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>@{user?.username} · System Account</p>
+          <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>@{user?.username} · System Account</p>
         </div>
       </div>
 

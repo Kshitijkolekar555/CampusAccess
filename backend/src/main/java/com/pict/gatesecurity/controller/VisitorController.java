@@ -97,7 +97,6 @@ public class VisitorController {
     }
 
     @PostMapping(value = "/recognize", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF', 'USER')")
     @Operation(summary = "Recognize Visitor Face", description = "Uploads photo to Python service to match existing visitor")
     public ResponseEntity<VisitorRecognitionResponse> recognizeVisitor(
             @RequestParam("photo") MultipartFile photo) {
@@ -105,14 +104,63 @@ public class VisitorController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping(value = {"/request-token", "/generate-token"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Request Digital Token with Photo", description = "Generates a digital token with face capture awaiting guard approval")
+    public ResponseEntity<ApiResponse<VisitorResponse>> requestDigitalToken(
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @Valid @RequestPart("data") VisitorCheckInRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String username = userDetails != null ? userDetails.getUsername() : "visitor_portal";
+        VisitorResponse response = visitorService.requestToken(photo, request, username);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(response, "Digital token requested successfully. Pending guard clearance."));
+    }
+
+    @GetMapping("/my-active-token")
+    @PreAuthorize("hasAnyRole('VISITOR', 'USER', 'STUDENT', 'SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF')")
+    @Operation(summary = "Get Visitor's Active/Pending Digital Token", description = "Fetches the current user's digital token pass")
+    public ResponseEntity<ApiResponse<VisitorResponse>> getMyActiveToken(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        VisitorResponse response = visitorService.getMyActiveToken(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/pending-tokens")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @Operation(summary = "Get Pending Digital Tokens", description = "Fetches all pending digital tokens awaiting guard approval")
+    public ResponseEntity<ApiResponse<List<VisitorResponse>>> getPendingTokens() {
+        List<VisitorResponse> responses = visitorService.getPendingTokens();
+        return ResponseEntity.ok(ApiResponse.success(responses));
+    }
+
+    @PutMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @Operation(summary = "Approve Digital Token", description = "Guard approves visitor digital token and admits them to campus")
+    public ResponseEntity<ApiResponse<VisitorResponse>> approveDigitalToken(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        VisitorResponse response = visitorService.approveToken(id, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(response, "Digital token approved and visitor admitted"));
+    }
+
+    @PutMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @Operation(summary = "Reject Digital Token", description = "Guard rejects visitor digital token pass")
+    public ResponseEntity<ApiResponse<VisitorResponse>> rejectDigitalToken(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        VisitorResponse response = visitorService.rejectToken(id, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(response, "Digital token rejected"));
+    }
+
     @PostMapping(value = "/register-with-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF', 'USER')")
     @Operation(summary = "Register Visitor with Photo & Face Enrollment", description = "Saves visitor record, photo, and registers face embedding")
     public ResponseEntity<ApiResponse<VisitorResponse>> registerWithPhoto(
             @RequestPart(value = "photo", required = false) MultipartFile photo,
             @Valid @RequestPart("data") VisitorCheckInRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
-        VisitorResponse response = visitorService.registerVisitorWithPhoto(photo, request, userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "visitor_portal";
+        VisitorResponse response = visitorService.registerVisitorWithPhoto(photo, request, username);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(response, "Visitor registered and face enrolled successfully"));
     }

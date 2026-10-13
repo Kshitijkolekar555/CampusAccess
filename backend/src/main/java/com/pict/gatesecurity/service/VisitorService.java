@@ -21,4 +21,10 @@ public interface VisitorService {
     VisitorRecognitionResponse recognizeVisitorFace(org.springframework.web.multipart.MultipartFile photo);
     VisitorResponse registerVisitorWithPhoto(org.springframework.web.multipart.MultipartFile photo, VisitorCheckInRequest request, String performingUsername);
     void deleteVisitor(Long id, String performingUsername);
+
+    VisitorResponse requestToken(org.springframework.web.multipart.MultipartFile photo, VisitorCheckInRequest request, String performingUsername);
+    List<VisitorResponse> getPendingTokens();
+    VisitorResponse approveToken(Long id, String performingUsername);
+    VisitorResponse rejectToken(Long id, String performingUsername);
+    VisitorResponse getMyActiveToken(String performingUsername);
 }

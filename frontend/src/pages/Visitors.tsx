@@ -12,9 +12,8 @@ import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Card } from '../components/ui/Card';
-import { QRCodeDisplay } from '../components/ui/QRCodeDisplay';
 import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
-import { UserPlus, LogOut, Search, QrCode, CheckCircle, Shield, ScanFace, Camera, Sparkles } from 'lucide-react';
+import { UserPlus, LogOut, Search, CheckCircle, Shield, ScanFace, Camera, Sparkles, FileText, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import facultiesData from '../data/faculties.json';
 import {
@@ -176,8 +175,16 @@ export const Visitors: React.FC = () => {
       }
       return visitorApi.checkIn(data);
     },
-    onSuccess: (data) => {
-      toast.success('Visitor checked in successfully!');
+    onSuccess: (data: Visitor) => {
+      if (capturedPhotoBlob) {
+        if (data.faceEnrolled) {
+          toast.success('Visitor checked in & biometric face enrolled successfully!');
+        } else {
+          toast.info('Visitor checked in. Note: Biometric enrollment was skipped or face service offline.');
+        }
+      } else {
+        toast.success('Visitor checked in successfully!');
+      }
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       queryClient.invalidateQueries({ queryKey: ['visitors-active'] });
       setIsCheckInOpen(false);
@@ -228,11 +235,12 @@ export const Visitors: React.FC = () => {
         idProofNumber: match.idProofNumber || '',
         vehicleNumber: match.vehicleNumber || '',
         photoUrl: match.photoPath || '',
-        notes: 'Returning Visitor (Verified via Biometric)',
+        // Audit note: form pre-filled from biometric match — guard must verify before confirming
+        notes: 'Details pre-filled from facial recognition match — verify identity before confirming entry',
       });
       setIsWebcamOpen(false);
       setIsCheckInOpen(true);
-      toast.success(`Returning visitor identified: ${match.visitorName}. Details loaded.`);
+      toast.info(`Possible match: ${match.visitorName}. Verify the visitor's identity before confirming check-in.`);
     } else {
       setReturningVisitor(null);
       setIsWebcamOpen(false);
@@ -249,6 +257,29 @@ export const Visitors: React.FC = () => {
     setIsWebcamOpen(false);
     setIsCheckInOpen(true);
   };
+
+  const approveTokenMutation = useMutation({
+    mutationFn: (id: number) => visitorApi.approveToken(id),
+    onSuccess: (data) => {
+      toast.success(`Digital token approved for ${data.name}! Entrance admitted.`);
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
+      queryClient.invalidateQueries({ queryKey: ['active-visitors-dashboard'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to approve token');
+    },
+  });
+
+  const rejectTokenMutation = useMutation({
+    mutationFn: (id: number) => visitorApi.rejectToken(id),
+    onSuccess: (data) => {
+      toast.info(`Token rejected for ${data.name || 'visitor'}.`);
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to reject token');
+    },
+  });
 
   const columns: Column<Visitor>[] = [
     {
@@ -286,11 +317,19 @@ export const Visitors: React.FC = () => {
     },
     {
       header: 'Status',
-      render: (v) => (
-        <Badge variant={v.timeOut ? 'default' : 'success'}>
-          {v.timeOut ? 'Checked Out' : 'Active Inside'}
-        </Badge>
-      ),
+      render: (v) => {
+        if (v.status === 'PENDING') {
+          return <Badge variant="warning">Pending Clearance</Badge>;
+        }
+        if (v.status === 'REJECTED') {
+          return <Badge variant="danger">Rejected</Badge>;
+        }
+        return (
+          <Badge variant={v.timeOut ? 'default' : 'success'}>
+            {v.timeOut ? 'Checked Out' : 'Active Inside'}
+          </Badge>
+        );
+      },
     },
     {
       header: 'Check In Time',
@@ -303,12 +342,29 @@ export const Visitors: React.FC = () => {
 
         return (
           <div className="flex items-center gap-2">
-            {v.qrCodeDataUrl && (
-              <Button variant="ghost" size="sm" onClick={() => setQrVisitor(v)}>
-                <QrCode className="w-4 h-4 text-indigo-600" />
-              </Button>
-            )}
-            {!v.timeOut && canCheckOut && (
+            <Button variant="ghost" size="sm" onClick={() => setQrVisitor(v)} title="View Pass Details">
+              <Ticket className="w-4 h-4 text-indigo-600" />
+            </Button>
+            {v.status === 'PENDING' && canCheckOut ? (
+              <>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => approveTokenMutation.mutate(v.id)}
+                  disabled={approveTokenMutation.isPending}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => rejectTokenMutation.mutate(v.id)}
+                  disabled={rejectTokenMutation.isPending}
+                >
+                  Reject
+                </Button>
+              </>
+            ) : !v.timeOut && canCheckOut ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -317,7 +373,7 @@ export const Visitors: React.FC = () => {
               >
                 Exit
               </Button>
-            )}
+            ) : null}
           </div>
         );
       },
@@ -333,7 +389,7 @@ export const Visitors: React.FC = () => {
             Visitor Management
           </h2>
           <p className="text-xs text-slate-500">
-            Real-time visitor registration, AI facial recognition, QR digital pass generation, and checkout tracking.
+            Real-time visitor registration, AI facial recognition, digital pass verification, and checkout tracking.
           </p>
         </div>
 
@@ -373,7 +429,7 @@ export const Visitors: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="md:col-span-2 flex items-center justify-between">
+        <Card className="md:col-span-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <h4 className="text-sm font-bold text-slate-900">Face Verification & Watchlist Enabled</h4>
@@ -393,20 +449,22 @@ export const Visitors: React.FC = () => {
             placeholder="Search visitor by name, mobile, or pass #..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-600 text-slate-900 shadow-xs"
+            className="w-full pl-10 pr-4 py-2 bg-white border border-[--line] rounded-[4px] text-xs outline-none focus:border-[--accent] text-[--text] transition-colors"
+            style={{ fontFamily: 'Inter, sans-serif' }}
           />
         </div>
 
         {/* Host Category Filter */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs font-semibold text-slate-500 shrink-0">Host Category:</span>
+          <span className="text-xs font-semibold text-[--mute] shrink-0" style={{ fontFamily: 'Inter, sans-serif' }}>Host Category:</span>
           <select
             value={hostTypeFilter}
             onChange={(e) => {
               setHostTypeFilter(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg font-medium text-slate-800 outline-none focus:ring-2 focus:ring-indigo-600 shadow-xs"
+            className="px-3 py-2 text-xs bg-white border border-[--line] rounded-[4px] font-medium text-[--text] outline-none focus:border-[--accent] transition-colors"
+            style={{ fontFamily: 'Inter, sans-serif' }}
           >
             <option value="">All Host Categories</option>
             <option value="FACULTY">Teachers / Faculty</option>
@@ -454,7 +512,7 @@ export const Visitors: React.FC = () => {
           resetForm();
         }}
         title="Check-In Visitor & Issue Digital Pass"
-        subtitle="Registers visitor details and generates a QR pass"
+        subtitle="Registers visitor details and generates an authenticated gate pass"
         maxWidth="xl"
       >
         <form
@@ -475,20 +533,23 @@ export const Visitors: React.FC = () => {
           className="space-y-4"
         >
           {returningVisitor?.isReturning ? (
-            <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl shadow-xs">
+            <div className="flex items-center justify-between p-3.5 bg-blue-50 border border-blue-200 rounded-xl shadow-xs">
               <div className="flex items-center gap-3">
                 <VisitorAvatar photoUrl={returningVisitor.photoUrl} name={returningVisitor.name} />
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-                      Returning Visitor Identified
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
+                      Potential Biometric Match
                     </span>
-                    <Badge variant="success" className="text-[10px] py-0 px-1.5">
-                      Verified Identity
+                    <Badge variant="purple" className="text-[10px] py-0 px-1.5">
+                      Verify Before Confirming
                     </Badge>
                   </div>
                   <p className="text-xs font-semibold text-slate-800">
-                    {returningVisitor.name} — Registered Photo & Profile Loaded
+                    {returningVisitor.name} — Form pre-filled from recognition result
+                  </p>
+                  <p className="text-[10px] text-blue-700 mt-0.5">
+                    ⚠ Confirm visitor identity manually before submitting
                   </p>
                 </div>
               </div>
@@ -736,12 +797,12 @@ export const Visitors: React.FC = () => {
         </form>
       </Modal>
 
-      {/* QR Code Pass Preview Modal */}
+      {/* Visitor Digital Gate Pass Preview Modal */}
       <Modal
         isOpen={!!qrVisitor}
         onClose={() => setQrVisitor(null)}
-        title="Visitor Digital Gate Pass & QR Code"
-        subtitle="Present or scan this pass at campus security checkpoints"
+        title="Visitor Digital Gate Pass"
+        subtitle="Official campus security entry authorization permit"
         maxWidth="md"
       >
         {qrVisitor && (
@@ -756,27 +817,11 @@ export const Visitors: React.FC = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-5 pt-1">
-                {qrVisitor.qrCodeDataUrl ? (
-                  <div className="bg-white p-2.5 rounded-xl shrink-0 shadow-md">
-                    <img src={qrVisitor.qrCodeDataUrl} alt="QR Digital Pass Code" className="w-32 h-32" />
-                  </div>
-                ) : (
-                  <div className="shrink-0">
-                    <QRCodeDisplay
-                      value={JSON.stringify({
-                        system: 'CampusAccess Visitor Pass',
-                        passNo: qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`,
-                        name: qrVisitor.name,
-                        mobile: qrVisitor.mobile,
-                        host: qrVisitor.hostName,
-                        dept: qrVisitor.hostDepartment,
-                      })}
-                      size={128}
-                      title="VISITOR ACCESS QR"
-                      subtitle={qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`}
-                    />
-                  </div>
-                )}
+                <div className="w-28 h-28 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex flex-col items-center justify-center text-indigo-300 p-2 text-center shrink-0">
+                  <Shield className="w-8 h-8 text-indigo-400 mb-1" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider">AUTHORIZED PASS</span>
+                  <span className="text-[9px] text-slate-400 font-mono mt-0.5">{qrVisitor.passNumber || `#${qrVisitor.id}`}</span>
+                </div>
 
                 <div className="space-y-2.5 text-xs w-full min-w-0">
                   <div className="flex justify-between items-center py-1 border-b border-slate-800">

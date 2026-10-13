@@ -68,7 +68,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           <div className="flex items-center gap-1.5 mt-2">
             <span
               style={{
-                fontFamily: 'IBM Plex Mono, monospace',
+                fontFamily: 'JetBrains Mono, monospace',
                 fontSize: 11,
                 color: trend.isPositive ? '#047857' : '#be123c',
               }}

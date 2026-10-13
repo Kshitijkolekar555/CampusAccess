@@ -17,6 +17,8 @@ public interface StudentGatePassRepository extends JpaRepository<StudentGatePass
 
     List<StudentGatePass> findByStudentPrnAndStatus(String studentPrn, PassStatus status);
 
+    java.util.Optional<StudentGatePass> findFirstByStudentPrnOrderByIdDesc(String studentPrn);
+
     @Query("SELECT sgp FROM StudentGatePass sgp WHERE sgp.status = 'APPROVED' AND sgp.expectedReturnTime < :now")
     List<StudentGatePass> findOverdueApprovedPasses(@Param("now") OffsetDateTime now);
 

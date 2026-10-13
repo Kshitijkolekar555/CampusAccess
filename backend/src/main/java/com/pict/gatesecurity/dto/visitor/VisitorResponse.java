@@ -2,6 +2,7 @@ package com.pict.gatesecurity.dto.visitor;
 
 import com.pict.gatesecurity.entity.enums.HostDepartment;
 import com.pict.gatesecurity.entity.enums.HostType;
+import com.pict.gatesecurity.entity.enums.PassStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -38,4 +39,6 @@ public class VisitorResponse {
     private String createdByUsername;
     private String passNumber;
     private String qrCodeDataUrl;
+    private Boolean faceEnrolled;
+    private PassStatus status;
 }

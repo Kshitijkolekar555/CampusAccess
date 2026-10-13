@@ -11,5 +11,8 @@ public enum UserRole {
     STAFF,
 
     GUARD,
-    CANTEEN_STAFF
+    CANTEEN_STAFF,
+    FACULTY,
+    HOD,
+    OTHER
 }

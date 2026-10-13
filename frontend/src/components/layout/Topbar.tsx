@@ -1,18 +1,22 @@
 import React from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { Bell, LogOut, User as UserIcon } from 'lucide-react';
+import { Bell, LogOut, User as UserIcon, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const Topbar: React.FC = () => {
+interface TopbarProps {
+  onToggleMenu?: () => void;
+}
+
+export const Topbar: React.FC<TopbarProps> = ({ onToggleMenu }) => {
   const { user, logout } = useAuthStore();
 
   return (
     <header
+      className="px-3 sm:px-6"
       style={{
         height: 52,
         background: 'white',
         borderBottom: '1px solid var(--line)',
-        padding: '0 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -22,29 +26,45 @@ export const Topbar: React.FC = () => {
         flexShrink: 0,
       }}
     >
-      {/* Page search — underline style */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--line)', paddingBottom: 6 }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-        </svg>
-        <input
-          type="text"
-          placeholder="Search visitors, passes, vehicles…"
-          style={{
-            background: 'none', border: 'none', outline: 'none',
-            fontFamily: 'Inter, sans-serif', fontSize: 13,
-            color: 'var(--text)', width: 240,
-            caretColor: 'var(--accent)',
-          }}
-          className="placeholder:text-[var(--mute)]"
-        />
+      {/* Left controls: Mobile Menu + Search */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {onToggleMenu && (
+          <button
+            type="button"
+            onClick={onToggleMenu}
+            aria-label="Toggle navigation menu"
+            className="md:hidden flex items-center justify-center rounded text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            style={{ minWidth: 44, minHeight: 44, padding: 8 }}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Page search — underline style (hidden on very small mobile to prevent overflow) */}
+        <div className="hidden sm:flex items-center gap-2" style={{ borderBottom: '1px solid var(--line)', paddingBottom: 6 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search visitors, passes…"
+            style={{
+              background: 'none', border: 'none', outline: 'none',
+              fontFamily: 'Inter, sans-serif', fontSize: 13,
+              color: 'var(--text)', width: 180,
+              caretColor: 'var(--accent)',
+            }}
+            className="placeholder:text-[var(--mute)]"
+          />
+        </div>
       </div>
 
       {/* Right controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {/* Role label */}
         {user?.role && (
           <span
+            className="hidden xs:inline-block"
             style={{
               fontFamily: 'Inter, sans-serif',
               fontSize: 11,

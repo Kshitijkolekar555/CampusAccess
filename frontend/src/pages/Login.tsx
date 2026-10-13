@@ -15,7 +15,7 @@ import {
 } from '../utils/validation';
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
-type UserRole = 'STUDENT' | 'SECURITY_GUARD' | 'STAFF' | 'ADMIN' | 'VISITOR' | 'HOSTEL_WARDEN';
+type UserRole = 'SECURITY_GUARD';
 type ActionMode = 'LOGIN' | 'SIGNUP';
 
 /* ─── colour tokens (CSS custom properties used inline) ─────────────────── */
@@ -30,17 +30,11 @@ const C = {
 
 /* ─── role meta ──────────────────────────────────────────────────────────── */
 const ROLES: { id: UserRole; label: string }[] = [
-  { id: 'STUDENT',        label: 'Student'  },
-  { id: 'SECURITY_GUARD', label: 'Guard'    },
-  { id: 'HOSTEL_WARDEN',  label: 'Warden'   },
-  { id: 'STAFF',          label: 'Faculty'  },
-  { id: 'ADMIN',          label: 'Admin'    },
-  { id: 'VISITOR',        label: 'Visitor'  },
+  { id: 'SECURITY_GUARD', label: 'Guard' },
 ];
 
 const ROLE_TITLE: Record<UserRole, string> = {
-  STUDENT: 'Student', SECURITY_GUARD: 'Guard',
-  STAFF: 'Faculty', ADMIN: 'Admin', VISITOR: 'Visitor', HOSTEL_WARDEN: 'Warden',
+  SECURITY_GUARD: 'Guard',
 };
 
 /* ─── underline input ────────────────────────────────────────────────────── */
@@ -112,7 +106,7 @@ const BoomBarrierSVG = () => (
 /* ─── main component ─────────────────────────────────────────────────────── */
 export const Login: React.FC = () => {
   const [actionMode, setActionMode]       = useState<ActionMode>('LOGIN');
-  const [selectedRole, setSelectedRole]   = useState<UserRole>('STUDENT');
+  const [selectedRole, setSelectedRole]   = useState<UserRole>('SECURITY_GUARD');
   const [username, setUsername]           = useState('');
   const [password, setPassword]           = useState('');
   const [showPassword, setShowPassword]   = useState(false);
@@ -129,25 +123,7 @@ export const Login: React.FC = () => {
   const { setAuth } = useAuthStore();
   const navigate    = useNavigate();
 
-  /* helper demo fallback user generator */
-  const createFallbackUser = (u: string, role: UserRole) => ({
-    id: Date.now(),
-    username: u,
-    role: role,
-    fullName: u === 'admin' ? 'PICT Administrator'
-      : u === 'guard1' || u.includes('guard') ? 'Security Guard Ramesh'
-      : u === 'student1' || role === 'STUDENT' ? 'Rohan Patil'
-      : u === 'warden1' || role === 'HOSTEL_WARDEN' ? 'Mrs. S. Kulkarni (Warden Block B)'
-      : u === 'staff1' || role === 'STAFF' ? 'Prof. S. Sharma'
-      : `${u} (${role})`,
-    email: `${u.toLowerCase().replace(/[^a-z0-9]/g, '')}@pict.edu`,
-    phone: '9876543210',
-    active: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-
-  /* handlers (unchanged logic) -------------------------------------------- */
+  /* handlers ------------------------------------------------------------- */
   const handleStandardLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const u = username.trim();
@@ -165,14 +141,7 @@ export const Login: React.FC = () => {
       toast.success(`Welcome back, ${data.user.fullName}!`);
       navigate('/dashboard');
     } catch (err: any) {
-      const msg = err.response?.data?.message;
-      if (!msg) {
-        const fallback = createFallbackUser(u, selectedRole);
-        setAuth(fallback, 'demo-access-token', 'demo-refresh-token');
-        toast.success(`Signed in as ${fallback.fullName}`);
-        navigate('/dashboard');
-        return;
-      }
+      const msg = err.response?.data?.message || err.message || 'Authentication failed. Please verify credentials.';
       toast.error(msg);
     } finally { setLoading(false); }
   };
@@ -182,13 +151,13 @@ export const Login: React.FC = () => {
     const cleanName  = normalizeName(regFullName);
     const cleanUser  = regUsername.trim();
     const cleanEmail = regEmail ? normalizeEmail(regEmail) : '';
-    const cleanPhone = regPhone ? normalizePhone(regPhone) : '9876543210';
+    const cleanPhone = regPhone ? normalizePhone(regPhone) : '';
     const nameErr = validateName(cleanName, 'Full Name');
     if (nameErr) { toast.error(nameErr); return; }
     if (!cleanUser) { toast.error('Username is required'); return; }
     const passErr = validatePasswordStrength(regPassword);
     if (passErr) { toast.error(passErr); return; }
-    if (cleanPhone && cleanPhone !== '9876543210') {
+    if (cleanPhone) {
       const pe = validatePhone(cleanPhone); if (pe) { toast.error(pe); return; }
     }
     if (cleanEmail) {
@@ -200,29 +169,14 @@ export const Login: React.FC = () => {
       const newUser = await authApi.register({
         fullName: cleanName, username: cleanUser,
         email: cleanEmail || `${cleanUser.toLowerCase()}@pict.edu`,
-        phone: cleanPhone, password: regPassword, role: targetRole,
+        phone: cleanPhone || undefined, password: regPassword, role: targetRole,
       });
       toast.success(`Account created for ${newUser?.fullName || regFullName}!`);
-      try {
-        const data = await authApi.login({ username: regUsername, password: regPassword, expectedRole: selectedRole });
-        setAuth(data.user, data.accessToken, data.refreshToken);
-      } catch {
-        setAuth({ id: Date.now(), username: regUsername, role: selectedRole, fullName: regFullName,
-          email: regEmail || `${regUsername}@pict.edu`, phone: regPhone || '9876543210',
-          active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-        }, 'demo-access-token', 'demo-refresh-token');
-      }
+      const data = await authApi.login({ username: regUsername, password: regPassword, expectedRole: selectedRole });
+      setAuth(data.user, data.accessToken, data.refreshToken);
       navigate('/dashboard');
     } catch (err: any) {
-      const msg = err.response?.data?.message || '';
-      if (!msg) {
-        setAuth({ id: Date.now(), username: regUsername, role: selectedRole, fullName: regFullName,
-          email: regEmail || `${regUsername}@pict.edu`, phone: regPhone || '9876543210',
-          active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-        }, 'demo-access-token', 'demo-refresh-token');
-        toast.success(`Account created! Logging in…`);
-        navigate('/dashboard'); return;
-      }
+      const msg = err.response?.data?.message || err.message || 'Registration failed';
       toast.error(msg);
     } finally { setLoading(false); }
   };
@@ -272,7 +226,11 @@ export const Login: React.FC = () => {
       <style>{`
         @media (max-width: 880px) {
           .login-left  { display: none !important; }
-          .login-right { width: 100% !important; }
+          .login-right { width: 100% !important; padding: 32px 20px !important; }
+        }
+        @media (max-width: 520px) {
+          .reg-grid { grid-template-columns: 1fr !important; gap: 0px !important; }
+          .login-right { padding: 24px 16px !important; }
         }
         .role-tab { background:none; border:none; cursor:pointer; padding:0 0 10px 0;
           font-family:Inter,sans-serif; font-size:13px; color:${C.mute};
@@ -292,7 +250,7 @@ export const Login: React.FC = () => {
           border-radius:2px; font-family:Inter,sans-serif; font-size:13px;
           color:${C.text}; cursor:pointer; transition:border-color .15s; width:100%; }
         .outline-btn:hover { border-color:${C.text}; }
-        .demo-use { background:none; border:none; color:${C.accent}; font-family:'IBM Plex Mono',monospace;
+        .demo-use { background:none; border:none; color:${C.accent}; font-family:'JetBrains Mono',monospace;
           font-size:11px; cursor:pointer; padding:0; }
         .demo-use:hover { text-decoration:underline; }
         details > summary { list-style:none; }
@@ -314,14 +272,14 @@ export const Login: React.FC = () => {
         {/* logo + wordmark */}
         <div style={{ display:'flex', alignItems:'center', gap:10, position:'relative', zIndex:2 }}>
           <img src="/logo.png" alt="CampusAccess" style={{ height: 40, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-          <button
+        <button
             type="button"
-            onClick={() => navigate('/')}
-            title="Back to home"
+            onClick={() => navigate('/enter')}
+            title="Back to portal selection"
             style={{ marginLeft:'auto', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.22)',
               borderRadius:4, padding:'5px 12px', cursor:'pointer',
               display:'flex', alignItems:'center', gap:6, color:'#f1f5f9', fontSize:12.5, fontWeight:500 }}>
-            <ArrowLeft size={14}/> Home
+            <ArrowLeft size={14}/> Back
           </button>
         </div>
 
@@ -333,13 +291,13 @@ export const Login: React.FC = () => {
             fontSize:38, lineHeight:1.22, color:'#f8fafc', margin:'0 0 18px 0', letterSpacing:'-0.02em',
             textShadow: '0 2px 10px rgba(0,0,0,0.6)',
           }}>
-            Secure gate access<br/>for every campus role.
+            Guard access,<br/>shift control &amp;<br/>gate management.
           </h2>
           <p style={{ fontFamily:'Inter,sans-serif', fontSize:15, lineHeight:1.68, color:'#cbd5e1', margin:0, maxWidth:500, textShadow:'0 1px 4px rgba(0,0,0,0.5)' }}>
-            Visitor check-in, student outpass verification, guard shift management — unified under PICT's main gate terminal.
+            Security guard terminal for managing visitor check-ins, student passes, vehicle logs, and duty rosters.
           </p>
           <div style={{ marginTop:36, background:'rgba(15,23,42,0.65)', border:'1px solid rgba(255,255,255,0.18)', backdropFilter:'blur(10px)', padding:'20px 22px', borderRadius:8, maxWidth:500 }}>
-            <p style={{ fontFamily:'IBM Plex Mono,monospace', fontSize:10.5, letterSpacing:'0.12em', textTransform:'uppercase', color:'#38bdf8', margin:'0 0 5px' }}>
+            <p style={{ fontFamily:'JetBrains Mono,monospace', fontSize:10.5, letterSpacing:'0.12em', textTransform:'uppercase', color:'#38bdf8', margin:'0 0 5px' }}>
               PICT Main Campus Gate
             </p>
             <p style={{ fontFamily:'Inter,sans-serif', fontSize:13.5, color:'#f1f5f9', margin:0, fontWeight:500 }}>
@@ -348,10 +306,11 @@ export const Login: React.FC = () => {
           </div>
         </div>
 
-        {/* bottom institution label */}
-        <div style={{ position:'relative', zIndex:2, fontFamily:'IBM Plex Mono,monospace', fontSize:10.5, letterSpacing:'0.12em',
+          {/* bottom institution label */}
+        <div style={{ position:'relative', zIndex:2, fontFamily:'JetBrains Mono,monospace', fontSize:10.5, letterSpacing:'0.12em',
           textTransform:'uppercase', color:'#94a3b8', lineHeight:1.8 }}>
-          Pune Institute of Computer Technology<br/>Gate Security Terminal
+          Pune Institute of Computer Technology<br/>Gate Security Terminal<br/>
+          <span style={{ color:'rgba(255,255,255,0.35)', marginTop:8, display:'block' }}>Not a guard? <button type="button" onClick={() => navigate('/enter')} style={{ background:'none', border:'none', color:'#7dd3fc', cursor:'pointer', fontFamily:'JetBrains Mono,monospace', fontSize:10.5, padding:0, textDecoration:'underline', letterSpacing:'0.12em' }}>Student / Visitor portal →</button></span>
         </div>
       </div>
 
@@ -368,9 +327,9 @@ export const Login: React.FC = () => {
         >
           {/* eyebrow + switch link */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-            <span style={{ fontFamily:'IBM Plex Mono,monospace', fontSize:10.5, letterSpacing:'0.1em',
+            <span style={{ fontFamily:'JetBrains Mono,monospace', fontSize:10.5, letterSpacing:'0.1em',
               textTransform:'uppercase', color:C.mute }}>
-              CampusAccess Portal
+              Guard Portal
             </span>
             {!isForgotPassword && (
               <button type="button"
@@ -389,24 +348,11 @@ export const Login: React.FC = () => {
           </h1>
           <p style={{ fontFamily:'Inter,sans-serif', fontSize:13, color:C.mute, margin:'0 0 28px 0' }}>
             {isForgotPassword
-              ? 'Enter your username or email to reset credentials.'
+              ? 'Enter your guard username or email to reset credentials.'
               : actionMode === 'LOGIN'
-              ? 'Select your role, then enter your credentials.'
-              : 'Select your account role, then enter registration details.'}
+              ? 'Enter your security guard credentials to access the terminal.'
+              : 'Enter registration details to create a guard account.'}
           </p>
-
-          {/* ── ROLE TABS (login & register) ─────────────────────────────── */}
-          {!isForgotPassword && (
-            <div style={{ display:'flex', gap:20, borderBottom:`1px solid ${C.line}`, marginBottom:28, overflowX:'auto' }}>
-              {ROLES.map(r => (
-                <button key={r.id} type="button"
-                  className={`role-tab${selectedRole === r.id ? ' active' : ''}`}
-                  onClick={() => setSelectedRole(r.id)}>
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* ── FORGOT PASSWORD ───────────────────────────────────────────── */}
           {isForgotPassword && (
@@ -415,7 +361,7 @@ export const Login: React.FC = () => {
                 label="Username or email"
                 value={forgotIdentifier}
                 onChange={setForgotIdentifier}
-                placeholder="admin or you@pict.edu"
+                placeholder="guard1 or guard@pict.edu"
                 icon={<Mail size={15}/>}
                 required
               />
@@ -435,11 +381,11 @@ export const Login: React.FC = () => {
           {!isForgotPassword && actionMode === 'LOGIN' && (
             <form onSubmit={handleStandardLogin}>
               <UInput
-                label={selectedRole === 'STUDENT' ? 'PRN / Student ID' : 'Username'}
+                label="Guard Username"
                 value={username}
                 onChange={setUsername}
-                placeholder={selectedRole === 'STUDENT' ? 'e.g. F24IT32' : 'Enter username'}
-                icon={selectedRole === 'STUDENT' ? <GraduationCap size={15}/> : <UserIcon size={15}/>}
+                placeholder="Enter guard username"
+                icon={<UserIcon size={15}/>}
                 required
                 autoComplete="username"
               />
@@ -472,7 +418,7 @@ export const Login: React.FC = () => {
                 </button>
               </div>
               <button type="submit" className="submit-btn" disabled={loading}>
-                {loading ? 'Signing in…' : `Sign in as ${roleLabel}`}
+                {loading ? 'Signing in…' : `Sign in as Guard`}
                 {!loading && <ArrowRight size={14} className="arrow"/>}
               </button>
             </form>
@@ -482,19 +428,19 @@ export const Login: React.FC = () => {
           {!isForgotPassword && actionMode === 'SIGNUP' && (
             <form onSubmit={handleRegister}>
               <UInput label="Full name" value={regFullName} onChange={setRegFullName}
-                placeholder="e.g. Siddharth Roy" icon={<UserIcon size={15}/>} required/>
-              <UInput label={selectedRole === 'STUDENT' ? 'PRN / Student Username' : 'Username'} value={regUsername} onChange={setRegUsername}
-                placeholder={selectedRole === 'STUDENT' ? 'e.g. F24IT32' : 'Choose a unique username'} icon={<Shield size={15}/>} required/>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                placeholder="e.g. Ramesh Shinde" icon={<UserIcon size={15}/>} required/>
+              <UInput label="Guard Username" value={regUsername} onChange={setRegUsername}
+                placeholder="Choose guard username" icon={<Shield size={15}/>} required/>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }} className="reg-grid">
                 <UInput label="Email" value={regEmail} onChange={setRegEmail}
-                  placeholder="you@pict.edu" icon={<Mail size={15}/>}/>
+                  placeholder="guard@pict.edu" icon={<Mail size={15}/>}/>
                 <UInput label="Mobile" value={regPhone} onChange={setRegPhone}
                   placeholder="9876543210" icon={<Phone size={15}/>}/>
               </div>
               <UInput label="Password" type="password" value={regPassword} onChange={setRegPassword}
                 placeholder="••••••••" icon={<Lock size={15}/>} required/>
               <button type="submit" className="submit-btn" disabled={loading}>
-                {loading ? 'Creating account…' : `Register as ${roleLabel}`}
+                {loading ? 'Creating account…' : `Register as Guard`}
                 {!loading && <ArrowRight size={14} className="arrow"/>}
               </button>
             </form>
@@ -513,10 +459,7 @@ export const Login: React.FC = () => {
               </summary>
               <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:8 }}>
                 {[
-                  { user:'admin',    pass:'ChangeMe@123', role:'ADMIN'          as UserRole, label:'Admin'   },
-                  { user:'student1', pass:'Student123!',  role:'STUDENT'        as UserRole, label:'Student' },
-                  { user:'guard1',   pass:'Guard123!',    role:'SECURITY_GUARD' as UserRole, label:'Guard'   },
-                  { user:'warden1',  pass:'Warden123!',   role:'HOSTEL_WARDEN'  as UserRole, label:'Warden'  },
+                  { user:'guard1', pass:'Guard123!', role:'SECURITY_GUARD' as UserRole, label:'Security Guard' },
                 ].map(d => (
                   <div key={d.role} style={{
                     display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -524,7 +467,7 @@ export const Login: React.FC = () => {
                   }}>
                     <div>
                       <span style={{ fontFamily:'Inter,sans-serif', fontSize:12, color:C.text, fontWeight:500 }}>{d.label}</span>
-                      <span style={{ fontFamily:'IBM Plex Mono,monospace', fontSize:11, color:C.mute, marginLeft:8 }}>{d.user}</span>
+                      <span style={{ fontFamily:'JetBrains Mono,monospace', fontSize:11, color:C.mute, marginLeft:8 }}>{d.user}</span>
                     </div>
                     <button className="demo-use" type="button" onClick={() => quickDemo(d.user, d.pass, d.role)}>
                       Use & Sign In
@@ -536,7 +479,7 @@ export const Login: React.FC = () => {
           )}
 
           {/* footer */}
-          <p style={{ fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:C.mute,
+          <p style={{ fontFamily:'JetBrains Mono,monospace', fontSize:10, color:C.mute,
             letterSpacing:'0.06em', textAlign:'center', marginTop:32, textTransform:'uppercase' }}>
             Authorized personnel only · PICT Security Terminal
           </p>

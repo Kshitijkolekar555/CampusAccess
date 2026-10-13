@@ -28,31 +28,43 @@ export const StudentPasses: React.FC = () => {
     return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
   };
 
-  // Initial Form Values (Autofilled from signed in user profile)
-  const getInitialForm = () => ({
-    studentName: user?.fullName || '',
-    studentPrn: user?.username || '',
-    studentDepartment: 'CE',
-    studentClass: 'BE',
-    studentDivision: '1',
-    studentMobile: user?.phone || '9876543210',
-    purpose: '',
-    destination: '',
-    departureTime: toLocalISOString(new Date()),
-    expectedReturnTime: toLocalISOString(new Date(Date.now() + 86400000)),
-  });
-
-  const [form, setForm] = useState(getInitialForm());
-
-  React.useEffect(() => {
-    setForm(getInitialForm());
-  }, [user]);
-
-  // Queries
+  // Queries — declared first so pageData is available in form init/effects
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['student-passes', page],
     queryFn: () => studentPassApi.getPasses({ page, size: 10 }),
   });
+
+  // Initial Form Values (Autofilled from signed in user profile or past records)
+  const getInitialForm = () => {
+    const existing = pageData?.content?.find((p: any) => p.studentPrn === user?.username);
+    return {
+      studentName: user?.fullName || '',
+      studentPrn: user?.username || '',
+      studentDepartment: existing?.studentDepartment || '',
+      studentClass: existing?.studentClass || '',
+      studentDivision: existing?.studentDivision || '',
+      studentMobile: user?.phone || existing?.studentMobile || '',
+      purpose: '',
+      destination: '',
+      departureTime: toLocalISOString(new Date()),
+      expectedReturnTime: toLocalISOString(new Date(Date.now() + 86400000)),
+    };
+  };
+
+  const [form, setForm] = useState(getInitialForm());
+
+  React.useEffect(() => {
+    const existing = pageData?.content?.find((p: any) => p.studentPrn === user?.username);
+    setForm((prev) => ({
+      ...prev,
+      studentName: user?.fullName || prev.studentName,
+      studentPrn: user?.username || prev.studentPrn,
+      studentDepartment: prev.studentDepartment || existing?.studentDepartment || '',
+      studentClass: prev.studentClass || existing?.studentClass || '',
+      studentDivision: prev.studentDivision || existing?.studentDivision || '',
+      studentMobile: prev.studentMobile || user?.phone || existing?.studentMobile || '',
+    }));
+  }, [user, pageData]);
 
   const { data: gates } = useQuery({
     queryKey: ['gates'],
@@ -123,7 +135,7 @@ export const StudentPasses: React.FC = () => {
       render: (p) => (
         <div>
           <p className="font-bold text-slate-900">{p.studentName}</p>
-          <p className="text-xs text-slate-400">PRN: {p.studentPrn} ({p.studentDepartment})</p>
+          <p className="text-xs text-slate-400">PRN: <span className="font-mono text-slate-600">{p.studentPrn}</span> ({p.studentDepartment})</p>
         </div>
       ),
     },
@@ -142,9 +154,11 @@ export const StudentPasses: React.FC = () => {
         const variants: Record<PassStatus, 'warning' | 'success' | 'danger' | 'info' | 'default'> = {
           PENDING: 'warning',
           APPROVED: 'success',
-          REJECTED: 'danger',
-          EXPIRED: 'info',
+          ACTIVE: 'info',
           COMPLETED: 'default',
+          CANCELLED: 'default',
+          REJECTED: 'danger',
+          EXPIRED: 'danger',
         };
         return (
           <div>
@@ -214,11 +228,28 @@ export const StudentPasses: React.FC = () => {
 
       {/* Create Modal */}
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Issue Student Gate Pass Request">
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Student Name (Auto-filled)" required value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })} disabled={user?.role === 'STUDENT'} />
-            <Input label="Student PRN (Auto-filled)" required value={form.studentPrn} onChange={(e) => setForm({ ...form, studentPrn: e.target.value })} disabled={user?.role === 'STUDENT'} />
-            <Input label="Student Mobile (Auto-filled)" required value={form.studentMobile} onChange={(e) => setForm({ ...form, studentMobile: e.target.value })} disabled={user?.role === 'STUDENT'} />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!form.studentMobile.trim() || !form.studentDepartment.trim() || !form.studentClass.trim() || !form.studentDivision.trim()) {
+              toast.error('Please complete all academic and contact details before submitting');
+              return;
+            }
+            createMutation.mutate(form);
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <Input label="Student Name" required value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })} disabled={user?.role === 'STUDENT'} />
+            <Input label="Student PRN" required value={form.studentPrn} onChange={(e) => setForm({ ...form, studentPrn: e.target.value })} disabled={user?.role === 'STUDENT'} />
+            <Input
+              label="Student Mobile"
+              required
+              value={form.studentMobile}
+              onChange={(e) => setForm({ ...form, studentMobile: e.target.value })}
+              placeholder="e.g. 9822012345"
+              disabled={user?.role === 'STUDENT' && !!user?.phone}
+            />
             <Input label="Department" required value={form.studentDepartment} onChange={(e) => setForm({ ...form, studentDepartment: e.target.value })} />
             <Input label="Class" required value={form.studentClass} onChange={(e) => setForm({ ...form, studentClass: e.target.value })} />
             <Input label="Division" required value={form.studentDivision} onChange={(e) => setForm({ ...form, studentDivision: e.target.value })} />

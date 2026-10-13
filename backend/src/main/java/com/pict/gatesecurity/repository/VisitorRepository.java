@@ -54,4 +54,10 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
     long countByGateIdAndTimeInBetween(Long gateId, OffsetDateTime start, OffsetDateTime end);
 
     long countByGateIdAndTimeOutIsNull(Long gateId);
+
+    List<Visitor> findByStatusOrderByCreatedAtDesc(com.pict.gatesecurity.entity.enums.PassStatus status);
+
+    Optional<Visitor> findFirstByCreatedByIdOrderByCreatedAtDesc(Long userId);
+
+    Optional<Visitor> findFirstByMobileOrderByCreatedAtDesc(String mobile);
 }

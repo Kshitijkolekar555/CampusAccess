@@ -15,7 +15,7 @@ const modules = [
   {
     icon: <Users size={18} />,
     title: 'Visitor Management',
-    desc: 'Check-in, QR pass issuance, host notification, and exit logging — all in real time.',
+    desc: 'Check-in, digital pass issuance, host notification, and exit logging — all in real time.',
   },
   {
     icon: <GraduationCap size={18} />,
@@ -95,11 +95,11 @@ export const LandingPage: React.FC = () => {
             <a href="#modules" className="lp-nav-link">Modules</a>
             <a href="#about" className="lp-nav-link">About</a>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/enter')}
               className="lp-cta-primary"
               style={{ padding: '8px 18px', fontSize: 12 }}
             >
-              Sign in <ArrowRight size={12} className="arrow" />
+              Enter System <ArrowRight size={12} className="arrow" />
             </button>
           </nav>
         </div>
@@ -119,7 +119,7 @@ export const LandingPage: React.FC = () => {
         <div style={{ maxWidth: 680, margin: '0 auto', position: 'relative', textAlign: 'center' }}>
           {/* Eyebrow */}
           <p style={{
-            fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, letterSpacing: '0.12em',
+            fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.12em',
             textTransform: 'uppercase', color: '#1e3a5f', fontWeight: 700, marginBottom: 20,
           }}>
             Pune Institute of Computer Technology · Gate Security Terminal
@@ -147,7 +147,7 @@ export const LandingPage: React.FC = () => {
 
           {/* CTAs */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <button className="lp-cta-primary" onClick={() => navigate('/login')}>
+            <button className="lp-cta-primary" onClick={() => navigate('/enter')}>
               Enter System <ArrowRight size={13} className="arrow" />
             </button>
             <a href="#modules" className="lp-cta-ghost" style={{ background: 'rgba(250,250,248,0.85)', color: '#0f172a', borderColor: '#94a3b8', fontWeight: 600 }}>
@@ -166,7 +166,7 @@ export const LandingPage: React.FC = () => {
       <section id="modules" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px' }}>
         {/* Section heading */}
         <div style={{ marginBottom: 36 }}>
-          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.mute, margin: '0 0 10px 0' }}>
+          <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.mute, margin: '0 0 10px 0' }}>
             System Modules
           </p>
           <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 26, color: C.text, margin: 0, letterSpacing: '-0.01em' }}>
@@ -200,7 +200,7 @@ export const LandingPage: React.FC = () => {
       {/* ── About Section ────────────────────────────────────────────────── */}
       <section id="about" style={{ maxWidth: 1080, margin: '0 auto', padding: '72px 32px' }}>
         <div style={{ marginBottom: 40 }}>
-          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.accent, fontWeight: 600, margin: '0 0 10px 0' }}>
+          <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.accent, fontWeight: 600, margin: '0 0 10px 0' }}>
             About the System
           </p>
           <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 30, color: C.text, margin: '0 0 16px 0', letterSpacing: '-0.01em', lineHeight: 1.25 }}>
@@ -223,7 +223,7 @@ export const LandingPage: React.FC = () => {
               Role-Based Access Control
             </h3>
             <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, lineHeight: 1.6, color: C.mute, margin: 0 }}>
-              Tailored interfaces for Guards, Wardens, Faculty, Students, and System Administrators with strict permission enforcement.
+              Tailored interfaces for Guards, Students, and Visitors with strict permission enforcement.
             </p>
           </div>
 
@@ -267,15 +267,15 @@ export const LandingPage: React.FC = () => {
         {/* Stats Strip Banner */}
         <div style={{ background: C.ink, borderRadius: 6, padding: '32px 36px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
           <div>
-            <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6ee7b7' }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6ee7b7' }}>
               PICT Security Operation
             </span>
             <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '4px 0 0' }}>
               Ready for daily campus access management?
             </h3>
           </div>
-          <button className="lp-cta-primary" onClick={() => navigate('/login')} style={{ background: C.accent }}>
-            Sign In to Terminal <ArrowRight size={13} className="arrow" />
+          <button className="lp-cta-primary" onClick={() => navigate('/enter')} style={{ background: C.accent }}>
+            Enter System <ArrowRight size={13} className="arrow" />
           </button>
         </div>
       </section>
@@ -285,11 +285,11 @@ export const LandingPage: React.FC = () => {
         <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src="/logo.png" alt="CampusAccess" style={{ height: 26, width: 'auto', objectFit: 'contain', opacity: 0.7 }} />
-            <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.mute }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.mute }}>
               PICT Gate Security Terminal · v2.4.0
             </span>
           </div>
-          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.line }}>
+          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.line }}>
             Authorized use only
           </span>
         </div>

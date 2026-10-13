@@ -10,9 +10,8 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { Input } from '../components/ui/Input';
 import { api } from '../api/axios';
 import { visitorApi } from '../api/visitors';
-import { staffBreaksApi } from '../api/staffBreaks';
-import { ApiResponse, GuardSelfDashboardResponse, StaffBreak, Visitor } from '../types';
-import { QRCodeDisplay } from '../components/ui/QRCodeDisplay';
+
+import { ApiResponse, GuardSelfDashboardResponse, Visitor } from '../types';
 import {
   Users,
   ShieldCheck,
@@ -26,11 +25,8 @@ import {
   LogOut,
   CheckCircle,
   Package,
-  Coffee,
   Play,
-  Square,
-  History,
-  QrCode,
+  History as HistoryIcon,
   MapPin,
   Calendar,
   Building,
@@ -40,38 +36,38 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
+  Home,
+  Camera,
+  ScanFace,
+  Sparkles,
 } from 'lucide-react';
 import { hostelOutpassApi } from '../api/hostelOutpasses';
 import { useNavigate } from 'react-router-dom';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
 import { toast } from 'sonner';
 import { GuardDashboardView } from '../components/guard/GuardDashboardView';
-
-const chartData = [
-  { time: '08:00', visitors: 12 },
-  { time: '10:00', visitors: 35 },
-  { time: '12:00', visitors: 68 },
-  { time: '14:00', visitors: 54 },
-  { time: '16:00', visitors: 82 },
-  { time: '18:00', visitors: 40 },
-  { time: '20:00', visitors: 18 },
-];
+import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Role detection
-  const role = user?.role || 'VISITOR';
+  // Role detection — only Guard and Student are supported login roles
+  const role = user?.role || '';
   const isGuard = role === 'SECURITY_GUARD' || role === 'GUARD';
   const isStudent = role === 'STUDENT';
-  const isVisitor = role === 'VISITOR';
-  const isStaff = role === 'STAFF';
+
+  // Redirect unsupported roles immediately
+  useEffect(() => {
+    if (!isGuard && !isStudent) {
+      navigate('/enter');
+    }
+  }, [isGuard, isStudent, navigate]);
 
   const [isSimplifiedGuardView, setIsSimplifiedGuardView] = useState(true);
 
-  // Real-time Active Visitors Inside Campus (polling every 10s)
+  // Real-time Active Visitors Inside Campus (polling every 10s) — guards only
   const { data: activeVisitorsList } = useQuery<Visitor[]>({
     queryKey: ['active-visitors-dashboard'],
     queryFn: async () => {
@@ -81,6 +77,7 @@ export const Dashboard: React.FC = () => {
         return [];
       }
     },
+    enabled: isGuard,
     refetchInterval: 10000,
   });
 
@@ -95,26 +92,13 @@ export const Dashboard: React.FC = () => {
         return null;
       }
     },
-    enabled: isGuard || role === 'ADMIN',
+    enabled: isGuard,
     refetchInterval: 10000,
   });
 
-  // Admin Dashboard Metrics
-  const { data: adminMetrics, isLoading: isAdminLoading } = useQuery({
-    queryKey: ['admin-dashboard-metrics'],
-    queryFn: async () => {
-      try {
-        const res = await api.get<ApiResponse<any>>('/dashboard/admin');
-        return res.data.data;
-      } catch (err) {
-        return null;
-      }
-    },
-    enabled: !isGuard && !isStudent && !isVisitor && !isStaff,
-    refetchInterval: 30000,
-  });
 
-  // Section I1: Visitor Autofill Profile Details
+
+  // Section I1: Visitor Autofill Profile Details & Digital Token State
   const [visitorName, setVisitorName] = useState(user?.fullName || '');
   const [visitorMobile, setVisitorMobile] = useState(user?.phone || '');
   const [hostDept, setHostDept] = useState('');
@@ -122,134 +106,236 @@ export const Dashboard: React.FC = () => {
   const [vehicleNo, setVehicleNo] = useState('');
   const [activeToken, setActiveToken] = useState<any>(null);
 
-  useEffect(() => {
-    if (user && isVisitor) {
-      setVisitorName(user.fullName || '');
-      setVisitorMobile(user.phone || '');
-    }
-  }, [user, isVisitor]);
+  // Visitor Webcam & Biometric state
+  const [isWebcamOpen, setIsWebcamOpen] = useState(false);
+  const [webcamMode, setWebcamMode] = useState<'capture' | 'recognize'>('recognize');
+  const [capturedPhotoBlob, setCapturedPhotoBlob] = useState<Blob | null>(null);
+  const [capturedPhotoPreview, setCapturedPhotoPreview] = useState<string | null>(null);
+  const [recognizedMatch, setRecognizedMatch] = useState<any>(null);
 
-  // Section H2: Staff Break Management State & Queries
-  const [breakNote, setBreakNote] = useState('');
 
-  const { data: activeBreakRes, refetch: refetchActiveBreak } = useQuery({
-    queryKey: ['staff-active-break'],
+
+  // Real-time visitor active/pending token query
+  const { data: myActiveTokenData, refetch: refetchMyActiveToken } = useQuery<Visitor | null>({
+    queryKey: ['visitor-my-active-token', user?.id],
     queryFn: async () => {
       try {
-        return await staffBreaksApi.getActiveBreak();
+        return await visitorApi.getMyActiveToken();
       } catch (err) {
         return null;
       }
     },
-    enabled: isStaff,
+    enabled: false,
+    refetchInterval: 4000,
   });
 
-  const { data: breakHistoryRes, refetch: refetchBreakHistory } = useQuery({
-    queryKey: ['staff-break-history'],
-    queryFn: async () => {
-      try {
-        return await staffBreaksApi.getHistory(0, 5);
-      } catch (err) {
-        return null;
-      }
-    },
-    enabled: isStaff,
-  });
-
-  const startBreakMutation = useMutation({
-    mutationFn: (note?: string) => staffBreaksApi.startBreak(note),
-    onSuccess: () => {
-      toast.success('Break session started!');
-      refetchActiveBreak();
-      refetchBreakHistory();
-      setBreakNote('');
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to start break');
-    },
-  });
-
-  const endBreakMutation = useMutation({
-    mutationFn: (note?: string) => staffBreaksApi.endBreak(note),
-    onSuccess: () => {
-      toast.success('Break session ended!');
-      refetchActiveBreak();
-      refetchBreakHistory();
-      setBreakNote('');
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to end break');
-    },
-  });
-
-  const activeBreak: StaffBreak | null = activeBreakRes?.data || null;
-
-  const checkInMutation = useMutation({
-    mutationFn: (payload: any) => visitorApi.checkIn(payload),
+  // Digital Token Request Mutation
+  const requestTokenMutation = useMutation({
+    mutationFn: (payload: { data: any; photo?: Blob | null }) =>
+      visitorApi.requestToken(payload.data, payload.photo),
     onSuccess: (data) => {
-      const token = {
-        tokenNumber: data.passNumber || `VT-${data.id}`,
-        visitorName: data.name,
-        mobileNumber: data.mobile,
-        hostPersonOrDepartment: data.hostName || data.hostDepartment || 'General Inquiry',
-        purpose: data.purpose,
-        entryTime: new Date(data.timeIn).toLocaleTimeString(),
-        validTillTime: new Date(Date.now() + 4 * 3600000).toLocaleTimeString(),
-      };
-      setActiveToken(token);
-      toast.success('Visit Request Created & Token Generated!');
+      setActiveToken(data);
+      refetchMyActiveToken();
+      toast.success(`Digital Token #${data.passNumber || data.id} generated! Awaiting guard clearance.`);
+      setPurpose('');
+      setRecognizedMatch(null);
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Check-in request failed');
+      toast.error(err.response?.data?.message || 'Failed to request digital token');
     },
   });
+
+  const handleVisitorRecognized = (match: any) => {
+    if (match.matched) {
+      if (match.visitorName) setVisitorName(match.visitorName);
+      if (match.mobileNumber) setVisitorMobile(match.mobileNumber);
+      if (match.hostName || match.hostDepartment) {
+        setHostDept(match.hostName || `${match.hostDepartment} Dept`);
+      }
+      if (match.purpose) setPurpose(match.purpose);
+      if (match.vehicleNumber) setVehicleNo(match.vehicleNumber);
+      setRecognizedMatch(match);
+      toast.success(`Welcome back, ${match.visitorName}! Details auto-filled from facial match.`);
+    }
+  };
+
+  const handleVisitorCapture = (blob: Blob) => {
+    setCapturedPhotoBlob(blob);
+    setCapturedPhotoPreview(URL.createObjectURL(blob));
+    setIsWebcamOpen(false);
+    toast.info('Photo captured successfully! Ready for biometric enrollment and token generation.');
+  };
 
   const handleCreateVisit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!visitorName || !visitorMobile || !purpose) {
-      toast.error('Please fill required visitor fields');
+    if (!visitorName.trim() || !visitorMobile.trim() || !purpose.trim()) {
+      toast.error('Please fill Visitor Name, Mobile Number, and Purpose of Visit');
       return;
     }
-    checkInMutation.mutate({
-      name: visitorName,
-      mobile: visitorMobile,
-      purpose,
-      hostName: hostDept || 'General Inquiry',
-      hostType: 'FACULTY',
-      hostDepartment: 'IT',
-      gateId: 1,
-      idProofType: 'Aadhaar',
-      idProofNumber: 'ID-' + Math.floor(100000 + Math.random() * 900000),
-      vehicleNumber: vehicleNo || undefined,
+    if (!capturedPhotoBlob && !recognizedMatch) {
+      toast.warning('Please capture your photo first using the camera so guards can verify and approve your token.');
+    }
+    requestTokenMutation.mutate({
+      data: {
+        name: visitorName.trim(),
+        mobile: visitorMobile.trim(),
+        purpose: purpose.trim(),
+        hostName: hostDept.trim() || 'General Inquiry',
+        hostType: 'FACULTY',
+        hostDepartment: 'IT',
+        gateId: 1,
+        idProofType: 'Aadhaar / Digital ID',
+        idProofNumber: 'VT-' + Math.floor(100000 + Math.random() * 900000),
+        vehicleNumber: vehicleNo.trim() || undefined,
+      },
+      photo: capturedPhotoBlob,
     });
   };
 
   // RENDER VISITOR DASHBOARD (Section I2)
-  if (isVisitor) {
+  if (!user) {
+    const currentToken = myActiveTokenData || activeToken;
+    const isPending = currentToken?.status === 'PENDING';
+    const isApproved = currentToken?.status === 'APPROVED' || currentToken?.status === 'ACTIVE' || (!currentToken?.status && currentToken?.timeIn);
+    const isRejected = currentToken?.status === 'REJECTED';
+
     return (
       <div className="space-y-6">
+        {/* Banner */}
         <div style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}>
           <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: 'var(--accent)', background: 'rgba(47,93,124,0.18)', border: '1px solid rgba(47,93,124,0.35)', borderRadius: 2, padding: '2px 8px', display: 'inline-block', marginBottom: 10 }}>
             Visitor Portal
           </span>
-          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Welcome, {user?.fullName || 'Visitor'}</h2>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Submit new campus visit requests and check active digital token status.</p>
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+            Welcome, {user?.fullName || 'Visitor'}
+          </h2>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+            Generate your secure digital entry token, capture your biometric photo, and track guard gate clearance in real-time.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* New Visit Request (Section I1: Autofilled) */}
+          {/* New Visit Request Card */}
           <Card>
-            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <PlusCircle style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
-              New Visit Request
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <PlusCircle style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
+                New Visit Request
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setWebcamMode('recognize');
+                  setIsWebcamOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition"
+                title="Scan face to automatically look up your previous visits and pre-fill this form"
+              >
+                <ScanFace className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Scan Face to Auto-Fill</span>
+              </button>
+            </div>
+
+            {/* Recognized Visitor Banner */}
+            {recognizedMatch && (
+              <div className="p-3 mb-4 bg-emerald-50 border border-emerald-200 rounded flex items-center justify-between text-xs text-emerald-800">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>
+                    <strong>Recognized Returning Visitor:</strong> {recognizedMatch.visitorName || 'Matched Subject'} ({(recognizedMatch.similarity ?? 85).toFixed(0)}% similarity).
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRecognizedMatch(null)}
+                  className="text-emerald-700 hover:text-emerald-900 text-[11px] underline ml-2"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
+            {/* Photo Capture Section */}
+            <div className="mb-4 p-3.5 bg-slate-50 border border-slate-200 rounded flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {capturedPhotoPreview ? (
+                  <img
+                    src={capturedPhotoPreview}
+                    alt="Captured Visitor"
+                    className="w-14 h-14 rounded-full object-cover border-2 border-indigo-500 shadow-sm bg-white"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-400">
+                    <Camera className="w-6 h-6" />
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-semibold text-slate-800 m-0">
+                    {capturedPhotoPreview ? 'Biometric Photo Attached' : 'Visitor Photo Required'}
+                  </p>
+                  <p className="text-[11px] text-slate-500 m-0">
+                    {capturedPhotoPreview
+                      ? 'Photo will be stored for gate verification and future quick recognition.'
+                      : 'Capture a clear live photo to enable guard approval and future auto-match.'}
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant={capturedPhotoPreview ? 'outline' : 'secondary'}
+                size="sm"
+                onClick={() => {
+                  setWebcamMode('capture');
+                  setIsWebcamOpen(true);
+                }}
+                leftIcon={<Camera className="w-3.5 h-3.5" />}
+              >
+                {capturedPhotoPreview ? 'Retake' : 'Capture Photo'}
+              </Button>
+            </div>
+
             <form onSubmit={handleCreateVisit} className="space-y-4">
-              <Input label="Visitor Name (Autofilled)" value={visitorName} onChange={(e) => setVisitorName(e.target.value)} required placeholder="Your full name" />
-              <Input label="Mobile Number (Autofilled)" value={visitorMobile} onChange={(e) => setVisitorMobile(e.target.value)} required placeholder="10-digit mobile number" />
-              <Input label="Host Person or Department" value={hostDept} onChange={(e) => setHostDept(e.target.value)} placeholder="e.g. Prof. Sharma / IT Dept" />
-              <Input label="Purpose of Visit" value={purpose} onChange={(e) => setPurpose(e.target.value)} required placeholder="Reason for visiting campus" />
-              <Input label="Vehicle Number (Optional)" value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="e.g. MH12AB1234" />
-              <Button type="submit" variant="primary" className="w-full">
+              <Input
+                label="Visitor Name (Autofilled)"
+                value={visitorName}
+                onChange={(e) => setVisitorName(e.target.value)}
+                required
+                placeholder="Your full name"
+              />
+              <Input
+                label="Mobile Number (Autofilled)"
+                value={visitorMobile}
+                onChange={(e) => setVisitorMobile(e.target.value)}
+                required
+                placeholder="10-digit mobile number"
+              />
+              <Input
+                label="Host Person or Department"
+                value={hostDept}
+                onChange={(e) => setHostDept(e.target.value)}
+                placeholder="e.g. Prof. Sharma / IT Dept / Admin"
+              />
+              <Input
+                label="Purpose of Visit"
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                required
+                placeholder="e.g. Admission Enquiry, Campus Tour, Parent Meeting"
+              />
+              <Input
+                label="Vehicle Number (Optional)"
+                value={vehicleNo}
+                onChange={(e) => setVehicleNo(e.target.value)}
+                placeholder="e.g. MH12AB1234"
+              />
+
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                isLoading={requestTokenMutation.isPending}
+              >
                 Generate Digital Token
               </Button>
             </form>
@@ -257,52 +343,158 @@ export const Dashboard: React.FC = () => {
 
           {/* Active Token & Visit Status */}
           <Card>
-            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Ticket style={{ width: 16, height: 16, color: '#047857', flexShrink: 0 }} />
-              My Active Token & Status
-            </h3>
-            {activeToken ? (
+            <div className="flex items-center justify-between mb-4">
+              <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Ticket style={{ width: 16, height: 16, color: '#047857', flexShrink: 0 }} />
+                My Active Token & Status
+              </h3>
+              {currentToken && (
+                <button
+                  type="button"
+                  onClick={() => refetchMyActiveToken()}
+                  className="text-[11px] text-slate-500 hover:text-slate-700 underline"
+                >
+                  Refresh Status
+                </button>
+              )}
+            </div>
+
+            {currentToken ? (
               <div style={{ background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: 20 }}>
+                {/* Header with Status Badge */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12, marginBottom: 14 }}>
-                  <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>Token Number</span>
-                  <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 16, fontWeight: 500, color: 'var(--accent)' }}>{activeToken.tokenNumber}</span>
+                  <div>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', display: 'block' }}>
+                      Token Number
+                    </span>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 600, color: 'var(--accent)' }}>
+                      {currentToken.passNumber || `VT-${currentToken.id}`}
+                    </span>
+                  </div>
+
+                  <div>
+                    {isPending && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-amber-300 bg-amber-950/70 border border-amber-500/40 rounded">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                        PENDING GUARD APPROVAL
+                      </span>
+                    )}
+                    {isApproved && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-300 bg-emerald-950/70 border border-emerald-500/40 rounded">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        APPROVED — ACTIVE PASS
+                      </span>
+                    )}
+                    {isRejected && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-rose-300 bg-rose-950/70 border border-rose-500/40 rounded">
+                        REQUEST REJECTED
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Status Notice Alert */}
+                {isPending && (
+                  <div className="mb-4 p-3 bg-amber-950/40 border border-amber-600/30 rounded text-xs text-amber-200">
+                    <p className="font-semibold m-0 mb-1">⏳ Awaiting Security Guard Clearance</p>
+                    <p className="text-[11px] text-amber-300/80 m-0">
+                      Your digital token has been registered. When you arrive at the gate terminal, present this token number to the security guard for entrance approval.
+                    </p>
+                  </div>
+                )}
+
+                {isApproved && (
+                  <div className="mb-4 p-3 bg-emerald-950/40 border border-emerald-600/30 rounded text-xs text-emerald-200">
+                    <p className="font-semibold m-0 mb-1">✓ Entrance Cleared</p>
+                    <p className="text-[11px] text-emerald-300/80 m-0">
+                      Gate security has approved your token. You may proceed to your host destination on campus.
+                    </p>
+                  </div>
+                )}
+
+                {/* Details Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12 }}>
                   <div>
                     <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Visitor Name</p>
-                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{activeToken.visitorName}</p>
+                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{currentToken.name}</p>
                   </div>
                   <div>
                     <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Mobile</p>
-                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{activeToken.mobileNumber}</p>
+                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{currentToken.mobile}</p>
                   </div>
                   <div>
                     <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Host / Dept</p>
-                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{activeToken.hostPersonOrDepartment}</p>
+                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>
+                      {currentToken.hostName || currentToken.hostDepartment || 'General Inquiry'}
+                    </p>
                   </div>
                   <div>
                     <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Purpose</p>
-                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{activeToken.purpose}</p>
+                    <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{currentToken.purpose}</p>
                   </div>
+                  {currentToken.vehicleNumber && (
+                    <div>
+                      <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Vehicle</p>
+                      <p style={{ color: '#f0ede8', fontWeight: 500, margin: 0 }}>{currentToken.vehicleNumber}</p>
+                    </div>
+                  )}
                   <div>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Entry Time</p>
-                    <p style={{ color: '#6ee7b7', fontWeight: 500, fontFamily: 'IBM Plex Mono, monospace', margin: 0 }}>{activeToken.entryTime}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Request / Entry Time</p>
+                    <p style={{ color: '#6ee7b7', fontWeight: 500, fontFamily: 'JetBrains Mono, monospace', margin: 0 }}>
+                      {new Date(currentToken.timeIn || currentToken.createdAt).toLocaleTimeString()}
+                    </p>
                   </div>
                   <div>
                     <p style={{ color: 'rgba(255,255,255,0.3)', margin: '0 0 2px', fontSize: 11 }}>Valid Till</p>
-                    <p style={{ color: 'var(--accent)', fontWeight: 500, fontFamily: 'IBM Plex Mono, monospace', margin: 0 }}>{activeToken.validTillTime}</p>
+                    <p style={{ color: 'var(--accent)', fontWeight: 500, fontFamily: 'JetBrains Mono, monospace', margin: 0 }}>
+                      {new Date(new Date(currentToken.timeIn || currentToken.createdAt).getTime() + 4 * 3600000).toLocaleTimeString()}
+                    </p>
                   </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setActiveToken(null);
+                      setCapturedPhotoBlob(null);
+                      setCapturedPhotoPreview(null);
+                    }}
+                  >
+                    Request New Token
+                  </Button>
                 </div>
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 20px', border: '1px dashed var(--line)', borderRadius: 4 }}>
                 <Ticket style={{ width: 28, height: 28, color: 'var(--line)', margin: '0 auto 10px' }} />
-                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--mute)', fontWeight: 500, margin: '0 0 4px' }}>No active token currently.</p>
-                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--line)', margin: 0 }}>Fill out the form on the left to request a digital pass.</p>
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--mute)', fontWeight: 500, margin: '0 0 4px' }}>
+                  No active token currently.
+                </p>
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--line)', margin: 0 }}>
+                  Capture your photo and fill out the form on the left to request a digital pass.
+                </p>
               </div>
             )}
           </Card>
         </div>
+
+        {/* Visitor Webcam Capture Modal */}
+        <VisitorWebcamModal
+          isOpen={isWebcamOpen}
+          onClose={() => setIsWebcamOpen(false)}
+          onRegisterNew={(blob) => {
+            if (blob) handleVisitorCapture(blob);
+            setIsWebcamOpen(false);
+          }}
+          onRecognized={(match, blob) => {
+            handleVisitorRecognized(match);
+            if (blob) handleVisitorCapture(blob);
+            setIsWebcamOpen(false);
+          }}
+        />
       </div>
     );
   }
@@ -356,13 +548,13 @@ export const Dashboard: React.FC = () => {
                 Duty Terminal (Detailed View)
               </span>
               <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>{summary.guardName}</h2>
-              <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+              <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
                 Guard ID: <span style={{ color: 'var(--accent)' }}>{summary.guardId}</span> • Assigned: <span style={{ color: '#e8e6e2', fontWeight: 500 }}>{summary.gateName}</span>
                 {summary.shiftStartTime && (
-                  <span> • In: <span style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#6ee7b7' }}>{new Date(summary.shiftStartTime).toLocaleTimeString()}</span></span>
+                  <span> • In: <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6ee7b7' }}>{new Date(summary.shiftStartTime).toLocaleTimeString()}</span></span>
                 )}
                 {summary.shiftEndTime && (
-                  <span> • Out: <span style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#fca5a5' }}>{new Date(summary.shiftEndTime).toLocaleTimeString()}</span></span>
+                  <span> • Out: <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#fca5a5' }}>{new Date(summary.shiftEndTime).toLocaleTimeString()}</span></span>
                 )}
               </p>
             </div>
@@ -375,7 +567,7 @@ export const Dashboard: React.FC = () => {
                 <span className={`px-2.5 py-0.5 rounded-[2px] text-xs font-bold uppercase tracking-wider border ${summary.dutyStatus === 'ON DUTY' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'}`}>
                   {summary.dutyStatus}
                 </span>
-                <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>{summary.shiftName}</p>
+                <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>{summary.shiftName}</p>
               </div>
             </div>
           </div>
@@ -386,7 +578,7 @@ export const Dashboard: React.FC = () => {
           <StatsCard title="Visitors Entered Today" value={summary.visitorsEnteredToday} icon={<UserCheck className="w-6 h-6" />} colorTheme="emerald" description="Checked in via location" />
           <StatsCard title="Visitors Exited Today" value={summary.visitorsExitedToday} icon={<LogOut className="w-6 h-6" />} colorTheme="indigo" description="Checked out via location" />
           <StatsCard title="Active Visitors Inside Campus" value={summary.activeVisitorsInsideCampus} icon={<Users className="w-6 h-6" />} colorTheme="emerald" description="Currently on campus" />
-          <StatsCard title="Faculty / Teacher Visitors" value={summary.visitorsEnteredToday > 0 ? Math.ceil(summary.visitorsEnteredToday * 0.6) : 0} icon={<GraduationCap className="w-6 h-6" />} colorTheme="purple" description="Visiting Teachers / HODs" />
+          <StatsCard title="Hostel Outpass Verifications" value={summary.hostelVerifications ?? 0} icon={<Home className="w-6 h-6" />} colorTheme="purple" description="Hostel outpasses verified" />
           <StatsCard title="Vehicles Entered Today" value={summary.vehiclesEnteredToday} icon={<Car className="w-6 h-6" />} colorTheme="cyan" description="Entry logs recorded" />
           <StatsCard title="Vehicles Exited Today" value={summary.vehiclesExitedToday} icon={<Car className="w-6 h-6" />} colorTheme="purple" description="Exit logs recorded" />
           <StatsCard title="Materials Processed Today" value={summary.materialsProcessedToday} icon={<Package className="w-6 h-6" />} colorTheme="amber" description="Vendor / Inward entry" />
@@ -425,12 +617,12 @@ export const Dashboard: React.FC = () => {
                 <tbody className="divide-y divide-slate-100">
                   {activeVisitorsList.map((v) => (
                     <tr key={v.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--accent)', fontWeight: 500 }}>{v.passNumber || `#${v.id}`}</td>
+                      <td className="py-2.5 px-3" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--accent)', fontWeight: 500 }}>{v.passNumber || `#${v.id}`}</td>
                       <td className="py-2.5 px-3" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, color: 'var(--text)' }}>{v.name}</td>
-                      <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{v.mobile}</td>
+                      <td className="py-2.5 px-3" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{v.mobile}</td>
                       <td className="py-2.5 px-3" style={{ color: 'var(--text)' }}>{v.hostName}</td>
                       <td className="py-2.5 px-3" style={{ color: 'var(--mute)', fontSize: 12 }}>{v.hostDepartment} ({v.hostType || 'FACULTY'})</td>
-                      <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{new Date(v.timeIn).toLocaleTimeString()}</td>
+                      <td className="py-2.5 px-3" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{new Date(v.timeIn).toLocaleTimeString()}</td>
                       <td className="py-2.5 px-3 text-right">
                         <Badge variant="success">Active Inside</Badge>
                       </td>
@@ -450,223 +642,9 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  // RENDER STAFF DASHBOARD (Section H1 & H2: Simplified + Break Management)
-  if (isStaff) {
-    return (
-      <div className="space-y-6">
-        <div style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}>
-          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: '#6ee7b7', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 2, padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
-            <Coffee style={{ width: 12, height: 12 }} />
-            Staff & Faculty Portal
-          </span>
-          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Welcome, {user?.fullName}</h2>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Department: Computer Engineering • Staff Workspace</p>
-        </div>
 
-        {/* Section H2: Break Update Only */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Coffee style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0 }} />
-              Staff Break Controls
-            </h3>
-
-            {activeBreak ? (
-              <div style={{ background: 'rgba(120,53,15,0.15)', border: '1px solid rgba(180,83,9,0.35)', borderRadius: 4, padding: 16 }} className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold text-amber-300">ON BREAK</span>
-                  <Badge variant="warning">Ongoing</Badge>
-                </div>
-                <p className="text-xs text-slate-300">Started at: <span className="font-mono">{new Date(activeBreak.startTime).toLocaleTimeString()}</span></p>
-                {activeBreak.note && <p className="text-xs text-slate-400 italic">Note: "{activeBreak.note}"</p>}
-                
-                <Input label="End Note (Optional)" placeholder="e.g. Lunch completed" value={breakNote} onChange={(e) => setBreakNote(e.target.value)} />
-                
-                <Button 
-                  variant="danger" 
-                  className="w-full" 
-                  leftIcon={<Square className="w-4 h-4" />}
-                  isLoading={endBreakMutation.isPending}
-                  onClick={() => endBreakMutation.mutate(breakNote)}
-                >
-                  End Break Session
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Input label="Break Note (Optional)" placeholder="e.g. Tea / Lunch break" value={breakNote} onChange={(e) => setBreakNote(e.target.value)} />
-                <Button 
-                  variant="success" 
-                  className="w-full" 
-                  leftIcon={<Play className="w-4 h-4" />}
-                  isLoading={startBreakMutation.isPending}
-                  onClick={() => startBreakMutation.mutate(breakNote)}
-                >
-                  Start Break Session
-                </Button>
-              </div>
-            )}
-          </Card>
-
-          {/* Break History */}
-          <Card>
-            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: '0 0 16px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <History style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
-              My Break History
-            </h3>
-
-            <div className="space-y-2">
-              {breakHistoryRes?.data?.content && breakHistoryRes.data.content.length > 0 ? (
-                breakHistoryRes.data.content.map((b) => (
-                  <div key={b.id} style={{ padding: '10px 12px', background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 4, fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#e8e6e2' }}>
-                    <div>
-                      <p className="font-semibold text-slate-100">{new Date(b.startTime).toLocaleDateString()} {new Date(b.startTime).toLocaleTimeString()}</p>
-                      <p className="text-[11px] text-slate-400">{b.note || 'Break'}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={b.status === 'COMPLETED' ? 'success' : 'warning'}>{b.status}</Badge>
-                      {b.durationMinutes && <p className="text-[11px] text-slate-400 mt-1">{b.durationMinutes} mins</p>}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-500 text-center py-6">No break history logs yet.</p>
-              )}
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // DEFAULT RENDER: ADMIN DASHBOARD
-  return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <div>
-          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: 'var(--accent)', background: 'rgba(47,93,124,0.18)', border: '1px solid rgba(47,93,124,0.35)', borderRadius: 2, padding: '2px 8px', display: 'inline-block', marginBottom: 10 }}>
-            Admin Security Control
-          </span>
-          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: '#f0ede8', margin: '0 0 4px', letterSpacing: '-0.01em' }}>
-            Welcome, System Admin {user?.fullName}
-          </h2>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-            System overview, active gate operations, and security logs.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Button variant="primary" leftIcon={<PlusCircle className="w-4 h-4" />} onClick={() => navigate('/visitors')}>
-            Check-In Visitor
-          </Button>
-          <Button variant="outline" className="border-white/20 text-white/80 hover:bg-white/10" onClick={() => navigate('/users')}>
-            User Management
-          </Button>
-        </div>
-      </div>
-
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        {isAdminLoading ? (
-          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-[4px]" />)
-        ) : (
-          <>
-            <StatsCard title="Active Visitors Inside" value={adminMetrics?.visitorsInside ?? 14} icon={<Users className="w-6 h-6" />} colorTheme="indigo" description="Currently on campus" />
-            <StatsCard title="Today's Total Visitors" value={adminMetrics?.todayVisitors ?? 42} icon={<UserCheck className="w-6 h-6" />} colorTheme="emerald" description="Checked in today" />
-            <StatsCard title="Faculty / Teacher Visitors" value={adminMetrics?.todayVisitors ? Math.ceil(adminMetrics.todayVisitors * 0.55) : 24} icon={<GraduationCap className="w-6 h-6" />} colorTheme="purple" description="Visiting Faculty / Staff" />
-            <StatsCard title="Active Guards on Duty" value={adminMetrics?.guardsOnDuty ?? 8} icon={<ShieldCheck className="w-6 h-6" />} colorTheme="cyan" description="Security personnel" />
-            <StatsCard title="Active Outpass Requests" value={adminMetrics?.todayHostelOutpasses ?? 12} icon={<Clock className="w-6 h-6" />} colorTheme="purple" description="Hostel outpasses" />
-          </>
-        )}
-      </div>
-
-      {/* Analytics Chart */}
-      <Card>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Activity style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
-              Hourly Visitor Traffic (Today)
-            </h3>
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: '4px 0 0' }}>Real-time gate traffic intensity across all campus locations</p>
-          </div>
-          <Badge variant="purple">System Analytics</Badge>
-        </div>
-
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="colorVis" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2f5d7c" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#2f5d7c" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} tickLine={false} />
-              <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }} />
-              <Area type="monotone" dataKey="visitors" stroke="#2f5d7c" strokeWidth={2} fillOpacity={1} fill="url(#colorVis)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      {/* Live Active Visitors Table on Admin Dashboard */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15, color: 'var(--text)', margin: 0, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Users style={{ width: 16, height: 16, color: 'var(--accent)', flexShrink: 0 }} />
-              Active Campus Visitors Log
-            </h3>
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: '4px 0 0' }}>Live monitoring of all visitors currently on campus (auto-refreshes every 10s)</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => navigate('/visitors')}>
-            Manage All Visitors
-          </Button>
-        </div>
-
-        {activeVisitorsList && activeVisitorsList.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-400 font-semibold uppercase text-[10px]">
-                  <th className="py-2.5 px-3">Pass #</th>
-                  <th className="py-2.5 px-3">Visitor Name</th>
-                  <th className="py-2.5 px-3">Mobile</th>
-                  <th className="py-2.5 px-3">Visiting Host</th>
-                  <th className="py-2.5 px-3">Dept</th>
-                  <th className="py-2.5 px-3">Check-In Time</th>
-                  <th className="py-2.5 px-3 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {activeVisitorsList.map((v) => (
-                  <tr key={v.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--accent)', fontWeight: 500 }}>{v.passNumber || `#${v.id}`}</td>
-                    <td className="py-2.5 px-3" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, color: 'var(--text)' }}>{v.name}</td>
-                    <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{v.mobile}</td>
-                    <td className="py-2.5 px-3" style={{ color: 'var(--text)' }}>{v.hostName}</td>
-                    <td className="py-2.5 px-3" style={{ color: 'var(--mute)', fontSize: 12 }}>{v.hostDepartment} ({v.hostType || 'FACULTY'})</td>
-                    <td className="py-2.5 px-3" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)' }}>{new Date(v.timeIn).toLocaleTimeString()}</td>
-                    <td className="py-2.5 px-3 text-right">
-                      <Badge variant="success">Active Inside</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '32px 20px', border: '1px dashed var(--line)', borderRadius: 4 }}>
-            <Users style={{ width: 26, height: 26, color: 'var(--line)', margin: '0 auto 10px' }} />
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--mute)', fontWeight: 500, margin: 0 }}>No active visitors logged inside campus right now.</p>
-          </div>
-        )}
-      </Card>
-    </div>
-  );
+  // FALLBACK: Unsupported role - navigate to login (done via useEffect below)
+  return null;
 };
 
 // ============================================================
@@ -690,18 +668,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
     return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
   };
 
-  const [outpassCategory, setOutpassCategory] = useState<'HOSTEL' | 'GATE_DAY'>('HOSTEL');
-  const [reasonCategory, setReasonCategory] = useState('Medical Checkup');
-  const [reasonDetails, setReasonDetails] = useState('Medical Checkup & Prescription collection at Sahyadri Hospital, Erandwane');
-  const [destination, setDestination] = useState('Erandwane, Pune');
-  const [parentContact, setParentContact] = useState(user?.phone || '9876543210');
-  const [emergencyPhone, setEmergencyPhone] = useState('9812345678');
-  const [departureTime, setDepartureTime] = useState(toLocalISOString(new Date()));
-  const [expectedReturnTime, setExpectedReturnTime] = useState(toLocalISOString(new Date(Date.now() + 5 * 3600000)));
-  const [parentConsent, setParentConsent] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Real API Query for Student Outpasses
+  // Real API Query for Student Outpasses — declared first so we can use data in form init
   const { data: realOutpassesData, isLoading: isOutpassesLoading, refetch: refetchOutpasses } = useQuery({
     queryKey: ['student-outpasses-dashboard', studentPrn],
     queryFn: async () => {
@@ -716,51 +683,68 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
     refetchInterval: 10000,
   });
 
+  const outpassList = realOutpassesData || [];
+  const latestRecorded = outpassList[0];
+
+  const [studentHostel, setStudentHostel] = useState(latestRecorded?.studentHostel || '');
+  const [studentRoom, setStudentRoom] = useState(latestRecorded?.studentRoom || latestRecorded?.roomNumber || '');
+  const [studentClass, setStudentClass] = useState(latestRecorded?.studentClass || '');
+  const [studentDivision, setStudentDivision] = useState(latestRecorded?.studentDivision || '');
+  const [parentContact, setParentContact] = useState(latestRecorded?.parentContact || '');
+  const [emergencyPhone, setEmergencyPhone] = useState(latestRecorded?.emergencyContact || '');
+  const [studentMobile, setStudentMobile] = useState(user?.phone || latestRecorded?.studentMobile || '');
+  const [outpassCategory, setOutpassCategory] = useState<'HOSTEL' | 'GATE_DAY'>('HOSTEL');
+
+  const [reasonCategory, setReasonCategory] = useState('Medical Checkup');
+  const [reasonDetails, setReasonDetails] = useState('');
+  const [destination, setDestination] = useState('');
+  const [departureTime, setDepartureTime] = useState(toLocalISOString(new Date()));
+  const [expectedReturnTime, setExpectedReturnTime] = useState(toLocalISOString(new Date(Date.now() + 5 * 3600000)));
+  const [parentConsent, setParentConsent] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (latestRecorded) {
+      setStudentHostel((prev) => prev || latestRecorded.studentHostel || '');
+      setStudentRoom((prev) => prev || latestRecorded.studentRoom || latestRecorded.roomNumber || '');
+      setStudentClass((prev) => prev || latestRecorded.studentClass || '');
+      setStudentDivision((prev) => prev || latestRecorded.studentDivision || '');
+      setParentContact((prev) => prev || latestRecorded.parentContact || '');
+      setEmergencyPhone((prev) => prev || latestRecorded.emergencyContact || '');
+      setStudentMobile((prev) => prev || user?.phone || latestRecorded.studentMobile || '');
+    }
+  }, [latestRecorded, user]);
+
   const activeOutpass = useMemo(() => {
     if (!realOutpassesData || realOutpassesData.length === 0) {
-      return {
-        id: 999,
-        outpassNumber: 'OP-2026-001',
-        studentName: studentName || 'Student User',
-        studentPrn: studentPrn || 'F24IT32',
-        studentHostel: 'Hostel Block B',
-        roomNumber: 'B-304',
-        reason: 'Medical Checkup & Prescription collection at Sahyadri Hospital',
-        destination: 'Erandwane, Pune',
-        wardenName: 'Dr. S. Kulkarni (Warden)',
-        departureTime: 'Today, 02:00 PM',
-        expectedReturnTime: 'Today, 07:00 PM',
-        status: 'APPROVED',
-      };
+      return null;
     }
-    return realOutpassesData.find((op: any) => op.status === 'APPROVED' || op.status === 'PENDING_WARDEN' || op.status === 'OUT_OF_CAMPUS') || realOutpassesData[0];
-  }, [realOutpassesData, studentName, studentPrn]);
-
-  const outpassList = realOutpassesData || [];
+    return realOutpassesData.find((op: any) => op.status === 'APPROVED' || op.status === 'PENDING_WARDEN' || op.status === 'OUT_OF_CAMPUS') || null;
+  }, [realOutpassesData]);
 
   // Handle New Outpass Form Submit
   const handleSubmitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reasonDetails || !destination) {
-      toast.error('Please fill in reason and destination address');
+    if (!reasonDetails.trim() || !destination.trim() || !studentHostel.trim() || !studentRoom.trim() || !parentContact.trim()) {
+      toast.error('Please fill in Hostel Block, Room, Parent Mobile, Reason, and Destination');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const payload = {
-        studentName: studentName,
-        studentPrn: studentPrn,
-        studentHostel: 'Hostel Block B',
-        studentRoom: 'B-304',
-        studentClass: 'BE',
-        studentDivision: '1',
-        studentMobile: user?.phone || '9876543210',
-        parentContact: parentContact,
-        emergencyContact: emergencyPhone,
-        reason: `[${reasonCategory}] ${reasonDetails}`,
+        studentName: studentName || user?.fullName,
+        studentPrn: studentPrn || user?.username,
+        studentHostel: studentHostel.trim(),
+        studentRoom: studentRoom.trim(),
+        studentClass: studentClass.trim() || 'BE',
+        studentDivision: studentDivision.trim() || '1',
+        studentMobile: studentMobile.trim() || user?.phone || '',
+        parentContact: parentContact.trim(),
+        emergencyContact: emergencyPhone.trim() || undefined,
+        reason: `[${reasonCategory}] ${reasonDetails.trim()}`,
         studentNote: `Parent consent verified: ${parentConsent ? 'Yes' : 'No'}`,
-        destination: destination,
+        destination: destination.trim(),
         departureTime: new Date(departureTime).toISOString(),
         expectedReturnTime: new Date(expectedReturnTime).toISOString(),
       };
@@ -793,7 +777,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
                 Verified Student Portal
               </span>
               <span className="px-2.5 py-0.5 bg-slate-800 border border-slate-700 rounded-md text-[11px] font-mono text-slate-300">
-                Hostel Block B • Room B-304
+                {latestRecorded?.studentHostel ? `${latestRecorded.studentHostel} • Room ${latestRecorded.studentRoom || latestRecorded.roomNumber}` : 'Hostel Resident: Self-declared'}
               </span>
             </div>
 
@@ -801,9 +785,13 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
               Welcome, {studentName}
             </h2>
             <p className="text-xs text-slate-400 font-mono mt-1 flex flex-wrap items-center gap-3">
-              <span>PRN: <strong style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--accent)', fontWeight: 500 }}>{studentPrn}</strong></span>
-              <span>•</span>
-              <span>Branch: <strong>Computer Engineering</strong></span>
+              <span>PRN: <strong style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--accent)', fontWeight: 500 }}>{studentPrn}</strong></span>
+              {latestRecorded?.studentClass && (
+                <>
+                  <span>•</span>
+                  <span>Class: <strong>{latestRecorded.studentClass}</strong></span>
+                </>
+              )}
               <span>•</span>
               <span className="text-emerald-400 font-semibold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Outpass Permitted
@@ -822,7 +810,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
             <Button
               variant="outline"
               onClick={() => setShowGuardModal(true)}
-              leftIcon={<QrCode className="w-4 h-4 text-emerald-300" />}
+              leftIcon={<ShieldCheck className="w-4 h-4 text-emerald-300" />}
             className="border-white/20 text-white/80 hover:bg-white/10"
             >
               Show Digital Pass
@@ -867,7 +855,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
               border: activeTab === 'history' ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
             }}
           >
-            <History style={{ width: 13, height: 13, color: '#2dd4bf' }} />
+            <HistoryIcon style={{ width: 13, height: 13, color: '#2dd4bf' }} />
             My Applications History ({outpassList.length})
           </button>
         </div>
@@ -885,37 +873,56 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
             transition={{ duration: 0.3 }}
             className="grid grid-cols-1 lg:grid-cols-3 gap-6"
           >
-            {/* Main Crisp White Digital Pass Card with Emerald Border */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card className="border border-[--line] bg-white relative overflow-hidden p-6 rounded-[4px] text-slate-900">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
-                  <div>
-                    <span className="px-3.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5 w-fit shadow-xs">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-                      WARDEN APPROVED — PERMITTED FOR EXIT & ENTRY
-                    </span>
-                    <h3 className="text-2xl font-black text-slate-900 mt-2 font-mono tracking-tight">
-                      Pass #{activeOutpass.outpassNumber}
-                    </h3>
+            {!activeOutpass ? (
+              <div className="lg:col-span-3">
+                <Card className="border border-[--line] bg-white p-10 rounded-[4px] text-center max-w-xl mx-auto space-y-4">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                    <Ticket className="w-6 h-6" />
                   </div>
-
-                  <Button
-                    variant="success"
-                    size="sm"
-                    onClick={() => setShowGuardModal(true)}
-                    leftIcon={<Eye className="w-4 h-4" />}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 text-xs shadow-md shadow-emerald-600/20 shrink-0"
-                  >
-                    Show to Guard (Full View)
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">No Active Gate Permission Pass</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                      You currently have no active or approved outpass on file. Total applications on record: {outpassList.length}.
+                    </p>
+                  </div>
+                  <Button variant="primary" onClick={() => setActiveTab('apply')} leftIcon={<PlusCircle className="w-4 h-4" />}>
+                    Apply for New Outpass
                   </Button>
-                </div>
+                </Card>
+              </div>
+            ) : (
+              <>
+                {/* Main Crisp White Digital Pass Card with Emerald Border */}
+                <div className="lg:col-span-2 space-y-6">
+                  <Card className="border border-[--line] bg-white relative overflow-hidden p-6 rounded-[4px] text-slate-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                      <div>
+                        <span className="px-3.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5 w-fit shadow-xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                          WARDEN APPROVED — PERMITTED FOR EXIT & ENTRY
+                        </span>
+                        <h3 className="text-2xl font-black text-slate-900 mt-2 font-mono tracking-tight">
+                          Pass #{activeOutpass.outpassNumber}
+                        </h3>
+                      </div>
+
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => setShowGuardModal(true)}
+                        leftIcon={<Eye className="w-4 h-4" />}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 text-xs shadow-md shadow-emerald-600/20 shrink-0"
+                      >
+                        Show to Guard (Full View)
+                      </Button>
+                    </div>
 
                 {/* Pass Details Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-5 text-xs">
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80 hover:border-indigo-300 transition-colors">
                     <p className="text-slate-500 font-medium">Student Name & PRN</p>
                     <p className="text-slate-900 font-extrabold text-base mt-0.5">{activeOutpass.studentName}</p>
-                    <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>PRN: {activeOutpass.studentPrn}</p>
+                    <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>PRN: {activeOutpass.studentPrn}</p>
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80 hover:border-indigo-300 transition-colors">
@@ -945,7 +952,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
                     <p className="text-slate-500 font-medium flex items-center gap-1">
                       <UserCheck className="w-3.5 h-3.5 text-purple-600" /> Verified Warden
                     </p>
-                    <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{activeOutpass.wardenName}</p>
+                    <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{activeOutpass.wardenName}</p>
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200/80">
@@ -959,31 +966,19 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
                     <p className="text-slate-500 font-medium flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5 text-indigo-600" /> Expected Return Cutoff
                     </p>
-                    <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{activeOutpass.expectedReturnTime}</p>
+                    <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{activeOutpass.expectedReturnTime}</p>
                   </div>
                 </div>
 
-                {/* QR Verification Barcode Graphic */}
+                {/* Digital Gate Verification Badge */}
                 <div style={{ background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }} className="sm:flex-row items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <QRCodeDisplay
-                      value={JSON.stringify({
-                        system: 'CampusAccess PICT Gate Control',
-                        passNo: activeOutpass.outpassNumber,
-                        prn: activeOutpass.studentPrn,
-                        student: activeOutpass.studentName,
-                        reason: activeOutpass.reason,
-                        validTill: activeOutpass.expectedReturnTime,
-                        warden: activeOutpass.wardenName,
-                        status: activeOutpass.status,
-                      })}
-                      size={72}
-                      showBorder={false}
-                      className="p-0 bg-white rounded-xl shadow-md p-1"
-                    />
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
                     <div>
-                      <p className="text-xs font-extrabold text-white uppercase tracking-wider">Gate Scanner Ready</p>
-                      <p className="text-[11px] text-slate-300">Guards at Main Gate & Hostel Gate can scan or search PRN <strong className="text-emerald-400">{studentPrn}</strong></p>
+                      <p className="text-xs font-extrabold text-white uppercase tracking-wider">Gate Checkpoint Ready</p>
+                      <p className="text-[11px] text-slate-300">Guards verify student PRN <strong className="text-emerald-400 font-mono">{studentPrn}</strong> or Pass <span className="font-mono text-indigo-300 font-bold">{activeOutpass.outpassNumber}</span></p>
                     </div>
                   </div>
 
@@ -991,7 +986,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
                     variant="primary"
                     onClick={() => setShowGuardModal(true)}
                     className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs py-2 px-4 shadow-md shrink-0"
-                    leftIcon={<QrCode className="w-4 h-4 text-slate-950" />}
+                    leftIcon={<Ticket className="w-4 h-4 text-slate-950" />}
                   >
                     Present Security Pass
                   </Button>
@@ -1035,21 +1030,23 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
                       3
                     </div>
                     <h4 style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', margin: '0 0 2px' }}>3. Gate Security Active</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Show QR Pass at Gate 1 or Gate 2</p>
-                    <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: 'var(--accent)', fontWeight: 500 }}>Ready for Exit Log</span>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Present Pass #{activeOutpass.outpassNumber} at Gate 1 or Gate 2</p>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'var(--accent)', fontWeight: 500 }}>Ready for Exit Log</span>
                   </div>
                 </div>
               </Card>
 
-              <Card style={{ background: 'rgba(47,93,124,0.06)', border: '1px solid rgba(47,93,124,0.15)', borderRadius: 4, padding: '16px 20px' }}>
-                <h4 className="text-xs font-extrabold text-indigo-900 uppercase tracking-wider mb-2.5">Campus Security Rules</h4>
-                <ul className="text-[11px] text-slate-600 space-y-2 list-disc list-inside font-medium">
-                  <li>Show your Warden Approval reason to the guard when exiting.</li>
-                  <li>Ensure return before <strong className="text-slate-900 font-bold">{activeOutpass.expectedReturnTime}</strong> to prevent late flags.</li>
-                  <li>Emergency assistance phone: <strong className="text-indigo-700 font-bold">020-24371101</strong></li>
-                </ul>
-              </Card>
-            </div>
+                  <Card style={{ background: 'rgba(47,93,124,0.06)', border: '1px solid rgba(47,93,124,0.15)', borderRadius: 4, padding: '16px 20px' }}>
+                    <h4 className="text-xs font-extrabold text-indigo-900 uppercase tracking-wider mb-2.5">Campus Security Rules</h4>
+                    <ul className="text-[11px] text-slate-600 space-y-2 list-disc list-inside font-medium">
+                      <li>Show your Warden Approval reason to the guard when exiting.</li>
+                      <li>Ensure return before <strong className="text-slate-900 font-bold">{activeOutpass.expectedReturnTime}</strong> to prevent late flags.</li>
+                      <li>Emergency assistance phone: <strong className="text-indigo-700 font-bold">020-24371101</strong></li>
+                    </ul>
+                  </Card>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
 
@@ -1110,20 +1107,57 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
                   </div>
                 </div>
 
-                {/* Student Autofilled Meta */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+                {/* Student Hostel & Room Meta */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-[4px] border border-slate-200 text-xs">
                   <div>
-                    <p className="text-slate-500 font-medium">Student Name</p>
+                    <label className="text-slate-500 font-medium block mb-1">Student Name</label>
                     <p className="font-extrabold text-slate-900 text-sm">{studentName}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500 font-medium">PRN Number</p>
-                    <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{studentPrn}</p>
+                    <label className="text-slate-500 font-medium block mb-1">PRN Number</label>
+                    <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{studentPrn}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500 font-medium">Hostel & Room</p>
-                    <p className="font-bold text-slate-900 text-sm">Block B • Room B-304</p>
+                    <Input
+                      label="Hostel Block"
+                      placeholder="e.g. Block A"
+                      value={studentHostel}
+                      onChange={(e) => setStudentHostel(e.target.value)}
+                      required
+                    />
                   </div>
+                  <div>
+                    <Input
+                      label="Room Number"
+                      placeholder="e.g. 102"
+                      value={studentRoom}
+                      onChange={(e) => setStudentRoom(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Input
+                    label="Class"
+                    placeholder="e.g. BE"
+                    value={studentClass}
+                    onChange={(e) => setStudentClass(e.target.value)}
+                  />
+                  <Input
+                    label="Division"
+                    placeholder="e.g. 1"
+                    value={studentDivision}
+                    onChange={(e) => setStudentDivision(e.target.value)}
+                  />
+                  <Input
+                    label="Student Mobile"
+                    value={studentMobile}
+                    onChange={(e) => setStudentMobile(e.target.value)}
+                    placeholder="e.g. 9822012345"
+                    disabled={!!user?.phone}
+                    required
+                  />
                 </div>
 
                 {/* Reason Selection & Details */}
@@ -1239,7 +1273,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                    <History className="w-5 h-5 text-indigo-600" />
+                    <HistoryIcon className="w-5 h-5 text-indigo-600" />
                     My Outpass Applications History
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">Track all your past and current outpass requests and warden approval logs</p>
@@ -1265,11 +1299,11 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
                   <tbody className="divide-y divide-slate-100">
                     {outpassList.map((op) => (
                       <tr key={op.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-4 px-4" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{op.outpassNumber}</td>
+                        <td className="py-4 px-4" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>{op.outpassNumber}</td>
                         <td className="py-4 px-4 font-medium text-slate-800">{op.category}</td>
                         <td className="py-4 px-4 max-w-xs">
                           <p className="font-semibold text-slate-900">{op.reason}</p>
-                          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: 'var(--mute)', marginTop: 2 }}>{op.wardenStatus}</p>
+                          <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--mute)', marginTop: 2 }}>{op.wardenStatus}</p>
                         </td>
                         <td className="py-4 px-4 text-slate-700">{op.destination}</td>
                         <td className="py-4 px-4 font-mono text-[11px] text-slate-500">
@@ -1374,27 +1408,19 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
               </div>
               </div>
 
-              {/* QR Scanner Code - Crisp High Contrast */}
-              <div className="text-center bg-slate-900 text-white p-3 rounded-2xl border border-slate-800">
-                <QRCodeDisplay
-                  value={JSON.stringify({
-                    system: 'CampusAccess PICT Gate Control',
-                    passNo: activeOutpass.outpassNumber,
-                    prn: activeOutpass.studentPrn,
-                    student: activeOutpass.studentName,
-                    reason: activeOutpass.reason,
-                    validTill: activeOutpass.expectedReturnTime,
-                    warden: activeOutpass.wardenName,
-                    status: activeOutpass.status,
-                  })}
-                  size={150}
-                  showBorder={false}
-                  title="AUTHENTICATED PASS QR"
-                  subtitle={`PRN: ${activeOutpass.studentPrn} • ${activeOutpass.outpassNumber}`}
-                  className="p-1"
-                />
-                <p className="text-[11px] font-mono text-emerald-400 font-bold tracking-wider mt-1">SCAN AT GATE CONTROLLER</p>
-                <p className="text-[9px] text-slate-400">Guard can verify via scanner or PRN search in Gate Terminal</p>
+              {/* Verified Pass Security Token Badge */}
+              <div className="text-center bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 space-y-2">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto">
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-mono text-emerald-400 font-bold tracking-wider uppercase">AUTHENTICATED DIGITAL PASS</p>
+                  <p className="text-lg font-black font-mono text-white tracking-tight">{activeOutpass.outpassNumber}</p>
+                  <p className="text-[11px] font-mono text-slate-300">PRN: <span className="text-indigo-300 font-bold">{activeOutpass.studentPrn}</span></p>
+                </div>
+                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                  Guard can verify this permit by student PRN or Pass number in Gate Terminal.
+                </p>
               </div>
 
               {/* Prominent Action / Close Button */}
@@ -1412,5 +1438,4 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
     </div>
   );
 };
-
 

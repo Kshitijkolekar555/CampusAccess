@@ -220,10 +220,11 @@ class StudentGatePassServiceImplTest {
     @Test
     void getPassById_shouldSucceed() {
         when(studentGatePassRepository.findById(1L)).thenReturn(Optional.of(testPass));
+        when(userRepository.findByUsername("guard1")).thenReturn(Optional.of(TEST_USER_GUARD()));
         when(studentGatePassMapper.toResponse(testPass)).thenReturn(StudentGatePassResponse.builder()
                 .id(1L).studentName("Test Student").build());
 
-        StudentGatePassResponse response = passService.getPassById(1L);
+        StudentGatePassResponse response = passService.getPassById(1L, "guard1");
 
         assertNotNull(response);
         assertEquals("Test Student", response.getStudentName());
@@ -233,7 +234,7 @@ class StudentGatePassServiceImplTest {
     void getPassById_shouldFailWhenNotFound() {
         when(studentGatePassRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> passService.getPassById(99L));
+        assertThrows(ResourceNotFoundException.class, () -> passService.getPassById(99L, "guard1"));
     }
 
     private User TEST_USER_GUARD() {

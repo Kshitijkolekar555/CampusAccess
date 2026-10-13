@@ -7,9 +7,9 @@
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/acampusaccessdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: Purva@2118_
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:acampusaccessdb}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:root}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:}}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -42,7 +42,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:local-dev-secret-key-at-least-256-bits-long-pad-if-needed}
   cors:
-    allowed-origins: http://localhost:3000,http://localhost:5173,http://localhost:8081
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3002,http://localhost:3000,http://localhost:5173,http://localhost:8081}
 
 face:
   service:

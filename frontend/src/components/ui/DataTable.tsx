@@ -31,9 +31,9 @@ export function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-6 flex flex-col gap-3">
+      <div className="bg-white rounded-[4px] border border-[--line] p-6 flex flex-col gap-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full rounded-lg" />
+          <Skeleton key={i} className="h-10 w-full rounded-[2px]" />
         ))}
       </div>
     );
@@ -44,24 +44,25 @@ export function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className="w-full overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+    <div className="w-full overflow-x-auto bg-white rounded-[4px] border border-[--line]">
       <table className="w-full text-left text-sm border-collapse">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50">
+          <tr className="border-b border-[--line] bg-slate-50">
             {columns.map((col, i) => (
               <th
                 key={i}
                 className={clsx(
-                  'px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap',
+                  'px-4 py-3 text-[11px] font-semibold text-[--mute] uppercase tracking-wider whitespace-nowrap',
                   col.className
                 )}
+                style={{ fontFamily: 'Inter, sans-serif' }}
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-[--line]">
           {data.map((item, rowIdx) => (
             <tr
               key={keyExtractor ? keyExtractor(item) : item.id || rowIdx}
@@ -74,7 +75,8 @@ export function DataTable<T extends Record<string, any>>({
               {columns.map((col, colIdx) => (
                 <td
                   key={colIdx}
-                  className={clsx('px-4 py-3 text-slate-800 align-middle', col.className)}
+                  className={clsx('px-4 py-3 text-[--text] align-middle text-xs', col.className)}
+                  style={{ fontFamily: 'Inter, sans-serif' }}
                 >
                   {col.render ? col.render(item) : col.accessor ? item[col.accessor] : null}
                 </td>

@@ -49,6 +49,8 @@ class AuthServiceImplTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private AuditLogService auditLogService;
     @Mock private NotificationService notificationService;
+    @Mock private com.pict.gatesecurity.repository.StudentGatePassRepository studentGatePassRepository;
+    @Mock private com.pict.gatesecurity.repository.HostelOutpassRepository hostelOutpassRepository;
 
     private AuthServiceImpl authService;
 
@@ -60,7 +62,8 @@ class AuthServiceImplTest {
         authService = new AuthServiceImpl(
                 authenticationManager, userRepository, refreshTokenRepository,
                 passwordResetTokenRepository, jwtUtil, tokenBlacklist,
-                userMapper, passwordEncoder, auditLogService, notificationService
+                userMapper, passwordEncoder, auditLogService, notificationService,
+                studentGatePassRepository, hostelOutpassRepository
         );
         ReflectionTestUtils.setField(authService, "refreshTokenExpiryMs", 604800000L);
         ReflectionTestUtils.setField(authService, "passwordResetTokenExpiryMs", 1800000L);
@@ -69,7 +72,7 @@ class AuthServiceImplTest {
                 .id(1L)
                 .username("testuser")
                 .passwordHash("encoded_password")
-                .role(UserRole.VISITOR)
+                .role(UserRole.STUDENT)
                 .fullName("Test User")
                 .email("test@example.com")
                 .active(true)
@@ -78,7 +81,7 @@ class AuthServiceImplTest {
         testUserResponse = UserResponse.builder()
                 .id(1L)
                 .username("testuser")
-                .role(UserRole.VISITOR)
+                .role(UserRole.STUDENT)
                 .fullName("Test User")
                 .email("test@example.com")
                 .active(true)
@@ -87,10 +90,10 @@ class AuthServiceImplTest {
 
     @Test
     void login_shouldSucceed() {
-        LoginRequest request = new LoginRequest("testuser", "password123");
+        LoginRequest request = LoginRequest.builder().username("testuser").password("password123").build();
         when(authenticationManager.authenticate(any())).thenReturn(null);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-        when(jwtUtil.generateAccessToken("testuser", "VISITOR")).thenReturn("access_token");
+        when(jwtUtil.generateAccessToken("testuser", "STUDENT")).thenReturn("access_token");
         when(jwtUtil.generateRefreshToken("testuser")).thenReturn("refresh_token");
         when(userMapper.toResponse(testUser)).thenReturn(testUserResponse);
 
@@ -105,7 +108,7 @@ class AuthServiceImplTest {
 
     @Test
     void login_shouldFailWithBadCredentials() {
-        LoginRequest request = new LoginRequest("testuser", "wrong_password");
+        LoginRequest request = LoginRequest.builder().username("testuser").password("wrong_password").build();
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("Invalid credentials"));
 
@@ -115,7 +118,7 @@ class AuthServiceImplTest {
     @Test
     void login_shouldFailWhenDisabled() {
         testUser.setActive(false);
-        LoginRequest request = new LoginRequest("testuser", "password123");
+        LoginRequest request = LoginRequest.builder().username("testuser").password("password123").build();
         when(authenticationManager.authenticate(any())).thenReturn(null);
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
@@ -138,7 +141,7 @@ class AuthServiceImplTest {
         when(jwtUtil.isTokenValid("old_refresh_token")).thenReturn(true);
         when(jwtUtil.isRefreshToken("old_refresh_token")).thenReturn(true);
         when(refreshTokenRepository.findByToken("old_refresh_token")).thenReturn(Optional.of(storedToken));
-        when(jwtUtil.generateAccessToken("testuser", "VISITOR")).thenReturn("new_access_token");
+        when(jwtUtil.generateAccessToken("testuser", "STUDENT")).thenReturn("new_access_token");
         when(jwtUtil.generateRefreshToken("testuser")).thenReturn("new_refresh_token");
         when(userMapper.toResponse(testUser)).thenReturn(testUserResponse);
 
@@ -175,7 +178,11 @@ class AuthServiceImplTest {
         when(passwordEncoder.matches("old_pass", "encoded_password")).thenReturn(true);
         when(passwordEncoder.encode("new_pass")).thenReturn("new_encoded");
 
-        ChangePasswordRequest request = new ChangePasswordRequest("old_pass", "new_pass");
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("old_pass")
+                .newPassword("new_pass")
+                .confirmPassword("new_pass")
+                .build();
         authService.changePassword("testuser", request);
 
         verify(userRepository).save(any(User.class));
@@ -186,13 +193,17 @@ class AuthServiceImplTest {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrong_pass", "encoded_password")).thenReturn(false);
 
-        ChangePasswordRequest request = new ChangePasswordRequest("wrong_pass", "new_pass");
+        ChangePasswordRequest request = ChangePasswordRequest.builder()
+                .currentPassword("wrong_pass")
+                .newPassword("new_pass")
+                .confirmPassword("new_pass")
+                .build();
         assertThrows(BadRequestException.class, () -> authService.changePassword("testuser", request));
     }
 
     @Test
     void register_shouldSucceed() {
-        UserCreateRequest request = new UserCreateRequest("newuser", "password123", UserRole.VISITOR, "New User", null, "new@example.com");
+        UserCreateRequest request = new UserCreateRequest("newuser", "password123", UserRole.STUDENT, "New User", null, "new@example.com");
 
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encoded");
@@ -215,7 +226,7 @@ class AuthServiceImplTest {
 
     @Test
     void register_shouldFailWhenUsernameTaken() {
-        UserCreateRequest request = new UserCreateRequest("existing", "password123", UserRole.VISITOR, "Existing User", null, null);
+        UserCreateRequest request = new UserCreateRequest("existing", "password123", UserRole.STUDENT, "Existing User", null, null);
         when(userRepository.existsByUsername("existing")).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class, () -> authService.register(request));

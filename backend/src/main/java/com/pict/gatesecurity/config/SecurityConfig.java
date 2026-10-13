@@ -45,7 +45,13 @@ public class SecurityConfig {
             "/api/v1/auth/refresh",
             "/api/v1/auth/register",
             "/api/v1/auth/verify-prn",
-            "/uploads/**"
+            "/uploads/**",
+            "/api/visitors/recognize",
+            "/api/v1/visitors/recognize",
+            "/api/visitors/register-with-photo",
+            "/api/v1/visitors/register-with-photo",
+            "/api/visitors/request-token",
+            "/api/v1/visitors/request-token"
     };
 
     @Bean

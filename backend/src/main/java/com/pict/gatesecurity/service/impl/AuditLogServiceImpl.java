@@ -22,6 +22,10 @@ public class AuditLogServiceImpl implements AuditLogService {
     @Override
     @Transactional
     public void logAction(User user, String action, String entityType, Long entityId, Map<String, Object> oldValue, Map<String, Object> newValue) {
+        if (user == null) {
+            log.info("Skipping audit log for action: {} (no authenticated user context)", action);
+            return;
+        }
         try {
             AuditLog auditLog = AuditLog.builder()
                     .user(user)

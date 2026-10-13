@@ -32,22 +32,35 @@ db.init_db()
 # Model file paths
 YUNET_PATH = os.path.join(os.path.dirname(__file__), "face_detection_yunet_2023mar.onnx")
 SFACE_PATH = os.path.join(os.path.dirname(__file__), "face_recognition_sface_2021dec.onnx")
+HAAR_PATH = os.path.join(os.path.dirname(__file__), "haarcascade_frontalface_default.xml")
 
 detector = None
 recognizer = None
+haar_cascade = None  # fallback when ONNX models are absent
 
 def init_models():
-    global detector, recognizer
+    global detector, recognizer, haar_cascade
+
+    # Try primary ONNX-based models first
     if os.path.exists(YUNET_PATH) and os.path.exists(SFACE_PATH):
         try:
-            # Score threshold: 0.70, NMS threshold: 0.30, top_k: 5000
             detector = cv2.FaceDetectorYN.create(YUNET_PATH, "", (320, 320), 0.70, 0.30, 5000)
             recognizer = cv2.FaceRecognizerSF.create(SFACE_PATH, "")
-            logger.info("Successfully loaded OpenCV YuNet & SFace neural models!")
+            logger.info("Loaded OpenCV YuNet & SFace ONNX models (full recognition mode).")
         except Exception as e:
             logger.error(f"Failed to load ONNX models: {e}")
     else:
-        logger.warning("YuNet or SFace ONNX models not found in face-service root.")
+        logger.warning("YuNet/SFace ONNX models not found — face recognition (embedding) unavailable.")
+
+    # Always try to load the Haar cascade as a fallback face detector
+    if os.path.exists(HAAR_PATH):
+        try:
+            haar_cascade = cv2.CascadeClassifier(HAAR_PATH)
+            logger.info("Loaded Haar cascade fallback detector for face presence detection.")
+        except Exception as e:
+            logger.error(f"Failed to load Haar cascade: {e}")
+    else:
+        logger.warning("Haar cascade XML not found — face detection will be unavailable in fallback mode.")
 
 init_models()
 
@@ -101,8 +114,9 @@ def check_image_quality(img_bgr: np.ndarray, face_box=None) -> dict:
 
 def process_and_extract_face(image_bytes: bytes):
     """
-    Decodes image, detects face with YuNet, aligns with SFace, and extracts 128-D embedding.
-    Returns: (embedding, quality_info, num_faces)
+    Decodes image, detects face, and extracts 128-D embedding (if ONNX models loaded).
+    Falls back to Haar cascade for face-presence detection when ONNX unavailable.
+    Returns: (embedding or None, quality_info, num_faces)
     """
     nparr = np.frombuffer(image_bytes, np.uint8)
     img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -117,53 +131,76 @@ def process_and_extract_face(image_bytes: bytes):
 
     ih, iw, _ = img_bgr.shape
 
-    if detector is None or recognizer is None:
-        raise HTTPException(status_code=503, detail="Face recognition neural models are not initialized")
+    # ── Path A: ONNX YuNet + SFace (full recognition) ─────────────────────────────
+    if detector is not None and recognizer is not None:
+        detector.setInputSize((iw, ih))
+        _, faces = detector.detect(img_bgr)
 
-    # Set dynamic input size for YuNet
-    detector.setInputSize((iw, ih))
-    _, faces = detector.detect(img_bgr)
+        if faces is None or len(faces) == 0:
+            q_info = check_image_quality(img_bgr, None)
+            return None, q_info, 0
 
-    if faces is None or len(faces) == 0:
-        # Check overall image illumination to give helpful guidance
+        num_faces = len(faces)
+        best_face = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)[0]
+        q_info = check_image_quality(img_bgr, best_face)
+
+        if not q_info["suitable"]:
+            return None, q_info, num_faces
+
+        aligned_face = recognizer.alignCrop(img_bgr, best_face)
+        embedding = recognizer.feature(aligned_face)
+        norm = np.linalg.norm(embedding)
+        if norm > 0:
+            embedding = embedding / norm
+
+        return embedding, q_info, num_faces
+
+    # ── Path B: Haar cascade fallback (detect presence only, no embedding) ───────
+    if haar_cascade is not None:
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        faces_haar = haar_cascade.detectMultiScale(
+            gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
+        )
+        num_faces = len(faces_haar) if len(faces_haar) > 0 else 0
         q_info = check_image_quality(img_bgr, None)
-        return None, q_info, 0
-
-    num_faces = len(faces)
-    # Pick the largest face (closest to camera)
-    best_face = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)[0]
-
-    q_info = check_image_quality(img_bgr, best_face)
-    if not q_info["suitable"]:
+        # Return None embedding — caller will report no match without 503
         return None, q_info, num_faces
 
-    # SFace Face alignment and 128-D feature extraction
-    aligned_face = recognizer.alignCrop(img_bgr, best_face)
-    embedding = recognizer.feature(aligned_face)
-
-    # Unit-normalize embedding
-    norm = np.linalg.norm(embedding)
-    if norm > 0:
-        embedding = embedding / norm
-
-    return embedding, q_info, num_faces
+    # No detection capability available at all
+    raise HTTPException(
+        status_code=503,
+        detail="Face detection unavailable: neural models and Haar cascade not loaded"
+    )
 
 @app.get("/health")
 def health_check():
+    onnx_ready = detector is not None and recognizer is not None
+    haar_ready = haar_cascade is not None
+    mode = "full-onnx" if onnx_ready else ("haar-fallback" if haar_ready else "unavailable")
     return {
         "status": "UP",
         "service": "neural-face-recognition-service",
-        "models_loaded": detector is not None and recognizer is not None,
-        "detector": "OpenCV YuNet (CNN)",
-        "recognizer": "SFace (ResNet-like 128D Cosine)"
+        "mode": mode,
+        "models_loaded": onnx_ready,
+        "onnx_models_loaded": onnx_ready,
+        "haar_fallback_loaded": haar_ready,
+        "recognition_capable": onnx_ready,
+        "detection_capable": onnx_ready or haar_ready,
     }
 
 @app.post("/enroll")
 async def enroll_face(file: UploadFile = File(...)):
     """
     Enrolls a new face from a visitor photo.
-    Returns unique faceId upon high-quality extraction.
+    Requires ONNX models (YuNet + SFace) to be loaded — returns 503 in Haar-only fallback mode.
     """
+    if detector is None or recognizer is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Face enrollment requires ONNX neural models (YuNet + SFace) which are not loaded. "
+                   "Download face_detection_yunet_2023mar.onnx and face_recognition_sface_2021dec.onnx "
+                   "into the face-service directory."
+        )
     try:
         contents = await file.read()
         embedding, q_info, num_faces = process_and_extract_face(contents)

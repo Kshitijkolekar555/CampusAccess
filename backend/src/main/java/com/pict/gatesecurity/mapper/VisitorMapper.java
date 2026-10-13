@@ -45,6 +45,8 @@ public class VisitorMapper {
                 .createdByUsername(visitor.getCreatedBy() != null ? visitor.getCreatedBy().getUsername() : null)
                 .passNumber(passNumber)
                 .qrCodeDataUrl(qrCodeDataUrl)
+                .faceEnrolled(visitor.getFaceId() != null && !visitor.getFaceId().isBlank())
+                .status(visitor.getStatus() != null ? visitor.getStatus() : com.pict.gatesecurity.entity.enums.PassStatus.APPROVED)
                 .build();
     }
 }

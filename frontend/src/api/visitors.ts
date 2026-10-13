@@ -51,4 +51,37 @@ export const visitorApi = {
     const res = await api.delete<ApiResponse<void>>(`/visitors/${id}`);
     return res.data;
   },
+
+  requestToken: async (data: any, photoBlob?: Blob | null) => {
+    const formData = new FormData();
+    if (photoBlob) {
+      formData.append('photo', photoBlob, 'visitor_token_photo.jpg');
+    }
+    formData.append(
+      'data',
+      new Blob([JSON.stringify(data)], { type: 'application/json' })
+    );
+    const res = await api.post<ApiResponse<Visitor>>('/visitors/request-token', formData);
+    return res.data.data;
+  },
+
+  getMyActiveToken: async () => {
+    const res = await api.get<ApiResponse<Visitor | null>>('/visitors/my-active-token');
+    return res.data.data;
+  },
+
+  getPendingTokens: async () => {
+    const res = await api.get<ApiResponse<Visitor[]>>('/visitors/pending-tokens');
+    return res.data.data;
+  },
+
+  approveToken: async (id: number) => {
+    const res = await api.put<ApiResponse<Visitor>>(`/visitors/${id}/approve`);
+    return res.data.data;
+  },
+
+  rejectToken: async (id: number) => {
+    const res = await api.put<ApiResponse<Visitor>>(`/visitors/${id}/reject`);
+    return res.data.data;
+  },
 };
