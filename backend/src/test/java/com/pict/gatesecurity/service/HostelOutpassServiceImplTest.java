@@ -187,6 +187,6 @@ class HostelOutpassServiceImplTest {
     @Test
     void getOutpassById_shouldFailWhenNotFound() {
         when(hostelOutpassRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> outpassService.getOutpassById(99L));
+        assertThrows(ResourceNotFoundException.class, () -> outpassService.getOutpassById(99L, "warden1"));
     }
 }
