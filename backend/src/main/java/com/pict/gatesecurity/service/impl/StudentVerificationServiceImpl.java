@@ -147,17 +147,29 @@ public class StudentVerificationServiceImpl implements StudentVerificationServic
         }
 
         String trimmed = query.trim().toUpperCase();
+        // 1. Lookup by PRN
         Optional<StudentProfile> profileOpt = studentProfileRepository.findByPrn(trimmed);
         if (profileOpt.isEmpty()) {
-            // Also attempt finding by User username or rollNumber
+            // 2. Lookup by Enrollment No / Username
             Optional<User> userOpt = userRepository.findByUsername(trimmed);
             if (userOpt.isPresent()) {
                 profileOpt = studentProfileRepository.findByUserId(userOpt.get().getId());
             }
         }
+        if (profileOpt.isEmpty()) {
+            // 3. Lookup by Roll Number (e.g. 32103)
+            profileOpt = studentProfileRepository.findByRollNumber(trimmed);
+        }
+        if (profileOpt.isEmpty()) {
+            // 4. Lookup by Email
+            Optional<User> emailUserOpt = userRepository.findByEmail(query.trim().toLowerCase());
+            if (emailUserOpt.isPresent()) {
+                profileOpt = studentProfileRepository.findByUserId(emailUserOpt.get().getId());
+            }
+        }
 
         if (profileOpt.isEmpty()) {
-            throw new ResourceNotFoundException("StudentProfile", "PRN", trimmed);
+            throw new ResourceNotFoundException("StudentProfile", "PRN / Enrollment / Roll / Email", trimmed);
         }
 
         StudentProfile profile = profileOpt.get();

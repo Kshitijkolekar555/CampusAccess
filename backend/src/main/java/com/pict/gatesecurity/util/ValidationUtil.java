@@ -7,7 +7,7 @@ public class ValidationUtil {
     public static final String INDIAN_PHONE_REGEX = "^[6-9][0-9]{9}$";
     public static final String INDIAN_VEHICLE_REGEX = "^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$";
     public static final String OPTIONAL_INDIAN_VEHICLE_REGEX = "^([A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4})?$";
-    public static final String PASSWORD_STRENGTH_REGEX = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$";
+    public static final String PASSWORD_STRENGTH_REGEX = "^.{6,}$";
     public static final String NAME_REGEX = "^[a-zA-Z\\s.']{2,150}$";
     public static final String PRN_REGEX = "^[A-Z0-9]{8,20}$";
 

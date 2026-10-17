@@ -7,5 +7,6 @@ public enum PassStatus {
     COMPLETED,
     CANCELLED,
     REJECTED,
-    EXPIRED
+    EXPIRED,
+    AUTO_CLOSED_EOD
 }

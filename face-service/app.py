@@ -88,21 +88,21 @@ def check_image_quality(img_bgr: np.ndarray, face_box=None) -> dict:
     else:
         roi = gray
 
-    # 1. Blur check
+    # 1. Blur check (Tuned for real-world handheld mobile cameras: threshold 16.0)
     lap_var = cv2.Laplacian(roi, cv2.CV_64F).var()
     # 2. Illumination check
     mean_val = np.mean(roi)
 
     issues = []
-    if lap_var < 35.0:
+    if lap_var < 16.0:
         issues.append("Image is too blurry. Please hold steady.")
-    if mean_val < 40.0:
+    if mean_val < 30.0:
         issues.append("Lighting is too dark / underexposed. Please face the light.")
-    elif mean_val > 220.0:
+    elif mean_val > 235.0:
         issues.append("Lighting is overexposed / too bright.")
 
     if face_box is not None:
-        if fw < 60 or fh < 60:
+        if fw < 50 or fh < 50:
             issues.append("Face is too far from camera. Please move closer.")
 
     return {
@@ -144,10 +144,22 @@ def process_and_extract_face(image_bytes: bytes):
         best_face = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)[0]
         q_info = check_image_quality(img_bgr, best_face)
 
-        if not q_info["suitable"]:
+        # Proceed with embedding extraction if a clear face was detected;
+        # only reject if severely unreadable (lap_var < 10.0 or no landmarks)
+        lap_var = q_info.get("blur_score", 50.0)
+        if lap_var < 10.0:
             return None, q_info, num_faces
 
-        aligned_face = recognizer.alignCrop(img_bgr, best_face)
+        # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) on L-channel
+        # to normalize harsh shadows, direct sun exposure, and fluorescent gate lights
+        lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
+        l_chan, a_chan, b_chan = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l_clahe = clahe.apply(l_chan)
+        enhanced_bgr = cv2.cvtColor(cv2.merge((l_clahe, a_chan, b_chan)), cv2.COLOR_LAB2BGR)
+
+        # Precise 5-point affine crop and alignment using enhanced luminance
+        aligned_face = recognizer.alignCrop(enhanced_bgr, best_face)
         embedding = recognizer.feature(aligned_face)
         norm = np.linalg.norm(embedding)
         if norm > 0:
@@ -270,11 +282,19 @@ async def recognize_face(
                 "quality": q_info
             }
 
-        matched_face_id, min_distance, is_ambiguous = db.find_best_match(embedding, threshold=threshold)
+        matched_face_id, min_distance, is_ambiguous, match_type = db.find_best_match(embedding)
         similarity = round(1.0 - min_distance, 4)
-        logger.info(f"Recognition: distance={min_distance:.4f}, similarity={similarity:.4f}, matched={matched_face_id}, ambiguous={is_ambiguous}")
+        logger.info(f"Recognition: distance={min_distance:.4f}, similarity={similarity:.4f}, type={match_type}, matched={matched_face_id}, ambiguous={is_ambiguous}")
 
         if matched_face_id and not is_ambiguous:
+            # If appearance shift confirmed (e.g. beard growth or shaved), auto-enroll new template for this faceId
+            if match_type == 'appearance_shift':
+                try:
+                    db.save_embedding(matched_face_id, embedding, appearance_tag='appearance_shift')
+                    logger.info(f"Auto-saved secondary appearance template for faceId={matched_face_id}")
+                except Exception as ex:
+                    logger.warning(f"Failed to auto-save secondary appearance template: {ex}")
+
             return {
                 "matched": True,
                 "faceId": matched_face_id,
@@ -282,7 +302,9 @@ async def recognize_face(
                 "similarity": similarity,
                 "numFaces": num_faces,
                 "quality": q_info,
-                "isAmbiguous": False
+                "isAmbiguous": False,
+                "matchType": match_type,
+                "message": "Appearance variation recognized (beard/glasses/shaven)" if match_type == 'appearance_shift' else "Exact facial match verified"
             }
         elif is_ambiguous:
             return {
@@ -293,6 +315,7 @@ async def recognize_face(
                 "numFaces": num_faces,
                 "quality": q_info,
                 "isAmbiguous": True,
+                "matchType": "ambiguous",
                 "message": "Multiple registered visitors share similar facial similarity. Manual verification required."
             }
         else:
@@ -304,7 +327,8 @@ async def recognize_face(
                 "numFaces": num_faces,
                 "quality": q_info,
                 "isAmbiguous": False,
-                "message": "First-time visitor. No matching registered face found."
+                "matchType": "none",
+                "message": "First-time visitor or face not recognized. Auto-lookup available by mobile."
             }
     except Exception as e:
         logger.error(f"Error during face recognition: {str(e)}", exc_info=True)

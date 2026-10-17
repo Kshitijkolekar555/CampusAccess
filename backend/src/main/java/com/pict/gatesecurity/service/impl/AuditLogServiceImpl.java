@@ -20,7 +20,7 @@ public class AuditLogServiceImpl implements AuditLogService {
     private final AuditLogRepository auditLogRepository;
 
     @Override
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void logAction(User user, String action, String entityType, Long entityId, Map<String, Object> oldValue, Map<String, Object> newValue) {
         if (user == null) {
             log.info("Skipping audit log for action: {} (no authenticated user context)", action);

@@ -43,7 +43,7 @@ public class DashboardController {
     // ==================== GUARD DASHBOARD ====================
 
     @GetMapping("/guard")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Guard Self-Dashboard",
             description = "Current shift, assigned gate, visitors/vehicles/vendors processed, shift duration, recent logs")
     public ResponseEntity<ApiResponse<GuardSelfDashboardResponse>> getGuardDashboard(

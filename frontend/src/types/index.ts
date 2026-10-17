@@ -10,8 +10,10 @@ export interface ApiResponse<T> {
 
 export interface PageResponse<T> {
   content: T[];
-  pageNumber: number;
-  pageSize: number;
+  pageNumber?: number;
+  page?: number;
+  pageSize?: number;
+  size?: number;
   totalElements: number;
   totalPages: number;
   last: boolean;
@@ -113,7 +115,10 @@ export interface Visitor {
   passNumber?: string;
   qrCodeDataUrl?: string;
   faceEnrolled?: boolean;
-  status?: 'PENDING' | 'APPROVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'REJECTED' | 'EXPIRED';
+  status?: 'PENDING' | 'APPROVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'REJECTED' | 'EXPIRED' | 'AUTO_CLOSED_EOD';
+  closedAt?: string;
+  closureReason?: string;
+  closedBy?: string;
 }
 
 export interface VisitorRecognitionResponse {
@@ -133,6 +138,7 @@ export interface VisitorRecognitionResponse {
   vehicleNumber?: string;
   confidenceDistance?: number;
   similarity?: number;
+  matchType?: 'exact' | 'appearance_shift';
   numFaces?: number;
   isAmbiguous?: boolean;
   message?: string;

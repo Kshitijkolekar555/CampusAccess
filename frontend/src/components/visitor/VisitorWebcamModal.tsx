@@ -5,11 +5,12 @@ import { Badge } from '../ui/Badge';
 import {
   Camera, RefreshCw, CheckCircle2, UserCheck, UserPlus,
   AlertCircle, Video, ScanFace, Sparkles, AlertTriangle,
-  ShieldCheck, WifiOff, CameraOff, XCircle, Loader2
+  ShieldCheck, WifiOff, CameraOff, XCircle, Loader2, Phone, Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { visitorApi } from '../../api/visitors';
 import { VisitorRecognitionResponse } from '../../types';
+import { captureBestOfNFrames, compressImageFile } from '../../utils/imageCompression';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -36,6 +37,8 @@ export interface VisitorWebcamModalProps {
   subtitle?: string;
   /** Optional flag to render inline without wrapping in a modal dialog */
   inline?: boolean;
+  /** Optional flag to pre-open the Mobile Lookup bar immediately */
+  initialShowMobileLookup?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,6 +82,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
   title = 'Visitor Face Identification',
   subtitle = 'Biometric check to identify returning visitors — guard must review before confirming',
   inline = false,
+  initialShowMobileLookup = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -88,7 +92,13 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
   const [cameraError, setCameraError] = useState<string>('');
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  // Default to rear camera ('environment') on mobile phones, 'user' on desktop
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(() => {
+    if (typeof window !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      return 'environment';
+    }
+    return 'user';
+  });
 
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
@@ -97,7 +107,36 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
   const [recognitionResult, setRecognitionResult] = useState<VisitorRecognitionResponse | null>(null);
   const [qualityIssues, setQualityIssues] = useState<string[]>([]);
 
+  // Mobile fallback lookup state
+  const [showMobileLookup, setShowMobileLookup] = useState(initialShowMobileLookup);
+  const [fallbackMobile, setFallbackMobile] = useState('');
+  const [isLookingUpMobile, setIsLookingUpMobile] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // ── Cleanup on unmount ────────────────────────────────────────────────────
+
+  const handleNativeFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      toast.info('Compressing photo from mobile camera...');
+      const compressed = await compressImageFile(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.78,
+        format: 'image/jpeg',
+      });
+      setCapturedImage(compressed.dataUrl);
+      setCapturedBlob(compressed.blob);
+      setCameraState('streaming');
+      toast.success('Mobile photo captured successfully. Click Recognise to verify.');
+    } catch (err: any) {
+      toast.error(`Photo compression failed: ${err.message || 'Unknown error'}`);
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
 
   useEffect(() => {
     mountedRef.current = true;
@@ -206,37 +245,72 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
     setCapturedBlob(null);
     setRecognitionResult(null);
     setQualityIssues([]);
+    setShowMobileLookup(false);
     startCamera(id);
   };
 
-  // ── Capture ───────────────────────────────────────────────────────────────
+  // ── Capture with Best-of-3 Multi-Frame Sampling & Compression (Max 800x800 @ 0.78 JPEG) ───
 
-  const capturePhoto = (): Promise<{ dataUrl: string; blob: Blob }> => {
-    return new Promise((resolve, reject) => {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      if (!video || !canvas) return reject(new Error('Video or canvas element unavailable'));
+  const capturePhoto = async (): Promise<{ dataUrl: string; blob: Blob }> => {
+    const video = videoRef.current;
+    if (!video) throw new Error('Video element unavailable');
 
-      const width = video.videoWidth || 1280;
-      const height = video.videoHeight || 720;
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return reject(new Error('Failed to obtain 2D canvas context'));
-
-      ctx.drawImage(video, 0, 0, width, height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-
-      canvas.toBlob(
-        (blob) => {
-          if (blob) resolve({ dataUrl, blob });
-          else reject(new Error('Failed to create image blob from canvas'));
-        },
-        'image/jpeg',
-        0.92
-      );
+    // Samples 3 rapid frames across 200ms, scoring sharpness variance to pick the best frame
+    return captureBestOfNFrames(video, 3, 75, {
+      maxWidth: 800,
+      maxHeight: 800,
+      quality: 0.78,
+      format: 'image/jpeg',
     });
+  };
+
+  // ── Fallback Database Mobile Lookup ──────────────────────────────────────────
+
+  const handleMobileLookup = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = fallbackMobile.trim().replace(/\D/g, '');
+    if (clean.length < 10) {
+      toast.error('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
+    setIsLookingUpMobile(true);
+    try {
+      const visitor = await visitorApi.lookupByMobile(clean);
+      if (visitor && visitor.name) {
+        toast.success(`Found previous visitor record for ${visitor.name}`);
+        const responseData: VisitorRecognitionResponse = {
+          matched: true,
+          visitorId: visitor.id,
+          visitorName: visitor.name,
+          mobileNumber: visitor.mobile,
+          hostPersonOrDepartment: `${visitor.hostName || ''} (${visitor.hostDepartment || ''})`.trim(),
+          purpose: visitor.purpose,
+          photoPath: visitor.photoPath,
+          hostName: visitor.hostName,
+          hostType: visitor.hostType,
+          hostDepartment: visitor.hostDepartment,
+          studentPrn: visitor.studentPrn,
+          idProofType: visitor.idProofType,
+          idProofNumber: visitor.idProofNumber,
+          vehicleNumber: visitor.vehicleNumber,
+          similarity: 1.0,
+          confidenceDistance: 0.0,
+          matchType: 'exact',
+          message: 'Found by database mobile number lookup'
+        };
+        stopStream(videoRef.current);
+        onRecognized(responseData, capturedBlob);
+      } else {
+        toast.info('No prior records found for this mobile. Continuing to new registration.');
+        stopStream(videoRef.current);
+        onRegisterNew(capturedBlob);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Database lookup failed');
+    } finally {
+      setIsLookingUpMobile(false);
+    }
   };
 
   // ── Scan & Recognise ──────────────────────────────────────────────────────
@@ -348,6 +422,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
     setRecognitionResult(null);
     setQualityIssues([]);
     setIsRecognizing(false);
+    setShowMobileLookup(initialShowMobileLookup);
   };
 
   const handleClose = () => {
@@ -368,31 +443,14 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
     <div className="space-y-4">
 
         {/* ── Device selector & Camera Flip ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 bg-slate-50 p-2.5 sm:p-3.5 rounded-xl border border-slate-200">
-          <div className="flex items-center justify-between w-full sm:w-auto gap-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 shrink-0">
-              <Video className="w-4 h-4 text-indigo-600" />
-              <span>Camera Source:</span>
-            </div>
-
-            {/* Mobile / Quick Flip FacingMode button */}
-            <button
-              type="button"
-              onClick={toggleFacingMode}
-              className="sm:hidden flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition"
-              title="Flip between front and rear cameras"
-            >
-              <RefreshCw className="w-3 h-3 text-indigo-600" />
-              <span>Flip ({facingMode === 'user' ? 'Front' : 'Back'})</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {devices.length > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Video className="w-4 h-4 text-indigo-600 shrink-0" />
+            {devices.length > 0 ? (
               <select
                 value={selectedDeviceId}
                 onChange={handleDeviceChange}
-                className="w-full sm:w-auto px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800"
+                className="w-full text-xs bg-white border border-slate-200 rounded-md py-1.5 px-2.5 text-slate-800 font-medium truncate outline-none focus:border-indigo-500 shadow-xs cursor-pointer"
               >
                 {devices.map((d, i) => (
                   <option key={d.deviceId || i} value={d.deviceId}>
@@ -400,18 +458,20 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                   </option>
                 ))}
               </select>
+            ) : (
+              <span className="text-xs text-slate-600">Default Camera</span>
             )}
-
-            <button
-              type="button"
-              onClick={toggleFacingMode}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg transition shrink-0"
-              title="Flip between front and rear cameras"
-            >
-              <RefreshCw className="w-3 h-3 text-indigo-600" />
-              <span>{facingMode === 'user' ? 'Front' : 'Rear'} Cam</span>
-            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={toggleFacingMode}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-indigo-600 bg-white hover:bg-slate-50 border border-slate-200 hover:border-indigo-300 rounded-md transition shrink-0 shadow-xs"
+            title="Switch between front and rear cameras"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+            <span>{facingMode === 'user' ? 'Front' : 'Rear'} Cam</span>
+          </button>
         </div>
 
         {/* ── Quality guidance (from backend response) ── */}
@@ -455,11 +515,26 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
           {/* Face alignment guide overlay */}
           {isStreaming && !hasCapture && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="w-36 sm:w-48 h-48 sm:h-60 max-w-[65vw] max-h-[75%] border-2 border-dashed border-indigo-400/50 rounded-full animate-pulse flex flex-col items-center justify-center bg-indigo-500/5">
-                <ScanFace className="w-8 sm:w-10 h-8 sm:h-10 text-indigo-400/80 mb-1.5" />
-                <span className="text-[10px] sm:text-[11px] font-semibold text-indigo-200 uppercase tracking-wider bg-slate-900/60 px-2 py-0.5 rounded-full text-center">
-                  Align Face Inside Oval
-                </span>
+              {/* Outer soft vignette & positioning bounds */}
+              <div className="relative w-44 sm:w-56 h-60 sm:h-72 border-2 border-dashed border-indigo-400/60 rounded-[50%/60%] animate-pulse flex flex-col items-center justify-between py-4 bg-indigo-500/5 backdrop-blur-[0.5px] shadow-[0_0_25px_rgba(99,102,241,0.2)]">
+                {/* Top alignment anchor */}
+                <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-indigo-200 tracking-wider bg-slate-950/70 px-2.5 py-0.5 rounded-full border border-indigo-400/30">
+                  <span>FOREHEAD</span>
+                </div>
+
+                {/* Center target crosshair/icon */}
+                <div className="flex flex-col items-center justify-center text-center">
+                  <ScanFace className="w-9 sm:w-11 h-9 sm:h-11 text-indigo-400/80 mb-1" />
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-indigo-200 uppercase tracking-wider bg-slate-900/80 px-2.5 py-0.5 rounded-full text-center border border-indigo-500/30">
+                    Fit Face Inside Oval
+                  </span>
+                  <span className="text-[9px] text-indigo-300/80 mt-1">Keep 1-2 ft distance & face camera</span>
+                </div>
+
+                {/* Bottom alignment anchor */}
+                <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-indigo-200 tracking-wider bg-slate-950/70 px-2.5 py-0.5 rounded-full border border-indigo-400/30">
+                  <span>CHIN</span>
+                </div>
               </div>
             </div>
           )}
@@ -473,6 +548,16 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
             </div>
           )}
 
+          {/* Hidden native mobile camera input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleNativeFileChange}
+            className="hidden"
+          />
+
           {/* Permission denied */}
           {cameraState === 'denied' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center bg-slate-950/95">
@@ -483,9 +568,19 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                 <p className="text-sm font-bold text-white mb-1">Camera Permission Denied</p>
                 <p className="text-xs text-slate-400 max-w-xs">{cameraError}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => startCamera(selectedDeviceId || undefined)}>
-                Try Again
-              </Button>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Camera className="w-4 h-4" />}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Use Native Mobile Camera
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => startCamera(selectedDeviceId || undefined)}>
+                  Try Again
+                </Button>
+              </div>
             </div>
           )}
 
@@ -499,9 +594,19 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                 <p className="text-sm font-bold text-white mb-1">No Camera Available</p>
                 <p className="text-xs text-slate-400 max-w-xs">{cameraError}</p>
               </div>
-              <Button variant="secondary" size="sm" leftIcon={<UserPlus className="w-4 h-4" />} onClick={handleManualEntry}>
-                Manual Registration
-              </Button>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Camera className="w-4 h-4" />}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Use Mobile Camera App
+                </Button>
+                <Button variant="secondary" size="sm" leftIcon={<UserPlus className="w-4 h-4" />} onClick={handleManualEntry}>
+                  Manual Registration
+                </Button>
+              </div>
             </div>
           )}
 
@@ -515,7 +620,15 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                 <p className="text-sm font-bold text-white mb-1">Camera Error</p>
                 <p className="text-xs text-slate-400 max-w-xs">{cameraError}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Camera className="w-4 h-4" />}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Use Mobile Camera App
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => startCamera(selectedDeviceId || undefined)}>
                   Retry
                 </Button>
@@ -552,16 +665,30 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
             <div className="absolute bottom-3 left-3 right-3 p-4 bg-slate-900/95 backdrop-blur-md rounded-xl border border-slate-700/80 text-white shadow-2xl">
               {recognitionResult.matched ? (
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-400 border border-emerald-500/30 shrink-0">
+                  <div className={`p-2 rounded-xl shrink-0 border ${
+                    recognitionResult.matchType === 'appearance_shift'
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                  }`}>
                     <UserCheck className="w-6 h-6" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[11px] uppercase font-extrabold text-emerald-400 tracking-wider flex items-center gap-1">
-                        <Sparkles className="w-3.5 h-3.5" /> Returning Visitor Recognised!
-                      </span>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      {recognitionResult.matchType === 'appearance_shift' ? (
+                        <span className="text-[11px] uppercase font-extrabold text-amber-400 tracking-wider flex items-center gap-1 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
+                          <Sparkles className="w-3.5 h-3.5" /> Appearance Shift (Beard/Clean/Glasses)
+                        </span>
+                      ) : (
+                        <span className="text-[11px] uppercase font-extrabold text-emerald-400 tracking-wider flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5" /> Returning Visitor Recognised!
+                        </span>
+                      )}
                       {recognitionResult.similarity !== undefined && (
-                        <span className="text-[10px] font-mono px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-semibold">
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold ${
+                          recognitionResult.matchType === 'appearance_shift'
+                            ? 'bg-amber-500/20 text-amber-300'
+                            : 'bg-emerald-500/20 text-emerald-300'
+                        }`}>
                           {(recognitionResult.similarity * 100).toFixed(0)}% Match
                         </span>
                       )}
@@ -572,8 +699,12 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                     <p className="text-xs text-slate-300 mt-0.5">
                       {recognitionResult.mobileNumber} · {recognitionResult.hostPersonOrDepartment || 'Previous visitor record found'}
                     </p>
-                    <p className="text-xs text-emerald-300 mt-1.5 font-medium flex items-center gap-1">
-                      ✓ Profile details will be auto-filled automatically.
+                    <p className={`text-xs mt-1.5 font-medium flex items-center gap-1 ${
+                      recognitionResult.matchType === 'appearance_shift' ? 'text-amber-300' : 'text-emerald-300'
+                    }`}>
+                      {recognitionResult.matchType === 'appearance_shift'
+                        ? '✓ Guard confirmation will automatically enroll this new appearance template.'
+                        : '✓ Profile details will be auto-filled automatically.'}
                     </p>
                   </div>
                 </div>
@@ -588,7 +719,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                     </span>
                     <p className="font-semibold text-xs text-slate-200">Manual verification required</p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Multiple records share similar features. Please continue with manual registration.
+                      Multiple records share similar features. Please continue with manual registration or mobile lookup.
                     </p>
                   </div>
                 </div>
@@ -602,7 +733,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                       No Face Detected
                     </span>
                     <p className="text-xs text-slate-300">
-                      {recognitionResult.message || 'Ensure your face is centered and clearly lit.'}
+                      {recognitionResult.message || 'Ensure your face is centered within the oval and clearly lit.'}
                     </p>
                   </div>
                 </div>
@@ -613,13 +744,13 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-xs uppercase font-extrabold text-amber-400 tracking-wider block mb-0.5">
-                      No Existing Record Found in Dataset
+                      No Face Match in Enrolled Dataset
                     </span>
                     <p className="text-sm font-semibold text-white">
-                      Please go for Registration first.
+                      Visitor face not recognized yet.
                     </p>
                     <p className="text-xs text-slate-300 mt-1">
-                      Your photo has been captured and will be saved for fast automatic recognition on your next visit!
+                      You can fetch previous details by mobile number below, or proceed to register them as a new visitor.
                     </p>
                   </div>
                 </div>
@@ -627,6 +758,39 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* ── Mobile Lookup Fallback Bar (When Face Not Matched / Always Available) ── */}
+        {(showMobileLookup || (recognitionResult && !recognitionResult.matched)) && (
+          <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-indigo-600" />
+                Find Visitor in Database by Mobile Number
+              </span>
+              <span className="text-[10px] text-indigo-600 font-medium">Instant Profile Fetch</span>
+            </div>
+            <form onSubmit={handleMobileLookup} className="flex gap-2">
+              <input
+                type="tel"
+                maxLength={10}
+                placeholder="Enter 10-digit mobile number..."
+                value={fallbackMobile}
+                onChange={(e) => setFallbackMobile(e.target.value)}
+                className="flex-1 text-xs bg-white border border-indigo-200 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-xs"
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                leftIcon={<Search className="w-3.5 h-3.5" />}
+                isLoading={isLookingUpMobile}
+                disabled={fallbackMobile.trim().length < 10}
+              >
+                Fetch Details
+              </Button>
+            </form>
+          </div>
+        )}
 
         {/* ── Action bar ── */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
@@ -652,7 +816,15 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
               </Button>
             )}
 
-            {/* Manual entry shortcut removed as requested */}
+            {/* Manual entry or Mobile lookup shortcuts */}
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Phone className="w-3.5 h-3.5 text-indigo-600" />}
+              onClick={() => setShowMobileLookup((prev) => !prev)}
+            >
+              {showMobileLookup ? 'Hide Mobile Lookup' : 'Lookup by Mobile'}
+            </Button>
           </div>
 
           {/* Right: scan / proceed */}

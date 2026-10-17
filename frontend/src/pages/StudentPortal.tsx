@@ -146,7 +146,15 @@ export const StudentPortal: React.FC = () => {
       setAuth(data.user, data.accessToken, data.refreshToken);
       navigate('/dashboard');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || 'Registration failed');
+      const data = err.response?.data;
+      if (data?.errors && typeof data.errors === 'object') {
+        const details = Object.entries(data.errors)
+          .map(([field, msg]) => `${field}: ${msg}`)
+          .join(', ');
+        toast.error(`Validation failed: ${details}`);
+      } else {
+        toast.error(data?.message || err.message || 'Registration failed');
+      }
     } finally { setLoading(false); }
   };
 
@@ -300,7 +308,7 @@ export const StudentPortal: React.FC = () => {
             {isForgot
               ? 'Enter your PRN or email to reset credentials.'
               : mode === 'LOGIN'
-              ? 'Enter your PRN or username and password.'
+              ? 'Enter your PRN or Enrollment No (e.g. S25ET034). Default password is your Enrollment No.'
               : 'Fill in your student details to register.'}
           </p>
 

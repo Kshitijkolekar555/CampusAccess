@@ -51,6 +51,7 @@ class AuthServiceImplTest {
     @Mock private NotificationService notificationService;
     @Mock private com.pict.gatesecurity.repository.StudentGatePassRepository studentGatePassRepository;
     @Mock private com.pict.gatesecurity.repository.HostelOutpassRepository hostelOutpassRepository;
+    @Mock private com.pict.gatesecurity.repository.StudentProfileRepository studentProfileRepository;
 
     private AuthServiceImpl authService;
 
@@ -63,7 +64,7 @@ class AuthServiceImplTest {
                 authenticationManager, userRepository, refreshTokenRepository,
                 passwordResetTokenRepository, jwtUtil, tokenBlacklist,
                 userMapper, passwordEncoder, auditLogService, notificationService,
-                studentGatePassRepository, hostelOutpassRepository
+                studentGatePassRepository, hostelOutpassRepository, studentProfileRepository
         );
         ReflectionTestUtils.setField(authService, "refreshTokenExpiryMs", 604800000L);
         ReflectionTestUtils.setField(authService, "passwordResetTokenExpiryMs", 1800000L);

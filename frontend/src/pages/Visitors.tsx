@@ -1,31 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { visitorApi } from '../api/visitors';
-import { gateApi } from '../api/gates';
 import { useAuthStore } from '../store/authStore';
-import { Visitor, HostType, HostDepartment, VisitorRecognitionResponse } from '../types';
+import { api } from '../api/axios';
+import { Visitor, HostType, ApiResponse, GuardSelfDashboardResponse } from '../types';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { Pagination } from '../components/ui/Pagination';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
-import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
-import { Card } from '../components/ui/Card';
-import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
-import { UserPlus, LogOut, Search, CheckCircle, Shield, ScanFace, Camera, Sparkles, FileText, Ticket } from 'lucide-react';
+import { LogOut, Search, CheckCircle, Shield, FileText, Ticket, ArrowLeft, Clock, AlertTriangle, UserCheck, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import facultiesData from '../data/faculties.json';
-import {
-  validatePhone,
-  validateName,
-  validatePurpose,
-  validateVehicleNumber,
-  validatePrn,
-  normalizePhone,
-  normalizeVehicleNumber,
-  normalizeName
-} from '../utils/validation';
 
 const VisitorAvatar: React.FC<{ photoUrl?: string; name: string }> = ({ photoUrl, name }) => {
   const [imgError, setImgError] = useState(false);
@@ -39,8 +25,7 @@ const VisitorAvatar: React.FC<{ photoUrl?: string; name: string }> = ({ photoUrl
     if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
       return url;
     }
-    const clean = url.startsWith('/') ? url : `/${url}`;
-    return `http://localhost:8081${clean}`;
+    return url.startsWith('/') ? url : `/${url}`;
   };
 
   const resolvedUrl = !imgError ? getResolvedUrl(photoUrl) : null;
@@ -51,23 +36,22 @@ const VisitorAvatar: React.FC<{ photoUrl?: string; name: string }> = ({ photoUrl
         src={resolvedUrl}
         alt=""
         onError={() => setImgError(true)}
-        className="w-9 h-9 rounded-full object-cover border-2 border-indigo-500/30 flex-shrink-0 shadow-sm bg-slate-100 dark:bg-slate-800"
+        className="w-9 h-9 rounded-full object-cover border-2 border-indigo-500/30 flex-shrink-0 shadow-xs bg-slate-100"
       />
     );
   }
 
   const initials = name
     ? name
-        .trim()
-        .split(/\s+/)
-        .map((part) => part[0])
+        .split(' ')
+        .map((n) => n[0])
         .join('')
         .substring(0, 2)
         .toUpperCase()
     : 'V';
 
   return (
-    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs flex-shrink-0 uppercase shadow-sm">
+    <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-xs flex-shrink-0 uppercase shadow-xs">
       {initials}
     </div>
   );
@@ -75,134 +59,72 @@ const VisitorAvatar: React.FC<{ photoUrl?: string; name: string }> = ({ photoUrl
 
 export const Visitors: React.FC = () => {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [hostTypeFilter, setHostTypeFilter] = useState<string>('');
-  const [page, setPage] = useState(0);
-  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
-  const [isWebcamOpen, setIsWebcamOpen] = useState(false);
-  const [capturedPhotoBlob, setCapturedPhotoBlob] = useState<Blob | null>(null);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // URL-driven query params for robust browser back/forward and refresh support
+  const search = searchParams.get('q') || '';
+  const hostTypeFilter = searchParams.get('hostType') || '';
+  const statusFilter = searchParams.get('status') || '';
+  const page = parseInt(searchParams.get('page') || '0', 10);
+
   const [checkoutVisitor, setCheckoutVisitor] = useState<Visitor | null>(null);
-  const [qrVisitor, setQrVisitor] = useState<Visitor | null>(null);
+  const [detailVisitor, setDetailVisitor] = useState<Visitor | null>(null);
 
-  const [returningVisitor, setReturningVisitor] = useState<{ isReturning: boolean; name: string; photoUrl?: string } | null>(null);
-
-  // Form State Default
-  const initialFormState = {
-    name: '',
-    mobile: '',
-    purpose: '',
-    hostName: '',
-    hostType: 'FACULTY' as HostType,
-    hostDepartment: 'CE' as HostDepartment,
-    studentPrn: '',
-    gateId: 1,
-    vehicleNumber: '',
-    idProofType: 'Aadhaar Card',
-    idProofNumber: '',
-    photoUrl: '',
-    notes: '',
+  const updateParam = (key: string, value: string | null) => {
+    setSearchParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      if (!value) {
+        updated.delete(key);
+      } else {
+        updated.set(key, value);
+      }
+      if (key !== 'page') {
+        updated.delete('page');
+      }
+      return updated;
+    });
   };
 
-  const [form, setForm] = useState(initialFormState);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  const resetForm = () => {
-    setForm(initialFormState);
-    setFormErrors({});
-    setCapturedPhotoBlob(null);
-    setReturningVisitor(null);
-  };
-
-  const validateVisitorForm = () => {
-    const errs: Record<string, string> = {};
-    const nameErr = validateName(form.name, 'Visitor Name');
-    if (nameErr) errs.name = nameErr;
-
-    const phoneErr = validatePhone(form.mobile);
-    if (phoneErr) errs.mobile = phoneErr;
-
-    const purposeErr = validatePurpose(form.purpose);
-    if (purposeErr) errs.purpose = purposeErr;
-
-    const hostErr = validateName(form.hostName, 'Host Name');
-    if (hostErr) errs.hostName = hostErr;
-
-    if (form.vehicleNumber) {
-      const vehicleErr = validateVehicleNumber(form.vehicleNumber);
-      if (vehicleErr) errs.vehicleNumber = vehicleErr;
-    }
-
-    if (form.hostType === 'STUDENT' && form.studentPrn) {
-      const prnErr = validatePrn(form.studentPrn);
-      if (prnErr) errs.studentPrn = prnErr;
-    }
-
-    if (!form.idProofType.trim()) errs.idProofType = 'ID Proof Type is required';
-    if (!form.idProofNumber.trim()) errs.idProofNumber = 'ID Proof Number is required';
-
-    setFormErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  // Query Visitors with hostType filter support
+  // Query Visitors with backend pagination & filtering
   const { data: pageData, isLoading } = useQuery({
-    queryKey: ['visitors', page, search, hostTypeFilter],
-    queryFn: () => visitorApi.getVisitors({
-      page,
-      size: 10,
-      query: search || undefined,
-      hostType: hostTypeFilter ? (hostTypeFilter as HostType) : undefined,
-    }),
+    queryKey: ['visitors', page, search, hostTypeFilter, statusFilter],
+    queryFn: () =>
+      visitorApi.getVisitors({
+        page,
+        size: 10,
+        query: search || undefined,
+        hostType: hostTypeFilter ? (hostTypeFilter as HostType) : undefined,
+        activeInside: statusFilter === 'ACTIVE' ? true : statusFilter === 'CHECKED_OUT' ? false : undefined,
+        status: statusFilter === 'AUTO_CLOSED_EOD' ? 'AUTO_CLOSED_EOD' : undefined,
+      }),
   });
 
   // Query Active Visitors Inside
-  const { data: activeVisitors } = useQuery({
+  const { data: activeVisitors = [] } = useQuery({
     queryKey: ['visitors-active'],
     queryFn: visitorApi.getActiveInside,
   });
 
-  // Query Gates for selection
-  const { data: gates } = useQuery({
-    queryKey: ['gates'],
-    queryFn: () => gateApi.getAllGates(true),
-  });
-
-  // CheckIn Mutation with Photo Support
-  const checkInMutation = useMutation({
-    mutationFn: async (data: typeof form) => {
-      if (capturedPhotoBlob) {
-        return visitorApi.registerWithPhoto(capturedPhotoBlob, data);
-      }
-      return visitorApi.checkIn(data);
+  // Query Guard Dashboard Metrics (for real-time daily entered count including auto-closed)
+  const { data: guardSummary } = useQuery<GuardSelfDashboardResponse>({
+    queryKey: ['guard-self-dashboard'],
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<GuardSelfDashboardResponse>>('/dashboard/guard');
+      return res.data.data;
     },
-    onSuccess: (data: Visitor) => {
-      if (capturedPhotoBlob) {
-        if (data.faceEnrolled) {
-          toast.success('Visitor checked in & biometric face enrolled successfully!');
-        } else {
-          toast.info('Visitor checked in. Note: Biometric enrollment was skipped or face service offline.');
-        }
-      } else {
-        toast.success('Visitor checked in successfully!');
-      }
-      queryClient.invalidateQueries({ queryKey: ['visitors'] });
-      queryClient.invalidateQueries({ queryKey: ['visitors-active'] });
-      setIsCheckInOpen(false);
-      resetForm();
-      setQrVisitor(data);
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Check-in failed');
-    },
+    refetchInterval: 3000,
   });
 
   // CheckOut Mutation
   const checkOutMutation = useMutation({
     mutationFn: visitorApi.checkOut,
     onSuccess: () => {
-      toast.success('Visitor checked out successfully!');
+      toast.success('Visitor exit logged successfully!');
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       queryClient.invalidateQueries({ queryKey: ['visitors-active'] });
+      queryClient.invalidateQueries({ queryKey: ['active-visitors-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
       setCheckoutVisitor(null);
     },
     onError: (err: any) => {
@@ -211,644 +133,333 @@ export const Visitors: React.FC = () => {
   });
 
   const { user } = useAuthStore();
-
-  const handleRecognized = (match: VisitorRecognitionResponse, blob: Blob | null) => {
-    if (blob) {
-      setCapturedPhotoBlob(blob);
-    }
-    if (match.matched && match.visitorName) {
-      setReturningVisitor({
-        isReturning: true,
-        name: match.visitorName,
-        photoUrl: match.photoPath,
-      });
-      setForm({
-        name: match.visitorName || '',
-        mobile: match.mobileNumber || '',
-        hostName: match.hostName || '',
-        purpose: match.purpose || '',
-        hostType: match.hostType || 'FACULTY',
-        hostDepartment: match.hostDepartment || 'CE',
-        studentPrn: match.studentPrn || '',
-        gateId: 1,
-        idProofType: match.idProofType || 'Aadhaar Card',
-        idProofNumber: match.idProofNumber || '',
-        vehicleNumber: match.vehicleNumber || '',
-        photoUrl: match.photoPath || '',
-        // Audit note: form pre-filled from biometric match — guard must verify before confirming
-        notes: 'Details pre-filled from facial recognition match — verify identity before confirming entry',
-      });
-      setIsWebcamOpen(false);
-      setIsCheckInOpen(true);
-      toast.info(`Possible match: ${match.visitorName}. Verify the visitor's identity before confirming check-in.`);
-    } else {
-      setReturningVisitor(null);
-      setIsWebcamOpen(false);
-      setIsCheckInOpen(true);
-    }
-  };
-
-  const handleRegisterNewFromWebcam = (blob: Blob | null) => {
-    resetForm();
-    if (blob) {
-      setCapturedPhotoBlob(blob);
-    }
-    setReturningVisitor(null);
-    setIsWebcamOpen(false);
-    setIsCheckInOpen(true);
-  };
-
-  const approveTokenMutation = useMutation({
-    mutationFn: (id: number) => visitorApi.approveToken(id),
-    onSuccess: (data) => {
-      toast.success(`Digital token approved for ${data.name}! Entrance admitted.`);
-      queryClient.invalidateQueries({ queryKey: ['visitors'] });
-      queryClient.invalidateQueries({ queryKey: ['active-visitors-dashboard'] });
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to approve token');
-    },
-  });
-
-  const rejectTokenMutation = useMutation({
-    mutationFn: (id: number) => visitorApi.rejectToken(id),
-    onSuccess: (data) => {
-      toast.info(`Token rejected for ${data.name || 'visitor'}.`);
-      queryClient.invalidateQueries({ queryKey: ['visitors'] });
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to reject token');
-    },
-  });
+  const isGuard = user?.role === 'SECURITY_GUARD' || user?.role === 'GUARD' || user?.role === 'SECURITY_OFFICER';
 
   const columns: Column<Visitor>[] = [
     {
-      header: 'Visitor',
+      header: 'Visitor Details',
       render: (v) => (
         <div className="flex items-center gap-3">
           <VisitorAvatar photoUrl={v.photoUrl || v.photoPath} name={v.name} />
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="font-bold text-slate-900">{v.name}</p>
+              <p className="font-bold text-slate-900 text-xs sm:text-sm">{v.name}</p>
               {v.faceId && (
                 <Badge variant="purple" className="text-[9px] py-0 px-1">
                   Face Enrolled
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-slate-400">{v.mobile}</p>
+            <p className="text-xs text-slate-500 font-mono">{v.mobile}</p>
           </div>
         </div>
       ),
     },
     {
-      header: 'Pass #',
+      header: 'Pass # / ID',
       accessor: 'passNumber',
-      render: (v) => <span className="font-mono text-xs font-semibold text-indigo-600">{v.passNumber || `#${v.id}`}</span>,
+      render: (v) => (
+        <span className="font-mono text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded">
+          {v.passNumber || `#${v.id}`}
+        </span>
+      ),
     },
     {
-      header: 'Host & Dept',
+      header: 'Host & Department',
       render: (v) => (
         <div>
           <p className="text-xs font-semibold text-slate-800">{v.hostName}</p>
-          <p className="text-[11px] text-slate-400">{v.hostDepartment} ({v.hostType})</p>
+          <p className="text-[11px] text-slate-500">{v.hostDepartment} ({v.hostType})</p>
         </div>
       ),
     },
     {
-      header: 'Status',
+      header: 'Purpose',
+      render: (v) => (
+        <span className="text-xs text-slate-600 line-clamp-1 max-w-[150px]" title={v.purpose}>
+          {v.purpose}
+        </span>
+      ),
+    },
+    {
+      header: 'Visit Status',
       render: (v) => {
+        if (v.status === 'AUTO_CLOSED_EOD') {
+          return (
+            <Badge variant="warning" icon={<Clock className="w-3 h-3 text-amber-600" />}>
+              Auto-Closed (EOD)
+            </Badge>
+          );
+        }
         if (v.status === 'PENDING') {
           return <Badge variant="warning">Pending Clearance</Badge>;
         }
         if (v.status === 'REJECTED') {
-          return <Badge variant="danger">Rejected</Badge>;
+          return <Badge variant="danger">Access Denied</Badge>;
+        }
+        if (v.timeOut) {
+          return (
+            <Badge variant="default" icon={<CheckCircle className="w-3 h-3 text-slate-500" />}>
+              Checked Out
+            </Badge>
+          );
         }
         return (
-          <Badge variant={v.timeOut ? 'default' : 'success'}>
-            {v.timeOut ? 'Checked Out' : 'Active Inside'}
+          <Badge variant="success" icon={<span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}>
+            Active Inside
           </Badge>
         );
       },
     },
     {
-      header: 'Check In Time',
-      render: (v) => <span className="text-xs text-slate-500">{new Date(v.timeIn).toLocaleTimeString()}</span>,
+      header: 'Check-In / Out',
+      render: (v) => (
+        <div className="text-xs font-mono">
+          <p className="text-slate-800">In: {new Date(v.timeIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          {v.timeOut ? (
+            <p className="text-slate-500 text-[11px]">Out: {new Date(v.timeOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          ) : v.status === 'AUTO_CLOSED_EOD' ? (
+            <p className="text-amber-700 text-[11px] font-sans">EOD Auto-Closed</p>
+          ) : (
+            <p className="text-emerald-700 text-[11px] font-sans font-medium">On Campus</p>
+          )}
+        </div>
+      ),
     },
     {
       header: 'Actions',
-      render: (v) => {
-        const canCheckOut = user?.role === 'SECURITY_GUARD' || user?.role === 'GUARD' || user?.role === 'ADMIN' || user?.role === 'SECURITY_OFFICER';
+      render: (v) => (
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDetailVisitor(v)}
+            title="Inspect Visit Audit Details"
+          >
+            <FileText className="w-4 h-4 text-slate-600 hover:text-indigo-600" />
+          </Button>
 
-        return (
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setQrVisitor(v)} title="View Pass Details">
-              <Ticket className="w-4 h-4 text-indigo-600" />
+          {!v.timeOut && v.status !== 'AUTO_CLOSED_EOD' && isGuard && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCheckoutVisitor(v)}
+              className="text-xs text-rose-700 border-rose-200 hover:bg-rose-50"
+            >
+              <LogOut className="w-3.5 h-3.5 mr-1" />
+              Log Exit
             </Button>
-            {v.status === 'PENDING' && canCheckOut ? (
-              <>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => approveTokenMutation.mutate(v.id)}
-                  disabled={approveTokenMutation.isPending}
-                >
-                  Approve
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => rejectTokenMutation.mutate(v.id)}
-                  disabled={rejectTokenMutation.isPending}
-                >
-                  Reject
-                </Button>
-              </>
-            ) : !v.timeOut && canCheckOut ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCheckoutVisitor(v)}
-                leftIcon={<LogOut className="w-3.5 h-3.5" />}
-              >
-                Exit
-              </Button>
-            ) : null}
-          </div>
-        );
-      },
+          )}
+        </div>
+      ),
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight font-heading flex items-center gap-2">
-            Visitor Management
-          </h2>
-          <p className="text-xs text-slate-500">
-            Real-time visitor registration, AI facial recognition, digital pass verification, and checkout tracking.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Contextual Back Navigation & Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+        <div className="flex items-center gap-3">
           <Button
-            variant="secondary"
-            leftIcon={<ScanFace className="w-4 h-4 text-indigo-600" />}
-            onClick={() => setIsWebcamOpen(true)}
-          >
-            Scan Face / Webcam
-          </Button>
-
-          <Button
-            variant="primary"
-            leftIcon={<UserPlus className="w-4 h-4" />}
+            variant="outline"
+            size="sm"
             onClick={() => {
-              resetForm();
-              setIsCheckInOpen(true);
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/dashboard');
+              }
             }}
+            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            title="Return to previous page"
           >
-            Check-In New Visitor
+            Back
           </Button>
+
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              Visitor Registers & Visit History
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Comprehensive audit log of campus visitor entries, verified exits, and automated end-of-day closures.
+            </p>
+          </div>
+        </div>
+
+        {/* Live Metrics Header Badges */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Total Visitors Entered Today (includes checked out & auto-closed) */}
+          <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg shadow-xs">
+            <Users className="w-4 h-4 text-indigo-600" />
+            <span className="text-xs font-semibold text-indigo-950">
+              Entered Today: <strong className="font-bold text-indigo-700">{guardSummary?.visitorsEnteredToday ?? pageData?.totalElements ?? 0}</strong>
+            </span>
+          </div>
+
+          {/* Currently Inside Badge */}
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg shadow-xs">
+            <Shield className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-semibold text-emerald-900">
+              Currently Inside: <strong className="font-bold text-emerald-700">{activeVisitors.length}</strong>
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Active Visitors Stat Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-white border border-slate-200 rounded-md shadow-xs">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Active Visitors Inside</p>
-              <h3 className="text-2xl font-bold mt-1 text-slate-900 font-heading">{activeVisitors?.length ?? 0}</h3>
-            </div>
-            <div className="w-10 h-10 rounded bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-              <Shield className="w-5 h-5" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="md:col-span-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-bold text-slate-900">Face Verification & Watchlist Enabled</h4>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">Captures 128-D facial vector embeddings at campus gates to verify visitor identity automatically.</p>
-          </div>
-          <Badge variant="success" icon={<CheckCircle className="w-3.5 h-3.5" />}>Active</Badge>
-        </Card>
-      </div>
-
-      {/* Search & Host Type Filter */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative flex-1 w-full max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Multi-Dimensional Filter Bar (State preserved in URL) */}
+      <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Search Input */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search visitor by name, mobile, or pass #..."
+            placeholder="Search by visitor name, mobile, or pass #..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white border border-[--line] rounded-[4px] text-xs outline-none focus:border-[--accent] text-[--text] transition-colors"
-            style={{ fontFamily: 'Inter, sans-serif' }}
+            onChange={(e) => updateParam('q', e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:border-indigo-500 text-slate-900"
           />
         </div>
 
-        {/* Host Category Filter */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs font-semibold text-[--mute] shrink-0" style={{ fontFamily: 'Inter, sans-serif' }}>Host Category:</span>
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => updateParam('status', e.target.value)}
+            className="text-xs bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500"
+          >
+            <option value="">All Visit Statuses</option>
+            <option value="ACTIVE">Active Inside Only</option>
+            <option value="CHECKED_OUT">Checked Out & Completed</option>
+            <option value="AUTO_CLOSED_EOD">Auto-Closed (EOD)</option>
+          </select>
+
+          {/* Host Category Filter */}
           <select
             value={hostTypeFilter}
-            onChange={(e) => {
-              setHostTypeFilter(e.target.value);
-              setPage(0);
-            }}
-            className="px-3 py-2 text-xs bg-white border border-[--line] rounded-[4px] font-medium text-[--text] outline-none focus:border-[--accent] transition-colors"
-            style={{ fontFamily: 'Inter, sans-serif' }}
+            onChange={(e) => updateParam('hostType', e.target.value)}
+            className="text-xs bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500"
           >
             <option value="">All Host Categories</option>
-            <option value="FACULTY">Teachers / Faculty</option>
+            <option value="FACULTY">Faculty / Teachers</option>
             <option value="HOD">Department HOD</option>
             <option value="ADMIN_STAFF">Admin Staff</option>
             <option value="STUDENT">Student Host</option>
             <option value="ALUMNI">Alumni</option>
             <option value="VENDOR">Vendor / Contractor</option>
           </select>
+
+          {(search || hostTypeFilter || statusFilter) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchParams(new URLSearchParams())}
+              className="text-xs text-slate-500 hover:text-slate-800"
+            >
+              Reset Filters
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* DataTable */}
+      {/* Visitor Record Table */}
       <DataTable
         columns={columns}
         data={pageData?.content || []}
         isLoading={isLoading}
-        emptyTitle="No visitors found"
-        emptyDescription="Get started by clicking Check-In New Visitor or Scan Face."
+        emptyTitle="No visitor records found"
+        emptyDescription="No visit entries match your active search or category filters."
       />
 
-      {pageData && (
+      {pageData && pageData.totalPages > 1 && (
         <Pagination
-          currentPage={pageData.pageNumber}
+          currentPage={pageData.page ?? pageData.pageNumber ?? page}
           totalPages={pageData.totalPages}
           totalElements={pageData.totalElements}
-          pageSize={pageData.pageSize}
-          onPageChange={setPage}
+          pageSize={pageData.size ?? pageData.pageSize}
+          onPageChange={(p) => updateParam('page', p.toString())}
         />
       )}
 
-      {/* Facial Recognition Webcam Modal */}
-      <VisitorWebcamModal
-        isOpen={isWebcamOpen}
-        onClose={() => setIsWebcamOpen(false)}
-        onRecognized={handleRecognized}
-        onRegisterNew={handleRegisterNewFromWebcam}
-      />
-
-      {/* Check In Modal */}
+      {/* Detail Audit Drawer/Modal */}
       <Modal
-        isOpen={isCheckInOpen}
-        onClose={() => {
-          setIsCheckInOpen(false);
-          resetForm();
-        }}
-        title="Check-In Visitor & Issue Digital Pass"
-        subtitle="Registers visitor details and generates an authenticated gate pass"
-        maxWidth="xl"
+        isOpen={!!detailVisitor}
+        onClose={() => setDetailVisitor(null)}
+        title="Visitor Identity & Access Audit Record"
+        subtitle="Complete record details for security, compliance, and gate audit"
+        maxWidth="lg"
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!validateVisitorForm()) return;
-            const normalizedData = {
-              ...form,
-              name: normalizeName(form.name),
-              mobile: normalizePhone(form.mobile),
-              hostName: normalizeName(form.hostName),
-              purpose: form.purpose.trim(),
-              vehicleNumber: form.vehicleNumber ? normalizeVehicleNumber(form.vehicleNumber) : '',
-              studentPrn: form.studentPrn ? form.studentPrn.trim().toUpperCase() : '',
-            };
-            checkInMutation.mutate(normalizedData);
-          }}
-          className="space-y-4"
-        >
-          {returningVisitor?.isReturning ? (
-            <div className="flex items-center justify-between p-3.5 bg-blue-50 border border-blue-200 rounded-xl shadow-xs">
-              <div className="flex items-center gap-3">
-                <VisitorAvatar photoUrl={returningVisitor.photoUrl} name={returningVisitor.name} />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
-                      Potential Biometric Match
-                    </span>
-                    <Badge variant="purple" className="text-[10px] py-0 px-1.5">
-                      Verify Before Confirming
-                    </Badge>
-                  </div>
-                  <p className="text-xs font-semibold text-slate-800">
-                    {returningVisitor.name} — Form pre-filled from recognition result
-                  </p>
-                  <p className="text-[10px] text-blue-700 mt-0.5">
-                    ⚠ Confirm visitor identity manually before submitting
-                  </p>
+        {detailVisitor && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <VisitorAvatar photoUrl={detailVisitor.photoUrl || detailVisitor.photoPath} name={detailVisitor.name} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-slate-900">{detailVisitor.name}</h3>
+                  <span className="font-mono text-xs font-bold text-indigo-700 bg-white border border-indigo-200 px-2 py-0.5 rounded">
+                    Pass #{detailVisitor.passNumber || detailVisitor.id}
+                  </span>
                 </div>
-              </div>
-              <span className="text-[11px] text-slate-500 hidden sm:inline">
-                Update visit purpose/host below
-              </span>
-            </div>
-          ) : capturedPhotoBlob ? (
-            <div className="flex items-center justify-between p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                <Camera className="w-4 h-4" />
-                <span>New Visitor: Live camera capture attached for biometric enrollment</span>
-              </div>
-              <Badge variant="purple" className="text-[10px]">Photo Ready</Badge>
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Visitor Name"
-              placeholder="Full Name"
-              required
-              value={form.name}
-              error={formErrors.name}
-              onChange={(e) => {
-                setForm({ ...form, name: e.target.value });
-                if (formErrors.name) setFormErrors({ ...formErrors, name: '' });
-              }}
-              onBlur={() => {
-                const err = validateName(form.name, 'Visitor Name');
-                if (err) setFormErrors((prev) => ({ ...prev, name: err }));
-              }}
-            />
-            <Input
-              label="Mobile Number"
-              placeholder="10-digit mobile"
-              required
-              value={form.mobile}
-              error={formErrors.mobile}
-              onChange={(e) => {
-                setForm({ ...form, mobile: e.target.value });
-                if (formErrors.mobile) setFormErrors({ ...formErrors, mobile: '' });
-              }}
-              onBlur={() => {
-                const err = validatePhone(form.mobile);
-                if (err) setFormErrors((prev) => ({ ...prev, mobile: err }));
-              }}
-            />
-            <Input
-              label="Purpose of Visit"
-              placeholder="Meeting, Inspection..."
-              required
-              value={form.purpose}
-              error={formErrors.purpose}
-              onChange={(e) => {
-                setForm({ ...form, purpose: e.target.value });
-                if (formErrors.purpose) setFormErrors({ ...formErrors, purpose: '' });
-              }}
-              onBlur={() => {
-                const err = validatePurpose(form.purpose);
-                if (err) setFormErrors((prev) => ({ ...prev, purpose: err }));
-              }}
-            />
-            <Select
-              label="Host Department"
-              value={form.hostDepartment}
-              onChange={(e) => {
-                const newDept = e.target.value as HostDepartment;
-                setForm({
-                  ...form,
-                  hostDepartment: newDept,
-                  hostName: '', // reset selected teacher when department changes
-                });
-                if (formErrors.hostName) setFormErrors({ ...formErrors, hostName: '' });
-              }}
-              options={[
-                { label: 'Computer Engineering (CE)', value: 'CE' },
-                { label: 'Information Technology (IT)', value: 'IT' },
-                { label: 'Electronics & Telecomm (ENTC)', value: 'ENTC' },
-                { label: 'Electronics & Computer (ECE)', value: 'ECE' },
-                { label: 'AI & Data Science (AIDS)', value: 'AIDS' },
-                { label: 'Administrative Office (ADMIN)', value: 'ADMIN' },
-              ]}
-            />
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
-                Host Person Name ({form.hostDepartment}) <span className="text-red-500">*</span>
-              </label>
-              <div className="space-y-2">
-                {(() => {
-                  const deptFaculties = facultiesData.filter(
-                    (f) => f.department.toUpperCase() === form.hostDepartment.toUpperCase()
-                  );
-                  const isListed = deptFaculties.some(
-                    (f) => f.name.toLowerCase() === form.hostName.toLowerCase()
-                  );
-
-                  return (
-                    <>
-                      <select
-                        value={isListed ? form.hostName : form.hostName ? '__OTHER__' : ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '__OTHER__') {
-                            setForm({ ...form, hostName: '' });
-                          } else if (val) {
-                            setForm({
-                              ...form,
-                              hostName: val,
-                              hostType: 'FACULTY',
-                            });
-                          } else {
-                            setForm({ ...form, hostName: '' });
-                          }
-                          if (formErrors.hostName) setFormErrors({ ...formErrors, hostName: '' });
-                        }}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-600 text-slate-900 dark:text-white shadow-xs"
-                      >
-                        <option value="">
-                          {deptFaculties.length > 0
-                            ? `-- Select ${form.hostDepartment} Faculty (${deptFaculties.length} available) --`
-                            : `-- No pre-loaded faculty for ${form.hostDepartment} --`}
-                        </option>
-                        {deptFaculties.map((f, idx) => (
-                          <option key={idx} value={f.name}>
-                            {f.name}
-                          </option>
-                        ))}
-                        <option value="__OTHER__">Other (Enter Name Manually)</option>
-                      </select>
-
-                      {(!isListed || !form.hostName) && (
-                        <Input
-                          placeholder={`Enter Host Name in ${form.hostDepartment} manually`}
-                          required
-                          value={form.hostName}
-                          error={formErrors.hostName}
-                          onChange={(e) => {
-                            setForm({ ...form, hostName: e.target.value });
-                            if (formErrors.hostName) setFormErrors({ ...formErrors, hostName: '' });
-                          }}
-                          onBlur={() => {
-                            const err = validateName(form.hostName, 'Host Name');
-                            if (err) setFormErrors((prev) => ({ ...prev, hostName: err }));
-                          }}
-                        />
-                      )}
-                    </>
-                  );
-                })()}
+                <p className="text-xs text-slate-500 font-mono mt-0.5">Mobile: {detailVisitor.mobile}</p>
               </div>
             </div>
 
-            <Select
-              label="Host Category"
-              value={form.hostType}
-              onChange={(e) => setForm({ ...form, hostType: e.target.value as HostType })}
-              options={[
-                { label: 'Faculty / Professor', value: 'FACULTY' },
-                { label: 'Head of Department (HOD)', value: 'HOD' },
-                { label: 'Admin Staff', value: 'ADMIN_STAFF' },
-                { label: 'Student', value: 'STUDENT' },
-                { label: 'Alumni', value: 'ALUMNI' },
-                { label: 'Vendor', value: 'VENDOR' },
-                { label: 'Other', value: 'OTHER' },
-              ]}
-            />
+            <div className="grid grid-cols-2 gap-3 text-xs bg-white border border-slate-200 rounded-lg p-4">
+              <div>
+                <span className="text-slate-400 block text-[11px]">Host Person</span>
+                <span className="font-semibold text-slate-800">{detailVisitor.hostName}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Host Department & Role</span>
+                <span className="font-semibold text-slate-800">{detailVisitor.hostDepartment} ({detailVisitor.hostType})</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Visit Purpose</span>
+                <span className="font-medium text-slate-800">{detailVisitor.purpose}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Vehicle Number</span>
+                <span className="font-mono font-medium text-slate-800">{detailVisitor.vehicleNumber || 'Pedestrian (No Vehicle)'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">ID Proof Type & No.</span>
+                <span className="font-mono text-slate-800">{detailVisitor.idProofType}: {detailVisitor.idProofNumber}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Campus Entry Timestamp</span>
+                <span className="font-mono text-slate-800">{new Date(detailVisitor.timeIn).toLocaleString()}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Verified Exit Timestamp</span>
+                <span className="font-mono text-slate-800">
+                  {detailVisitor.timeOut ? new Date(detailVisitor.timeOut).toLocaleString() : 'Not Checked Out (Unverified)'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">Visit Status & Closure Info</span>
+                {detailVisitor.status === 'AUTO_CLOSED_EOD' ? (
+                  <span className="text-amber-800 font-semibold block">
+                    Auto-Closed at EOD ({detailVisitor.closedAt ? new Date(detailVisitor.closedAt).toLocaleTimeString() : 'Campus Cutoff'})
+                    <span className="block text-[10px] text-amber-600 font-normal">Reason: {detailVisitor.closureReason || 'END_OF_DAY_AUTO_CLOSURE'}</span>
+                  </span>
+                ) : detailVisitor.timeOut ? (
+                  <span className="text-emerald-700 font-semibold">Verified Departure</span>
+                ) : (
+                  <span className="text-indigo-700 font-semibold">Active On Campus</span>
+                )}
+              </div>
+            </div>
 
-            {form.hostType === 'STUDENT' && (
-              <Input
-                label="Student PRN"
-                placeholder="e.g. C2K21001"
-                value={form.studentPrn}
-                error={formErrors.studentPrn}
-                onChange={(e) => {
-                  setForm({ ...form, studentPrn: e.target.value.toUpperCase() });
-                  if (formErrors.studentPrn) setFormErrors({ ...formErrors, studentPrn: '' });
-                }}
-                onBlur={() => {
-                  const err = validatePrn(form.studentPrn);
-                  if (err) setFormErrors((prev) => ({ ...prev, studentPrn: err }));
-                }}
-              />
+            {detailVisitor.notes && (
+              <div className="bg-slate-50 border border-slate-200 rounded p-3 text-xs">
+                <span className="text-slate-400 block text-[11px] font-semibold mb-0.5">Guard / Audit Remarks:</span>
+                <p className="text-slate-700 m-0">{detailVisitor.notes}</p>
+              </div>
             )}
 
-            <Select
-              label="Gate"
-              value={form.gateId}
-              onChange={(e) => setForm({ ...form, gateId: Number(e.target.value) })}
-              options={gates && gates.length > 0
-                ? gates.map((g) => ({ label: g.name, value: g.id }))
-                : [{ label: 'Gate 1 - Main Entrance', value: 1 }]}
-            />
-
-            <Input
-              label="ID Proof Type"
-              placeholder="Aadhaar / Driving License"
-              required
-              value={form.idProofType}
-              error={formErrors.idProofType}
-              onChange={(e) => {
-                setForm({ ...form, idProofType: e.target.value });
-                if (formErrors.idProofType) setFormErrors({ ...formErrors, idProofType: '' });
-              }}
-            />
-            <Input
-              label="ID Proof Number"
-              placeholder="ID Number"
-              required
-              value={form.idProofNumber}
-              error={formErrors.idProofNumber}
-              onChange={(e) => {
-                setForm({ ...form, idProofNumber: e.target.value });
-                if (formErrors.idProofNumber) setFormErrors({ ...formErrors, idProofNumber: '' });
-              }}
-            />
-            <Input
-              label="Vehicle Number (Optional)"
-              placeholder="MH12AB1234"
-              value={form.vehicleNumber}
-              error={formErrors.vehicleNumber}
-              onChange={(e) => {
-                setForm({ ...form, vehicleNumber: e.target.value });
-                if (formErrors.vehicleNumber) setFormErrors({ ...formErrors, vehicleNumber: '' });
-              }}
-              onBlur={() => {
-                if (form.vehicleNumber) {
-                  const err = validateVehicleNumber(form.vehicleNumber);
-                  if (err) setFormErrors((prev) => ({ ...prev, vehicleNumber: err }));
-                  else setForm({ ...form, vehicleNumber: normalizeVehicleNumber(form.vehicleNumber) });
-                }
-              }}
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-            <Button variant="outline" onClick={() => setIsCheckInOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" isLoading={checkInMutation.isPending}>
-              Complete Check-In
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Visitor Digital Gate Pass Preview Modal */}
-      <Modal
-        isOpen={!!qrVisitor}
-        onClose={() => setQrVisitor(null)}
-        title="Visitor Digital Gate Pass"
-        subtitle="Official campus security entry authorization permit"
-        maxWidth="md"
-      >
-        {qrVisitor && (
-          <div className="p-2 space-y-5">
-            <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-5 space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">PICT Digital Access Pass</span>
-                  <h4 className="font-extrabold text-lg text-white">{qrVisitor.name}</h4>
-                </div>
-                <Badge variant="purple" className="font-mono text-xs">{qrVisitor.passNumber || `PICT-PASS-${qrVisitor.id}`}</Badge>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-5 pt-1">
-                <div className="w-28 h-28 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex flex-col items-center justify-center text-indigo-300 p-2 text-center shrink-0">
-                  <Shield className="w-8 h-8 text-indigo-400 mb-1" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider">AUTHORIZED PASS</span>
-                  <span className="text-[9px] text-slate-400 font-mono mt-0.5">{qrVisitor.passNumber || `#${qrVisitor.id}`}</span>
-                </div>
-
-                <div className="space-y-2.5 text-xs w-full min-w-0">
-                  <div className="flex justify-between items-center py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Mobile</span>
-                    <span className="font-semibold text-slate-200">{qrVisitor.mobile}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Host</span>
-                    <span className="font-semibold text-indigo-300 truncate max-w-[140px] text-right" title={qrVisitor.hostName}>{qrVisitor.hostName}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Department</span>
-                    <span className="font-semibold text-slate-200">{qrVisitor.hostDepartment}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-slate-400">Status</span>
-                    <Badge variant={qrVisitor.timeOut ? 'default' : 'success'}>
-                      {qrVisitor.timeOut ? 'Checked Out' : 'Active Inside'}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <Button variant="primary" className="w-full" onClick={() => setQrVisitor(null)}>
-                Close Pass View
+            <div className="flex justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setDetailVisitor(null)}>
+                Close Audit View
               </Button>
             </div>
           </div>
@@ -860,24 +471,25 @@ export const Visitors: React.FC = () => {
         isOpen={!!checkoutVisitor}
         onClose={() => setCheckoutVisitor(null)}
         title="Confirm Visitor Exit"
-        subtitle="Log visitor checkout from campus"
+        subtitle="Log verified departure from campus terminal"
         maxWidth="sm"
       >
         {checkoutVisitor && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Are you sure you want to check out <strong>{checkoutVisitor.name}</strong> (Pass #{checkoutVisitor.passNumber})?
+            <p className="text-sm text-slate-700">
+              Confirm physical departure for <strong>{checkoutVisitor.name}</strong> (Pass #{checkoutVisitor.passNumber || checkoutVisitor.id})?
             </p>
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" onClick={() => setCheckoutVisitor(null)}>
+              <Button variant="outline" size="sm" onClick={() => setCheckoutVisitor(null)}>
                 Cancel
               </Button>
               <Button
                 variant="danger"
+                size="sm"
                 isLoading={checkOutMutation.isPending}
                 onClick={() => checkOutMutation.mutate({ visitorId: checkoutVisitor.id })}
               >
-                Log Exit
+                Confirm Exit
               </Button>
             </div>
           </div>

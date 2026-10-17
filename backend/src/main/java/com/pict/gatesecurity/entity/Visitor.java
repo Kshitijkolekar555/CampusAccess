@@ -93,6 +93,15 @@ public class Visitor {
     @Builder.Default
     private PassStatus status = PassStatus.APPROVED;
 
+    @Column(name = "closed_at")
+    private OffsetDateTime closedAt;
+
+    @Column(name = "closure_reason", length = 100)
+    private String closureReason;
+
+    @Column(name = "closed_by", length = 50)
+    private String closedBy;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

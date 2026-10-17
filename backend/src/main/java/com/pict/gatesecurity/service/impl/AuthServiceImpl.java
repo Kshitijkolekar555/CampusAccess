@@ -51,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
     private final NotificationService notificationService;
     private final com.pict.gatesecurity.repository.StudentGatePassRepository studentGatePassRepository;
     private final com.pict.gatesecurity.repository.HostelOutpassRepository hostelOutpassRepository;
+    private final com.pict.gatesecurity.repository.StudentProfileRepository studentProfileRepository;
 
     @Value("${app.jwt.refresh-token-expiry-ms}")
     private long refreshTokenExpiryMs;
@@ -315,10 +316,24 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("PRN is required");
         }
 
-        String normalizedPrn = prn.trim().toUpperCase();
+        String searchKey = prn.trim();
+        String normalizedKey = searchKey.toUpperCase();
 
-        User studentUser = userRepository.findByUsername(normalizedPrn)
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid PRN"));
+        User studentUser = userRepository.findByUsername(normalizedKey)
+                .orElseGet(() -> {
+                    // Check if lookup key matches student_profiles PRN or Roll Number
+                    if (studentProfileRepository != null) {
+                        return studentProfileRepository.findByPrn(searchKey)
+                                .or(() -> studentProfileRepository.findByRollNumber(searchKey))
+                                .map(com.pict.gatesecurity.entity.StudentProfile::getUser)
+                                .orElse(null);
+                    }
+                    return null;
+                });
+
+        if (studentUser == null) {
+            throw new ResourceNotFoundException("Invalid PRN: Student not found in college directory");
+        }
 
         if (studentUser.getRole() != com.pict.gatesecurity.entity.enums.UserRole.STUDENT) {
             throw new BadRequestException("Invalid PRN: Provided identifier does not belong to a student record");
@@ -337,15 +352,33 @@ public class AuthServiceImpl implements AuthService {
         String hostelRoom = null;
         String mobileNumber = studentUser.getPhone();
 
+        // 1. Try student_profiles for department and class
+        if (studentProfileRepository != null) {
+            java.util.Optional<com.pict.gatesecurity.entity.StudentProfile> profileOpt =
+                    studentProfileRepository.findByUserId(studentUser.getId());
+            if (profileOpt.isPresent()) {
+                com.pict.gatesecurity.entity.StudentProfile sp = profileOpt.get();
+                branchYear = sp.getDepartment();
+                if (sp.getAcademicYear() != null) {
+                    branchYear = sp.getAcademicYear() + " " + (branchYear != null ? branchYear : "");
+                }
+                if (sp.getDivision() != null) {
+                    branchYear = (branchYear != null ? branchYear : "") + " (" + sp.getDivision() + ")";
+                }
+            }
+        }
+
         if (studentGatePassRepository != null) {
             java.util.Optional<com.pict.gatesecurity.entity.StudentGatePass> latestGatePass =
-                    studentGatePassRepository.findFirstByStudentPrnOrderByIdDesc(normalizedPrn);
+                    studentGatePassRepository.findFirstByStudentPrnOrderByIdDesc(studentUser.getUsername());
             if (latestGatePass.isPresent()) {
                 com.pict.gatesecurity.entity.StudentGatePass gp = latestGatePass.get();
-                if (gp.getStudentDepartment() != null && gp.getStudentClass() != null) {
-                    branchYear = gp.getStudentDepartment() + " - " + gp.getStudentClass();
-                } else if (gp.getStudentDepartment() != null) {
-                    branchYear = gp.getStudentDepartment();
+                if (branchYear == null) {
+                    if (gp.getStudentDepartment() != null && gp.getStudentClass() != null) {
+                        branchYear = gp.getStudentDepartment() + " - " + gp.getStudentClass();
+                    } else if (gp.getStudentDepartment() != null) {
+                        branchYear = gp.getStudentDepartment();
+                    }
                 }
                 if (mobileNumber == null) {
                     mobileNumber = gp.getStudentMobile();
@@ -355,7 +388,7 @@ public class AuthServiceImpl implements AuthService {
 
         if (hostelOutpassRepository != null) {
             java.util.Optional<com.pict.gatesecurity.entity.HostelOutpass> latestOutpass =
-                    hostelOutpassRepository.findFirstByStudentPrnOrderByIdDesc(normalizedPrn);
+                    hostelOutpassRepository.findFirstByStudentPrnOrderByIdDesc(studentUser.getUsername());
             if (latestOutpass.isPresent()) {
                 com.pict.gatesecurity.entity.HostelOutpass ho = latestOutpass.get();
                 if (ho.getStudentHostel() != null && ho.getStudentRoom() != null) {
@@ -370,7 +403,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return StudentAuthDto.builder()
-                .prn(normalizedPrn)
+                .prn(studentUser.getUsername())
                 .studentName(studentUser.getFullName())
                 .branchYear(branchYear)
                 .hostelRoom(hostelRoom)

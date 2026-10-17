@@ -35,5 +35,6 @@ public class VisitorRecognitionResponse {
     private Integer numFaces;
     private Boolean isAmbiguous;
     private String message;
+    private String matchType;
     private Map<String, Object> quality;
 }

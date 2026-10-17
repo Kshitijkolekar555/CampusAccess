@@ -215,9 +215,31 @@ export const Vendors: React.FC = () => {
       </div>
 
       {activeTab === 'vendors' ? (
-        <DataTable columns={vendorColumns} data={vendorPage?.content || []} isLoading={loadingVendors} />
+        <>
+          <DataTable columns={vendorColumns} data={vendorPage?.content || []} isLoading={loadingVendors} />
+          {vendorPage && (
+            <Pagination
+              currentPage={vendorPage.page ?? vendorPage.pageNumber ?? page}
+              totalPages={vendorPage.totalPages}
+              totalElements={vendorPage.totalElements}
+              pageSize={vendorPage.size ?? vendorPage.pageSize}
+              onPageChange={setPage}
+            />
+          )}
+        </>
       ) : (
-        <DataTable columns={visitColumns} data={visitPage?.content || []} isLoading={loadingVisits} />
+        <>
+          <DataTable columns={visitColumns} data={visitPage?.content || []} isLoading={loadingVisits} />
+          {visitPage && (
+            <Pagination
+              currentPage={visitPage.page ?? visitPage.pageNumber ?? page}
+              totalPages={visitPage.totalPages}
+              totalElements={visitPage.totalElements}
+              pageSize={visitPage.size ?? visitPage.pageSize}
+              onPageChange={setPage}
+            />
+          )}
+        </>
       )}
 
       <Modal isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} title="Register Vendor/Contractor">

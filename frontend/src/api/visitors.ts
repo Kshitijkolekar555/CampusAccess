@@ -34,6 +34,13 @@ export const visitorApi = {
     return res.data;
   },
 
+  lookupByMobile: async (mobile: string) => {
+    const res = await api.get<ApiResponse<Visitor>>('/visitors/lookup/mobile', {
+      params: { mobile }
+    });
+    return res.data.data;
+  },
+
   registerWithPhoto: async (photoBlob: Blob | null, data: any) => {
     const formData = new FormData();
     if (photoBlob) {

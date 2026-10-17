@@ -28,7 +28,7 @@ public class VendorController {
     private final VendorService vendorService;
 
     @PostMapping("/register")
-    @PreAuthorize("hasAnyRole('SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Register Vendor/Contractor", description = "Registers a new vendor or contractor")
     public ResponseEntity<ApiResponse<VendorResponse>> registerVendor(
             @Valid @RequestBody VendorRegisterRequest request,
@@ -39,7 +39,7 @@ public class VendorController {
     }
 
     @PostMapping("/{vendorId}/entry")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Record Vendor Entry", description = "Records vendor/contractor entry through a gate")
     public ResponseEntity<ApiResponse<VendorVisitResponse>> recordEntry(
             @PathVariable Long vendorId,
@@ -51,7 +51,7 @@ public class VendorController {
     }
 
     @PutMapping("/visits/{visitId}/exit")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Record Vendor Exit", description = "Records vendor/contractor exit")
     public ResponseEntity<ApiResponse<VendorVisitResponse>> recordExit(
             @PathVariable Long visitId,
@@ -62,7 +62,7 @@ public class VendorController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Get Vendor by ID", description = "Fetches vendor details by ID")
     public ResponseEntity<ApiResponse<VendorResponse>> getVendorById(@PathVariable Long id) {
         VendorResponse response = vendorService.getVendorById(id);
@@ -70,7 +70,7 @@ public class VendorController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Search & Filter Vendors", description = "Paginated list of vendors filtered by query or blacklist status")
     public ResponseEntity<ApiResponse<PageResponse<VendorResponse>>> getVendors(
             @RequestParam(required = false) String query,
@@ -86,7 +86,7 @@ public class VendorController {
     }
 
     @GetMapping("/visits")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Search & Filter Vendor Visits", description = "Paginated list of vendor visits")
     public ResponseEntity<ApiResponse<PageResponse<VendorVisitResponse>>> getVisits(
             @RequestParam(required = false) Long vendorId,
@@ -103,7 +103,7 @@ public class VendorController {
     }
 
     @PutMapping("/{id}/blacklist")
-    @PreAuthorize("hasAnyRole('SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Blacklist Vendor", description = "Blacklists a vendor (Officer/Admin only)")
     public ResponseEntity<ApiResponse<VendorResponse>> blacklistVendor(
             @PathVariable Long id,
@@ -114,7 +114,7 @@ public class VendorController {
     }
 
     @PutMapping("/{id}/unblacklist")
-    @PreAuthorize("hasAnyRole('SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Unblacklist Vendor", description = "Removes blacklist status from a vendor (Officer/Admin only)")
     public ResponseEntity<ApiResponse<VendorResponse>> unblacklistVendor(
             @PathVariable Long id,

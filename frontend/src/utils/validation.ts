@@ -4,7 +4,7 @@
 
 export const INDIAN_PHONE_REGEX = /^[6-9][0-9]{9}$/;
 export const INDIAN_VEHICLE_REGEX = /^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/;
-export const PASSWORD_STRENGTH_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+export const PASSWORD_STRENGTH_REGEX = /^.{6,}$/;
 export const NAME_REGEX = /^[a-zA-Z\s.']{2,150}$/;
 export const PRN_REGEX = /^[A-Z0-9]{8,20}$/;
 export const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -71,10 +71,7 @@ export const validateEmail = (email: string): string | null => {
 
 export const validatePasswordStrength = (password: string): string | null => {
   if (!password) return 'Password is required';
-  if (password.length < 8) return 'Password must be at least 8 characters long';
-  if (!PASSWORD_STRENGTH_REGEX.test(password)) {
-    return 'Password must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number';
-  }
+  if (password.length < 6) return 'Password must be at least 6 characters long';
   return null;
 };
 

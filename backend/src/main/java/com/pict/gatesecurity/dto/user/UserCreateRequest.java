@@ -22,7 +22,7 @@ public class UserCreateRequest {
     private String username;
 
     @NotBlank(message = "Password is required")
-    @jakarta.validation.constraints.Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$", message = "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number")
+    @Size(min = 6, max = 100, message = "Password must be at least 6 characters")
     private String password;
 
     @NotNull(message = "User role is required")

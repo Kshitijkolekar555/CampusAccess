@@ -34,6 +34,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
+    private final com.pict.gatesecurity.repository.StudentProfileRepository studentProfileRepository;
 
     @Override
     @Transactional
@@ -93,7 +94,20 @@ public class UserServiceImpl implements UserService {
                 Predicate usernameMatch = cb.like(cb.lower(root.get("username")), searchPattern);
                 Predicate fullNameMatch = cb.like(cb.lower(root.get("fullName")), searchPattern);
                 Predicate emailMatch = cb.like(cb.lower(root.get("email")), searchPattern);
-                predicates.add(cb.or(usernameMatch, fullNameMatch, emailMatch));
+
+                // Also match PRN and roll number from student_profiles
+                jakarta.persistence.criteria.Subquery<Long> subquery = q.subquery(Long.class);
+                jakarta.persistence.criteria.Root<com.pict.gatesecurity.entity.StudentProfile> spRoot =
+                        subquery.from(com.pict.gatesecurity.entity.StudentProfile.class);
+                subquery.select(spRoot.get("user").get("id"));
+                Predicate spPrnMatch = cb.like(cb.lower(spRoot.get("prn")), searchPattern);
+                Predicate spRollMatch = cb.like(cb.lower(spRoot.get("rollNumber")), searchPattern);
+                subquery.where(cb.and(
+                        cb.equal(spRoot.get("user").get("id"), root.get("id")),
+                        cb.or(spPrnMatch, spRollMatch)
+                ));
+
+                predicates.add(cb.or(usernameMatch, fullNameMatch, emailMatch, cb.exists(subquery)));
             }
 
             if (role != null) {

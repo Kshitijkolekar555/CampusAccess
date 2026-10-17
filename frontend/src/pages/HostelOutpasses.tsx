@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { Plus, LogOut, LogIn, AlertTriangle } from 'lucide-react';
+import { Plus, LogOut, LogIn, AlertTriangle, Search, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../store/authStore';
 
@@ -26,10 +26,19 @@ export const HostelOutpasses: React.FC = () => {
     return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
   };
 
-  // Query — declared first so pageData is available in form init/effects
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+
+  // Query — real-time polling so guard immediately sees new student requests
   const { data: pageData, isLoading, refetch } = useQuery({
-    queryKey: ['hostel-outpasses', page],
-    queryFn: () => hostelOutpassApi.getOutpasses({ page, size: 10 }),
+    queryKey: ['hostel-outpasses', page, searchQuery, statusFilter],
+    queryFn: () => hostelOutpassApi.getOutpasses({
+      page,
+      size: 10,
+      query: searchQuery.trim() || undefined,
+      status: statusFilter || undefined,
+    }),
+    refetchInterval: 5000,
   });
 
   const getInitialForm = () => {
@@ -114,6 +123,7 @@ export const HostelOutpasses: React.FC = () => {
     onSuccess: () => {
       toast.success('Hostel Outpass Exit recorded!');
       queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
       refetch();
     },
     onError: (err: any) => {
@@ -126,6 +136,7 @@ export const HostelOutpasses: React.FC = () => {
     onSuccess: () => {
       toast.success('Hostel Outpass Re-Entry recorded!');
       queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
       refetch();
     },
     onError: (err: any) => {
@@ -207,9 +218,9 @@ export const HostelOutpasses: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 22, color: 'var(--text)', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
-            Hostel Outpasses
+            Campus Outpasses
           </h2>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Night outpasses and leave management with late return tracking.</p>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Gate day passes, night outpasses, and leave management with approval tracking.</p>
         </div>
         {(user?.role === 'STUDENT' || user?.role === 'ADMIN') && (
           <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setIsCreateOpen(true)}>
@@ -218,13 +229,58 @@ export const HostelOutpasses: React.FC = () => {
         )}
       </div>
 
+      {/* Search & Status Filter Toolbar for Guards & Admins */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200/90 shadow-xs">
+        <div className="relative flex-1 w-full max-w-md">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search student by name, PRN, reason, destination..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(0);
+            }}
+            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(0);
+            }}
+            className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md font-medium text-slate-700 outline-none focus:border-indigo-500 transition-colors"
+          >
+            <option value="">All Statuses</option>
+            <option value="PENDING">Pending Review</option>
+            <option value="APPROVED">Approved (Gate Ready)</option>
+            <option value="ACTIVE">Active (Outside Campus)</option>
+            <option value="COMPLETED">Completed (Returned)</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => refetch()}
+            title="Refresh outpasses list"
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
+          >
+            Refresh
+          </Button>
+        </div>
+      </div>
+
       <DataTable columns={columns} data={pageData?.content || []} isLoading={isLoading} />
       {pageData && (
         <Pagination
-          currentPage={pageData.pageNumber}
+          currentPage={pageData.page ?? pageData.pageNumber ?? page}
           totalPages={pageData.totalPages}
           totalElements={pageData.totalElements}
-          pageSize={pageData.pageSize}
+          pageSize={pageData.size ?? pageData.pageSize}
           onPageChange={setPage}
         />
       )}

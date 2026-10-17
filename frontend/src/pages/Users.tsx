@@ -141,10 +141,10 @@ export const Users: React.FC = () => {
       <DataTable columns={columns} data={pageData?.content || []} isLoading={isLoading} />
       {pageData && (
         <Pagination
-          currentPage={pageData.pageNumber}
+          currentPage={pageData.page ?? pageData.pageNumber ?? page}
           totalPages={pageData.totalPages}
           totalElements={pageData.totalElements}
-          pageSize={pageData.pageSize}
+          pageSize={pageData.size ?? pageData.pageSize}
           onPageChange={setPage}
         />
       )}

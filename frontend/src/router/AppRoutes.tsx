@@ -59,7 +59,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/student/login"    element={<StudentPortal />} />
       <Route path="/student/register" element={<StudentPortal />} />
 
-      {/* Visitor portal (public, unauthenticated camera-first flow) */}
+      {/* Visitor self-registration portal */}
       <Route path="/visitor" element={<VisitorPortal />} />
 
       {/* Guard/legacy login route — used by guards and as fallback */}
@@ -77,15 +77,14 @@ export const AppRoutes: React.FC = () => {
         <Route path="/vehicles" element={<Vehicles />} />
         <Route path="/vendors"  element={<Vendors />} />
         <Route path="/guards"   element={<Guards />} />
-        <Route path="/shifts"   element={<Shifts />} />
         <Route path="/gates"    element={<Gates />} />
       </Route>
 
       {/* ── Guard + Student Routes ────────────────────────────────────── */}
       <Route element={<ProtectedLayout allowedRoles={['SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'STUDENT']} />}>
         <Route path="/student-passes"   element={<StudentPasses />} />
-        <Route path="/hostel-outpasses" element={<HostelOutpasses />} />
-        <Route path="/notifications"    element={<Notifications />} />
+        <Route path="/outpasses"        element={<HostelOutpasses />} />
+        <Route path="/notifications"    element={<Navigate to="/dashboard" replace />} />
       </Route>
 
       {/* ── Default Catch-All ─────────────────────────────────────────── */}

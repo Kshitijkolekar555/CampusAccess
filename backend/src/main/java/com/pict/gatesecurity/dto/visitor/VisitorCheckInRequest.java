@@ -41,13 +41,13 @@ public class VisitorCheckInRequest {
     @NotNull(message = "Host department is required")
     private HostDepartment hostDepartment;
 
-    @Pattern(regexp = "^([A-Z0-9]{8,20})?$", message = "Student PRN must be 8 to 20 alphanumeric characters")
+    @Pattern(regexp = "^$|^[a-zA-Z0-9\\s\\-]{0,20}$", message = "Student PRN must be alphanumeric characters")
     private String studentPrn;
 
     @NotNull(message = "Gate ID is required")
     private Long gateId;
 
-    @Pattern(regexp = "^([A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4})?$", message = "Please enter a valid Indian vehicle registration number (e.g. MH12AB1234)")
+    @Pattern(regexp = "^$|^[a-zA-Z0-9\\s\\-]{0,20}$", message = "Please enter a valid vehicle registration number")
     private String vehicleNumber;
 
     @Size(max = 50, message = "ID proof type must be up to 50 characters")

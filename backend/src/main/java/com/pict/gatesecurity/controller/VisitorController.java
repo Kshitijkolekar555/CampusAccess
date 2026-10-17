@@ -28,6 +28,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping({"/api/v1/visitors", "/api/visitors"})
@@ -36,6 +37,7 @@ import java.util.List;
 public class VisitorController {
 
     private final VisitorService visitorService;
+    private final com.pict.gatesecurity.service.EndOfDayClosureService endOfDayClosureService;
 
     @PostMapping("/check-in")
     @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF')")
@@ -83,6 +85,7 @@ public class VisitorController {
             @RequestParam(required = false) HostType hostType,
             @RequestParam(required = false) Boolean isBlacklisted,
             @RequestParam(required = false) Boolean activeInside,
+            @RequestParam(required = false) com.pict.gatesecurity.entity.enums.PassStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "timeIn") String sortBy,
@@ -92,7 +95,7 @@ public class VisitorController {
         Sort sort = sortDir.equalsIgnoreCase("ASC") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<VisitorResponse> visitorPage = visitorService.getVisitors(query, department, hostType, isBlacklisted, activeInside, pageable, userDetails.getUsername());
+        Page<VisitorResponse> visitorPage = visitorService.getVisitors(query, department, hostType, isBlacklisted, activeInside, status, pageable, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(visitorPage)));
     }
 
@@ -112,6 +115,17 @@ public class VisitorController {
             @AuthenticationPrincipal UserDetails userDetails) {
         String username = userDetails != null ? userDetails.getUsername() : "visitor_portal";
         VisitorResponse response = visitorService.requestToken(photo, request, username);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(response, "Digital token requested successfully. Pending guard clearance."));
+    }
+
+    @PostMapping(value = {"/request-token", "/generate-token"}, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Request Digital Token (JSON)", description = "Generates a digital token awaiting guard approval")
+    public ResponseEntity<ApiResponse<VisitorResponse>> requestDigitalTokenJson(
+            @Valid @RequestBody VisitorCheckInRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String username = userDetails != null ? userDetails.getUsername() : "visitor_portal";
+        VisitorResponse response = visitorService.requestToken(null, request, username);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(response, "Digital token requested successfully. Pending guard clearance."));
     }
@@ -165,6 +179,14 @@ public class VisitorController {
                 .body(ApiResponse.created(response, "Visitor registered and face enrolled successfully"));
     }
 
+    @GetMapping("/lookup/mobile")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF')")
+    @Operation(summary = "Lookup Returning Visitor by Mobile", description = "Fetches previous visitor details by mobile number as fallback when face does not match")
+    public ResponseEntity<ApiResponse<VisitorResponse>> lookupVisitorByMobile(@RequestParam("mobile") String mobile) {
+        VisitorResponse response = visitorService.findLatestByMobile(mobile);
+        return ResponseEntity.ok(ApiResponse.success(response, response != null ? "Visitor profile found" : "No previous record found"));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'GUARD', 'SECURITY_GUARD')")
     @Operation(summary = "Delete Visitor Record", description = "Deletes visitor entry by ID")
@@ -173,5 +195,16 @@ public class VisitorController {
             @AuthenticationPrincipal UserDetails userDetails) {
         visitorService.deleteVisitor(id, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(null, "Visitor deleted successfully"));
+    }
+
+    @PostMapping("/eod-closure")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'GUARD', 'SECURITY_GUARD')")
+    @Operation(summary = "Trigger End-of-Day Closure", description = "Executes End-of-Day visitor closure sweep for active unclosed visits")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> triggerEodClosure() {
+        int closedCount = endOfDayClosureService.triggerManualClosureNow();
+        return ResponseEntity.ok(ApiResponse.success(
+                Map.of("closedCount", closedCount, "status", "EOD closure completed"),
+                "End-of-day closure executed successfully: " + closedCount + " visits closed"
+        ));
     }
 }

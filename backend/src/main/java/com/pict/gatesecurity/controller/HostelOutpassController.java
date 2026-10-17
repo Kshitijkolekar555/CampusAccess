@@ -29,7 +29,7 @@ public class HostelOutpassController {
     private final HostelOutpassService hostelOutpassService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT')")
     @Operation(summary = "Create Outpass", description = "Creates a new hostel outpass request")
     public ResponseEntity<ApiResponse<HostelOutpassResponse>> createOutpass(
             @Valid @RequestBody HostelOutpassRequest request,

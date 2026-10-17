@@ -40,7 +40,13 @@ import {
   Check,
   XCircle,
   ArrowRight,
-  BookOpen
+  BookOpen,
+  IdCard,
+  HelpCircle,
+  UserX,
+  Printer,
+  Car,
+  Ticket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -64,7 +70,7 @@ const VisitorAvatar: React.FC<{ photoUrl?: string; name: string }> = ({ photoUrl
       return url;
     }
     const clean = url.startsWith('/') ? url : `/${url}`;
-    return `http://localhost:8081${clean}`;
+    return clean;
   };
 
   const resolvedUrl = !imgError ? getResolvedUrl(photoUrl) : null;
@@ -106,11 +112,13 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
   const queryClient = useQueryClient();
   const [liveTime, setLiveTime] = useState(new Date().toLocaleTimeString());
 
-  // Top-Level Mode Selection: 'VISITOR' vs 'STUDENT'
-  const [primaryMode, setPrimaryMode] = useState<'VISITOR' | 'STUDENT'>('VISITOR');
+  // Gate Operations Primary Option:
+  // 1: FIND_STUDENT_PRN | 2: IDENTIFY_VISITOR_PHOTO | 3: FIND_VISITOR_MOBILE | 4: REGISTER_NEW_VISITOR
+  type GateOperationMode = 'FIND_STUDENT_PRN' | 'IDENTIFY_VISITOR_PHOTO' | 'FIND_VISITOR_MOBILE' | 'REGISTER_NEW_VISITOR';
+  const [primaryMode, setPrimaryMode] = useState<GateOperationMode>('FIND_STUDENT_PRN');
 
-  // Student Subcategory: 'REGULAR' vs 'OUTPASS'
-  const [studentMode, setStudentMode] = useState<'REGULAR' | 'OUTPASS'>('REGULAR');
+  // Student Subcategory: 'OUTPASS' (PRN Lookup) vs 'REGULAR' (Gate Pass)
+  const [studentMode, setStudentMode] = useState<'REGULAR' | 'OUTPASS'>('OUTPASS');
 
   // Gate list query
   const { data: gates = [] } = useQuery<Gate[]>({
@@ -123,6 +131,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
   // 1. VISITOR WORKFLOW STATES & MUTATIONS
   // ─────────────────────────────────────────────────────────────────────────────
   const [isWebcamOpen, setIsWebcamOpen] = useState(false);
+  const [webcamInitialMobileLookup, setWebcamInitialMobileLookup] = useState(false);
   const [visitorCapturedBlob, setVisitorCapturedBlob] = useState<Blob | null>(null);
   const [visitorPhotoPreview, setVisitorPhotoPreview] = useState<string | null>(null);
   const [isNewVisitorModalOpen, setIsNewVisitorModalOpen] = useState(false);
@@ -130,6 +139,12 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
   const [visitorExitQuery, setVisitorExitQuery] = useState('');
   const [selectedVisitorForExit, setSelectedVisitorForExit] = useState<Visitor | null>(null);
   const [visitorSearchFilter, setVisitorSearchFilter] = useState('');
+
+  // Dedicated Phone Search State (no camera)
+  const [isPhoneSearchModalOpen, setIsPhoneSearchModalOpen] = useState(false);
+  const [phoneSearchInput, setPhoneSearchInput] = useState('');
+  const [isSearchingPhone, setIsSearchingPhone] = useState(false);
+  const [phoneSearchResult, setPhoneSearchResult] = useState<Visitor | null>(null);
 
   // Returning visitor review state
   const [recognizedVisitorData, setRecognizedVisitorData] = useState<VisitorRecognitionResponse | null>(null);
@@ -170,6 +185,34 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       }
     },
     refetchInterval: 5000,
+  });
+
+  // Real-time query for pending student gate outpass requests awaiting guard approval
+  const { data: pendingStudentPasses = [] } = useQuery<StudentGatePass[]>({
+    queryKey: ['guard-pending-student-passes'],
+    queryFn: async () => {
+      try {
+        const res = await studentPassApi.getPasses({ status: 'PENDING', size: 20 });
+        return res?.content || [];
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 3000,
+  });
+
+  // Real-time query for pending hostel outpasses awaiting review
+  const { data: pendingHostelOutpasses = [] } = useQuery<HostelOutpass[]>({
+    queryKey: ['guard-pending-hostel-outpasses'],
+    queryFn: async () => {
+      try {
+        const res = await hostelOutpassApi.getOutpasses({ status: 'PENDING', size: 20 });
+        return res?.content || [];
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 3000,
   });
 
   // Approve Token Mutation
@@ -255,7 +298,8 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       setVisitorCapturedBlob(blob);
       setVisitorPhotoPreview(URL.createObjectURL(blob));
     } else if (match.photoPath) {
-      setVisitorPhotoPreview(`http://localhost:8081/${match.photoPath.replace(/^\/+/, '')}`);
+      const cleanPath = match.photoPath.startsWith('/') ? match.photoPath : `/${match.photoPath}`;
+      setVisitorPhotoPreview(cleanPath);
     }
     // Pre-fill form values
     if (match.visitorName) setVFormName(match.visitorName);
@@ -404,68 +448,106 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
     }
   });
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 3. OUTPASS STUDENT WORKFLOW STATES & MUTATIONS
-  // ─────────────────────────────────────────────────────────────────────────────
-  const [outpassStudentQuery, setOutpassStudentQuery] = useState('');
-  const [searchedOutpasses, setSearchedOutpasses] = useState<HostelOutpass[]>([]);
-  const [isOutpassSearching, setIsOutpassSearching] = useState(false);
-  const [outpassSearchError, setOutpassSearchError] = useState<string | null>(null);
+  // Guard Approve / Reject Student Outpass or Hostel Outpass Mutation
+  const [reviewModalPass, setReviewModalPass] = useState<(StudentGatePass | HostelOutpass) & { passType?: 'STUDENT_PASS' | 'HOSTEL_OUTPASS' } | null>(null);
+  const [guardApprovalNotes, setGuardApprovalNotes] = useState('');
+  const [guardRejectionReason, setGuardRejectionReason] = useState('');
 
-  const handleOutpassSearch = async (e?: React.FormEvent) => {
+  const guardApproveMutation = useMutation({
+    mutationFn: async (data: { passId: number; approved: boolean; notes?: string; rejectionReason?: string; isHostel?: boolean }) => {
+      if (data.isHostel) {
+        return hostelOutpassApi.approveOutpass(data.passId, {
+          approved: data.approved,
+          wardenRemarks: data.notes,
+          rejectionReason: data.rejectionReason,
+        });
+      }
+      return studentPassApi.approvePass(data.passId, {
+        approved: data.approved,
+        notes: data.notes,
+        rejectionReason: data.rejectionReason,
+      });
+    },
+    onSuccess: (_, variables) => {
+      toast.success(variables.approved ? 'Student Pass / Outpass APPROVED by Guard!' : 'Student Pass / Outpass REJECTED by Guard');
+      queryClient.invalidateQueries({ queryKey: ['student-passes'] });
+      queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-pending-student-passes'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-pending-hostel-outpasses'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
+      setReviewModalPass(null);
+      handleRegularStudentSearch();
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Action failed');
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3. STUDENT ID FORGOTTEN CHECKUP & ENTRY SLIP WORKFLOW
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [forgotIdQuery, setForgotIdQuery] = useState('');
+  const [isSearchingForgotId, setIsSearchingForgotId] = useState(false);
+  const [forgotIdResult, setForgotIdResult] = useState<User | null>(null);
+  const [forgotIdError, setForgotIdError] = useState<string | null>(null);
+  const [issuedSlip, setIssuedSlip] = useState<{
+    studentName: string;
+    studentPrn: string;
+    passNumber: string;
+    gateName: string;
+    timeIssued: string;
+    notes: string;
+  } | null>(null);
+  const [entrySlipNotes, setEntrySlipNotes] = useState('Forgot physical ID card - identity verified via directory check');
+
+  const handleForgotIdSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const query = outpassStudentQuery.trim();
+    const query = forgotIdQuery.trim();
     if (!query) {
-      toast.error('Please enter student PRN to verify outpass');
+      toast.error('Please enter student PRN, Roll No, or Name');
       return;
     }
 
-    setIsOutpassSearching(true);
-    setOutpassSearchError(null);
-    setSearchedOutpasses([]);
+    setIsSearchingForgotId(true);
+    setForgotIdError(null);
+    setForgotIdResult(null);
+    setIssuedSlip(null);
 
     try {
-      const res = await hostelOutpassApi.getOutpasses({ studentPrn: query, size: 10 });
-      if (res && res.content && res.content.length > 0) {
-        setSearchedOutpasses(res.content);
+      const res = await userApi.getUsers({ query, size: 5 });
+      const found = res?.content?.find(
+        (u) =>
+          u.username.toUpperCase() === query.toUpperCase() ||
+          u.fullName.toLowerCase().includes(query.toLowerCase())
+      ) || (res?.content && res.content.length > 0 ? res.content[0] : null);
+
+      if (found) {
+        setForgotIdResult(found);
       } else {
-        setOutpassSearchError(`No hostel outpass records found for PRN "${query}".`);
+        setForgotIdError(`No student profile located for "${query}". Please check the PRN.`);
       }
     } catch (err: any) {
-      setOutpassSearchError(err.response?.data?.message || 'Outpass verification lookup failed');
+      setForgotIdError(err.response?.data?.message || 'Student directory lookup failed');
     } finally {
-      setIsOutpassSearching(false);
+      setIsSearchingForgotId(false);
     }
   };
 
-  // Outpass Exit Mutation
-  const outpassExitMutation = useMutation({
-    mutationFn: (outpassId: number) => hostelOutpassApi.recordGateExit(outpassId, currentGateId),
-    onSuccess: (data) => {
-      toast.success(`Departure recorded! Outpass #${data.outpassNumber || data.id} exited at ${new Date().toLocaleTimeString()}`);
-      queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
-      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
-      handleOutpassSearch();
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Exit record denied');
-    }
-  });
-
-  // Outpass Entry Mutation
-  const outpassEntryMutation = useMutation({
-    mutationFn: (outpassId: number) => hostelOutpassApi.recordGateEntry(outpassId),
-    onSuccess: (data) => {
-      const lateNote = data.isLateReturn ? ' ⚠️ Flagged as Late Return' : '';
-      toast.success(`Return recorded for ${data.studentName}!${lateNote}`);
-      queryClient.invalidateQueries({ queryKey: ['hostel-outpasses'] });
-      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
-      handleOutpassSearch();
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Entry record denied');
-    }
-  });
+  const handleIssueForgotIdSlip = () => {
+    if (!forgotIdResult) return;
+    const slipNumber = `FORGOT-ID-${Math.floor(100000 + Math.random() * 900000)}`;
+    const now = new Date();
+    setIssuedSlip({
+      studentName: forgotIdResult.fullName,
+      studentPrn: forgotIdResult.username,
+      passNumber: slipNumber,
+      gateName: summaryData.gateName || 'Main Entrance Gate',
+      timeIssued: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      notes: entrySlipNotes,
+    });
+    toast.success(`Temporary Entry Slip issued for ${forgotIdResult.fullName} (PRN: ${forgotIdResult.username})`);
+    queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
+  };
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Summary Stats
@@ -479,6 +561,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
     visitorsExitedToday: 0,
     activeVisitorsInsideCampus: activeVisitors.length,
     studentPassesProcessedToday: 0,
+    hostelVerifications: 0,
   };
 
   const filteredVisitors = activeVisitors.filter(
@@ -492,41 +575,39 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
   return (
     <div className="space-y-6 font-sans text-slate-900">
       {/* 1. HEADER BANNER */}
-      <div className="bg-[#0f172a] text-white rounded-md p-5 border border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
-              Gate Duty Terminal
-            </span>
-            <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-              <Clock className="w-3 h-3 text-slate-400" />
-              {liveTime}
-            </span>
+      <div className="bg-[#0f172a] text-white rounded-lg p-4 border border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-white text-sm">
+            {summaryData.guardName ? summaryData.guardName[0].toUpperCase() : 'G'}
           </div>
-
-          <h1 className="text-xl font-bold text-slate-100 tracking-tight">
-            {summaryData.guardName}
-          </h1>
-
-          <p className="text-xs text-slate-400 mt-0.5">
-            Assigned Gate: <span className="text-slate-200 font-medium">{summaryData.gateName}</span> • Terminal ID: <span className="text-slate-200 font-mono font-medium">{summaryData.guardId}</span>
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-slate-100 tracking-tight">
+                {summaryData.guardName}
+              </h1>
+              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
+                ON DUTY
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {summaryData.gateName} · Terminal {summaryData.guardId}
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-end md:self-center">
+          <span className="text-xs text-slate-400 font-sans flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
+            {liveTime}
+          </span>
           {onToggleDetailedView && (
             <button
               onClick={onToggleDetailedView}
-              className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded transition font-medium"
+              className="text-xs sm:text-sm text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-600/80 hover:border-slate-500 px-4 py-1.5 rounded-md transition font-medium shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
-              Detailed View
+              <span>Details</span>
             </button>
           )}
-
-          <div className="bg-emerald-950/50 border border-emerald-500/30 px-3 py-1 rounded text-right">
-            <span className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider block">Status</span>
-            <span className="text-xs font-bold text-emerald-300">ON DUTY</span>
-          </div>
         </div>
       </div>
 
@@ -590,123 +671,331 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
         </div>
       )}
 
-      {/* 3. PRIMARY GATE CATEGORY SELECTION: VISITOR (CAMERA) vs STUDENT */}
-      <div className="bg-white border border-slate-200 rounded-md p-1.5 sm:p-2 shadow-xs">
-        <div className="grid grid-cols-2 gap-2">
+      {/* 2B. PENDING STUDENT OUTPASS CLEARANCE BANNER (Direct Guard Approval Flow) */}
+      {((pendingStudentPasses && pendingStudentPasses.length > 0) || (pendingHostelOutpasses && pendingHostelOutpasses.length > 0)) && (
+        <div className="bg-indigo-50/80 border border-indigo-300 rounded-md p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-950 flex items-center gap-1.5">
+                <GraduationCap className="w-4 h-4 text-indigo-600" />
+                Pending Student Outpasses ({pendingStudentPasses.length + pendingHostelOutpasses.length})
+              </h2>
+            </div>
+            <span className="text-[11px] font-mono text-indigo-900 bg-indigo-100/80 border border-indigo-200 px-2 py-0.5 rounded font-semibold">
+              Awaiting Guard Decision
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Student Gate Passes */}
+            {pendingStudentPasses.map((pass) => (
+              <div
+                key={`gate-pass-${pass.id}`}
+                className="bg-white border border-indigo-200 rounded p-3.5 shadow-xs flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="text-xs font-bold text-slate-900">{pass.studentName}</h3>
+                        <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-semibold">Gate Pass</span>
+                      </div>
+                      <span className="text-[11px] font-mono font-medium text-indigo-600 block mt-0.5">
+                        PRN: {pass.studentPrn}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
+                      #{pass.passNumber || pass.id}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 text-xs space-y-1 bg-slate-50 p-2.5 rounded border border-slate-100">
+                    <p className="text-slate-700 font-medium truncate">
+                      <span className="text-slate-500 font-normal">Reason:</span> {pass.purpose || 'Campus Leave'}
+                    </p>
+                    <p className="text-slate-700 font-medium truncate">
+                      <span className="text-slate-500 font-normal">Dest:</span> {pass.destination || 'Pune'}
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Dep: {pass.departureTime ? new Date(pass.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setReviewModalPass({ ...pass, passType: 'STUDENT_PASS' });
+                      setGuardApprovalNotes('Verified by gate security');
+                      setGuardRejectionReason('');
+                    }}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs py-1.5 rounded transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Review & Decide
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Hostel Outpasses */}
+            {pendingHostelOutpasses.map((outpass) => (
+              <div
+                key={`hostel-outpass-${outpass.id}`}
+                className="bg-white border border-amber-200 rounded p-3.5 shadow-xs flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="text-xs font-bold text-slate-900">{outpass.studentName}</h3>
+                        <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-semibold">Hostel Leave</span>
+                      </div>
+                      <span className="text-[11px] font-mono font-medium text-amber-800 block mt-0.5">
+                        PRN: {outpass.studentPrn}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
+                      #{outpass.outpassNumber || outpass.id}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 text-xs space-y-1 bg-slate-50 p-2.5 rounded border border-slate-100">
+                    <p className="text-slate-700 font-medium truncate">
+                      <span className="text-slate-500 font-normal">Reason:</span> {outpass.reason || 'Campus Leave'}
+                    </p>
+                    <p className="text-slate-700 font-medium truncate">
+                      <span className="text-slate-500 font-normal">Dest:</span> {outpass.destination || outpass.destinationAddress || 'Home'}
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Hostel: {outpass.studentHostel || outpass.hostelBlock || 'Hostel'} ({outpass.studentRoom || outpass.roomNumber || 'Room'})
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setReviewModalPass({ ...outpass, passType: 'HOSTEL_OUTPASS' });
+                      setGuardApprovalNotes('Verified by gate security');
+                      setGuardRejectionReason('');
+                    }}
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs py-1.5 rounded transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Review & Decide
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {/* 3. CAMPUS ACTIVITY & STATISTICAL METRICS */}
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Metric 1: Active Visitors Inside Campus */}
+        <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Active Visitors
+            </p>
+            <p className="text-xl sm:text-2xl font-bold font-mono text-emerald-600 mt-0.5">
+              {summaryData.activeVisitorsInsideCampus ?? activeVisitors.length}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Currently on campus</p>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Metric 2: Visitors Entered Today */}
+        <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Visitors In Today
+            </p>
+            <p className="text-xl sm:text-2xl font-bold font-mono text-slate-900 mt-0.5">
+              {summaryData.visitorsEnteredToday ?? 0}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Verified entries</p>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+            <UserCheck className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Metric 3: Visitors Exited Today */}
+        <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Visitors Out Today
+            </p>
+            <p className="text-xl sm:text-2xl font-bold font-mono text-slate-900 mt-0.5">
+              {summaryData.visitorsExitedToday ?? 0}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Logged exits</p>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 shrink-0">
+            <LogOut className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Metric 4: Student Passes / Hostel Passes Processed Today */}
+        <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Passes Processed
+            </p>
+            <p className="text-xl sm:text-2xl font-bold font-mono text-indigo-600 mt-0.5">
+              {(summaryData.studentPassesProcessedToday ?? 0) + (summaryData.hostelVerifications ?? 0)}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Student & hostel</p>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+            <Ticket className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {/* 4. GATE OPERATIONS: FOUR PRIMARY OPTIONS */}
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-indigo-600" />
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900">
+              Gate Operations
+            </h2>
+          </div>
+          <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+            Primary Terminal Hub
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {/* OPTION 1: Find Student by PRN */}
           <button
-            onClick={() => setPrimaryMode('VISITOR')}
-            className={`flex items-center justify-center gap-1.5 sm:gap-2.5 py-3 sm:py-3.5 px-2 sm:px-4 rounded text-xs sm:text-sm font-semibold transition min-h-[44px] ${
-              primaryMode === 'VISITOR'
-                ? 'bg-[#0f172a] text-white shadow-xs'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            onClick={() => {
+              setPrimaryMode('FIND_STUDENT_PRN');
+              setStudentMode('OUTPASS');
+            }}
+            className={`p-3 rounded-md border text-left transition flex items-center gap-3 min-h-[56px] ${
+              primaryMode === 'FIND_STUDENT_PRN'
+                ? 'bg-indigo-50 border-indigo-500 text-indigo-950 shadow-xs ring-1 ring-indigo-500'
+                : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/80 text-slate-700 hover:text-slate-900'
             }`}
           >
-            <Camera className={`w-4 h-4 shrink-0 ${primaryMode === 'VISITOR' ? 'text-indigo-400' : 'text-slate-500'}`} />
-            <span className="truncate">1. Visitor (Camera)</span>
+            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${
+              primaryMode === 'FIND_STUDENT_PRN' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-indigo-600'
+            }`}>
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-xs font-bold truncate">1. Find Student by PRN</span>
+              <span className="block text-[11px] text-slate-500 truncate">PRN lookup & gate status</span>
+            </div>
           </button>
 
+          {/* OPTION 2: Identify Visitor by Photo */}
           <button
-            onClick={() => setPrimaryMode('STUDENT')}
-            className={`flex items-center justify-center gap-1.5 sm:gap-2.5 py-3 sm:py-3.5 px-2 sm:px-4 rounded text-xs sm:text-sm font-semibold transition min-h-[44px] ${
-              primaryMode === 'STUDENT'
-                ? 'bg-[#0f172a] text-white shadow-xs'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            onClick={() => {
+              setPrimaryMode('IDENTIFY_VISITOR_PHOTO');
+              setWebcamInitialMobileLookup(false);
+              setIsWebcamOpen(true);
+            }}
+            className={`p-3 rounded-md border text-left transition flex items-center gap-3 min-h-[56px] ${
+              primaryMode === 'IDENTIFY_VISITOR_PHOTO'
+                ? 'bg-indigo-50 border-indigo-500 text-indigo-950 shadow-xs ring-1 ring-indigo-500'
+                : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/80 text-slate-700 hover:text-slate-900'
             }`}
           >
-            <GraduationCap className={`w-4 h-4 shrink-0 ${primaryMode === 'STUDENT' ? 'text-indigo-400' : 'text-slate-500'}`} />
-            <span className="truncate">2. Student</span>
+            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${
+              primaryMode === 'IDENTIFY_VISITOR_PHOTO' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-indigo-600'
+            }`}>
+              <Camera className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-xs font-bold truncate">2. Identify Visitor by Photo</span>
+              <span className="block text-[11px] text-slate-500 truncate">Camera & face match</span>
+            </div>
+          </button>
+
+          {/* OPTION 3: Find Visitor by Mobile Number (NO CAMERA) */}
+          <button
+            onClick={() => {
+              setPrimaryMode('FIND_VISITOR_MOBILE');
+              setPhoneSearchInput('');
+              setPhoneSearchResult(null);
+              setIsPhoneSearchModalOpen(true);
+            }}
+            className={`p-3 rounded-md border text-left transition flex items-center gap-3 min-h-[56px] ${
+              primaryMode === 'FIND_VISITOR_MOBILE'
+                ? 'bg-indigo-50 border-indigo-500 text-indigo-950 shadow-xs ring-1 ring-indigo-500'
+                : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/80 text-slate-700 hover:text-slate-900'
+            }`}
+          >
+            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${
+              primaryMode === 'FIND_VISITOR_MOBILE' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-indigo-600'
+            }`}>
+              <Phone className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-xs font-bold truncate">3. Find Visitor by Mobile</span>
+              <span className="block text-[11px] text-slate-500 truncate">Phone lookup & check-out</span>
+            </div>
+          </button>
+
+          {/* OPTION 4: Register New Visitor */}
+          <button
+            onClick={() => {
+              setPrimaryMode('REGISTER_NEW_VISITOR');
+              setRecognizedVisitorData(null);
+              setVisitorCapturedBlob(null);
+              if (visitorPhotoPreview) URL.revokeObjectURL(visitorPhotoPreview);
+              setVisitorPhotoPreview(null);
+              resetVisitorForm();
+              setIsNewVisitorModalOpen(true);
+            }}
+            className={`p-3 rounded-md border text-left transition flex items-center gap-3 min-h-[56px] ${
+              primaryMode === 'REGISTER_NEW_VISITOR'
+                ? 'bg-emerald-50 border-emerald-500 text-emerald-950 shadow-xs ring-1 ring-emerald-500'
+                : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/80 text-slate-700 hover:text-slate-900'
+            }`}
+          >
+            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${
+              primaryMode === 'REGISTER_NEW_VISITOR' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-emerald-600'
+            }`}>
+              <PlusCircle className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="block text-xs font-bold truncate">4. Register New Visitor</span>
+              <span className="block text-[11px] text-slate-500 truncate">New gate pass entry</span>
+            </div>
           </button>
         </div>
       </div>
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {/* 4. VISITOR (CAMERA) MAIN WORKFLOW INTERFACE */}
+      {/* 4. VISITOR (CAMERA & ACTIVE GUEST DIRECTORY) WORKFLOW INTERFACE */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {primaryMode === 'VISITOR' && (
-        <div className="space-y-6">
-          {/* VISITOR ACTION CARDS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* SCAN VISITOR (CAMERA) */}
-            <button
-              onClick={() => setIsWebcamOpen(true)}
-              className="group bg-white hover:bg-slate-50 border-2 border-indigo-200 hover:border-indigo-400 rounded-md p-4 transition shadow-xs text-left flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 flex-shrink-0">
-                  <Camera className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                      Scan Visitor (Camera)
-                    </h3>
-                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.2 rounded">
-                      AI Face
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5">Identify returning visitor / Capture photo</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition" />
-            </button>
+      {primaryMode !== 'FIND_STUDENT_PRN' && (
+        <div className="space-y-5">
 
-            {/* MANUAL VISITOR REGISTRATION */}
-            <button
-              onClick={() => {
-                setRecognizedVisitorData(null);
-                setVisitorCapturedBlob(null);
-                if (visitorPhotoPreview) URL.revokeObjectURL(visitorPhotoPreview);
-                setVisitorPhotoPreview(null);
-                resetVisitorForm();
-                setIsNewVisitorModalOpen(true);
-              }}
-              className="group bg-white hover:bg-slate-50 border border-slate-200 hover:border-emerald-300 rounded-md p-4 transition shadow-xs text-left flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 flex-shrink-0">
-                  <PlusCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition">
-                    Manual Visitor Entry
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Direct entry without camera</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-700 group-hover:translate-x-0.5 transition" />
-            </button>
-
-            {/* VISITOR EXIT / CHECK-OUT */}
-            <button
-              onClick={() => setIsVisitorExitOpen(true)}
-              className="group bg-white hover:bg-slate-50 border border-slate-200 hover:border-rose-300 rounded-md p-4 transition shadow-xs text-left flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700 flex-shrink-0">
-                  <LogOut className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-rose-600 transition">
-                    Visitor Departure (Exit)
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Lookup by mobile or pass number</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-rose-600 group-hover:translate-x-0.5 transition" />
-            </button>
-          </div>
 
           {/* ACTIVE VISITORS CURRENTLY INSIDE */}
-          <div className="bg-white border border-slate-200 rounded-md p-5 shadow-xs space-y-4">
+          <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-600" />
-                  Active Visitors Currently Inside Campus ({activeVisitors.length})
+                  Active Visitors ({activeVisitors.length})
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Record departure when the visitor exits through Gate {currentGateId}.
-                </p>
               </div>
 
               <div className="relative w-full sm:w-64">
@@ -795,10 +1084,22 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {/* 5. STUDENT WORKFLOW INTERFACE (REGULAR STUDENT vs OUTPASS STUDENT) */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {primaryMode === 'STUDENT' && (
+      {primaryMode === 'FIND_STUDENT_PRN' && (
         <div className="space-y-6">
           {/* STUDENT SUBCATEGORY TOGGLE */}
           <div className="flex border-b border-slate-200 bg-white rounded-t-md px-3 sm:px-4 pt-3 gap-3 sm:gap-6 overflow-x-auto">
+            <button
+              onClick={() => setStudentMode('OUTPASS')}
+              className={`pb-3 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 border-b-2 transition min-h-[44px] shrink-0 ${
+                studentMode === 'OUTPASS'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <IdCard className="w-4 h-4" />
+              <span>Student PRN Lookup & Verification</span>
+            </button>
+
             <button
               onClick={() => setStudentMode('REGULAR')}
               className={`pb-3 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 border-b-2 transition min-h-[44px] shrink-0 ${
@@ -808,19 +1109,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
               }`}
             >
               <BookOpen className="w-4 h-4" />
-              <span>Regular Student</span>
-            </button>
-
-            <button
-              onClick={() => setStudentMode('OUTPASS')}
-              className={`pb-3 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 border-b-2 transition min-h-[44px] shrink-0 ${
-                studentMode === 'OUTPASS'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4" />
-              <span>Outpass Student</span>
+              <span>Student Gate Pass Status</span>
             </button>
           </div>
 
@@ -942,6 +1231,20 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                             </div>
 
                             <div className="flex items-center gap-2 self-end sm:self-auto">
+                              {pass.status === 'PENDING' && (
+                                <button
+                                  onClick={() => {
+                                    setReviewModalPass(pass);
+                                    setGuardApprovalNotes('');
+                                    setGuardRejectionReason('');
+                                  }}
+                                  className="bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs px-3 py-1.5 rounded transition flex items-center gap-1 shadow-xs"
+                                >
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  Review & Decide
+                                </button>
+                              )}
+
                               {pass.status === 'APPROVED' && (
                                 <button
                                   onClick={() => {
@@ -993,200 +1296,194 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
           )}
 
           {/* ───────────────────────────────────────────────────────────────────── */}
-          {/* OPTION B: OUTPASS STUDENT */}
+          {/* OPTION B: STUDENT ID FORGOTTEN / DIRECTORY CHECKUP & PASS ISSUANCE */}
           {/* ───────────────────────────────────────────────────────────────────── */}
           {studentMode === 'OUTPASS' && (
-            <div className="bg-white border border-slate-200 rounded-md p-5 shadow-xs space-y-5">
+            <div className="bg-white border border-slate-200 rounded-md p-5 shadow-xs space-y-6">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4 text-indigo-600" />
-                  Hostel Outpass Verification & Gate Operations
+                  <IdCard className="w-4 h-4 text-indigo-600" />
+                  Student PRN Lookup & Directory Verification
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Verify hostel warden approval, check time validity, and record departure (exit) or return (entry) events.
+                  Enter student PRN number (e.g. 310122446894, F24ET046) or Roll No to instantly verify college identity and check enrollment status.
                 </p>
               </div>
 
               {/* SEARCH FORM */}
-              <form onSubmit={handleOutpassSearch} className="flex flex-col sm:flex-row gap-2 max-w-xl">
+              <form onSubmit={handleForgotIdSearch} className="flex flex-col sm:flex-row gap-2 max-w-xl">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
                     type="text"
                     required
-                    placeholder="Enter Student PRN (e.g. F24IT32, student1)"
-                    value={outpassStudentQuery}
-                    onChange={(e) => setOutpassStudentQuery(e.target.value)}
+                    placeholder="Enter Student PRN No. (e.g. 310122446894 or F24ET046)"
+                    value={forgotIdQuery}
+                    onChange={(e) => setForgotIdQuery(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 pl-9 text-xs text-slate-900 font-mono uppercase focus:outline-none focus:border-indigo-500 focus:bg-white"
                   />
                 </div>
                 <button
                   type="submit"
-                  disabled={isOutpassSearching}
+                  disabled={isSearchingForgotId}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2.5 rounded transition flex items-center justify-center gap-1.5 min-h-[44px] w-full sm:w-auto"
                 >
-                  {isOutpassSearching ? (
+                  {isSearchingForgotId ? (
                     <Clock className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <Search className="w-3.5 h-3.5" />
                   )}
-                  <span>Verify Outpass</span>
+                  <span>Search Directory</span>
                 </button>
               </form>
 
-              {/* ERROR / NOT FOUND STATE */}
-              {outpassSearchError && (
+              {/* ERROR STATE */}
+              {forgotIdError && (
                 <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded p-4 text-xs flex items-center gap-2.5">
                   <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-                  <span>{outpassSearchError}</span>
+                  <span>{forgotIdError}</span>
                 </div>
               )}
 
-              {/* OUTPASS RESULTS LIST */}
-              {searchedOutpasses.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Hostel Outpasses Found ({searchedOutpasses.length})
-                  </h3>
-
-                  {searchedOutpasses.map((outpass) => {
-                    const isApproved = outpass.status === 'APPROVED';
-                    const isExited = outpass.status === 'EXITED';
-                    const isReturned = outpass.status === 'RETURNED';
-                    const isRejected = outpass.status === 'REJECTED';
-                    const isPending = outpass.status === 'PENDING';
-                    const isExpired =
-                      (isApproved || isPending) &&
-                      new Date(outpass.expectedReturnTime) < new Date();
-
-                    return (
-                      <div
-                        key={outpass.id}
-                        className={`bg-slate-50/70 border rounded-md p-4 space-y-3 transition ${
-                          isApproved ? 'border-emerald-300 bg-emerald-50/30' :
-                          isExited ? 'border-blue-300 bg-blue-50/30' :
-                          isRejected ? 'border-rose-300 bg-rose-50/30' :
-                          'border-slate-200'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-slate-900">{outpass.studentName}</h4>
-                              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700">
-                                PRN: {outpass.studentPrn}
-                              </span>
-                              <span className="text-xs text-slate-500">
-                                Hostel: <span className="font-medium text-slate-700">{outpass.studentHostel || 'Campus Hostel'}</span> (Room {outpass.studentRoom || '-'})
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">
-                              Reason: <span className="text-slate-800 font-medium">{outpass.reason}</span> • Destination: <span className="text-slate-700">{outpass.destination}</span>
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {isExpired && (
-                              <span className="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                EXPIRED / OVERDUE
-                              </span>
-                            )}
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase border ${
-                              isApproved ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
-                              isExited ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                              isReturned ? 'bg-slate-100 text-slate-800 border-slate-300' :
-                              isRejected ? 'bg-rose-100 text-rose-800 border-rose-300' :
-                              'bg-amber-100 text-amber-800 border-amber-300'
-                            }`}>
-                              {outpass.status}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* TIME RESTRICTIONS & WARDEN VERIFICATION */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] bg-white border border-slate-200 rounded p-2.5">
-                          <div>
-                            <span className="text-slate-400 block">Departure</span>
-                            <span className="font-mono text-slate-700 font-medium">
-                              {new Date(outpass.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block">Expected Return</span>
-                            <span className="font-mono text-slate-700 font-medium">
-                              {new Date(outpass.expectedReturnTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block">Actual Exit</span>
-                            <span className="font-mono text-slate-700 font-medium">
-                              {outpass.gateExitAt ? new Date(outpass.gateExitAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Not yet exited'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block">Warden Remarks</span>
-                            <span className="text-slate-700 truncate block">
-                              {outpass.wardenRemarks || (isApproved ? 'Approved by Warden' : isPending ? 'Pending Approval' : 'No remarks')}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* ACTION BUTTONS WITH BACKEND ENFORCEMENT */}
-                        <div className="pt-2 flex justify-end gap-2">
-                          {isPending && (
-                            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded flex items-center gap-1.5">
-                              <AlertTriangle className="w-3.5 h-3.5" />
-                              <span>Cannot allow exit: Outpass must be APPROVED by Warden first.</span>
-                            </div>
-                          )}
-
-                          {isRejected && (
-                            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded flex items-center gap-1.5">
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Departure prohibited: Outpass was REJECTED ({outpass.rejectionReason || 'No reason provided'}).</span>
-                            </div>
-                          )}
-
-                          {isReturned && (
-                            <span className="text-xs text-slate-500 font-mono self-center">
-                              Outpass returned & closed.
-                            </span>
-                          )}
-
-                          {isApproved && (
-                            <button
-                              onClick={() => {
-                                if (window.confirm(`Confirm departure (exit) for student ${outpass.studentName}?`)) {
-                                  outpassExitMutation.mutate(outpass.id);
-                                }
-                              }}
-                              disabled={outpassExitMutation.isPending}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2 rounded transition shadow-xs flex items-center gap-1.5"
-                            >
-                              <LogOut className="w-3.5 h-3.5" />
-                              Record Gate Departure (Exit)
-                            </button>
-                          )}
-
-                          {isExited && (
-                            <button
-                              onClick={() => {
-                                if (window.confirm(`Confirm return (entry) for student ${outpass.studentName}?`)) {
-                                  outpassEntryMutation.mutate(outpass.id);
-                                }
-                              }}
-                              disabled={outpassEntryMutation.isPending}
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2 rounded transition shadow-xs flex items-center gap-1.5"
-                            >
-                              <LogIn className="w-3.5 h-3.5" />
-                              Record Gate Return (Entry)
-                            </button>
-                          )}
-                        </div>
+              {/* VERIFIED STUDENT PROFILE CARD */}
+              {forgotIdResult && (
+                <div className="bg-slate-50 border border-indigo-200 rounded-lg p-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-base shrink-0">
+                        {forgotIdResult.fullName ? forgotIdResult.fullName[0].toUpperCase() : 'S'}
                       </div>
-                    );
-                  })}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-slate-900">{forgotIdResult.fullName}</h3>
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-white border border-indigo-200 text-indigo-700">
+                            PRN: {forgotIdResult.username}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Role: <span className="font-semibold text-slate-700">Enrolled Student</span> • Registered: {new Date(forgotIdResult.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2.5 py-1 rounded font-bold border ${
+                        forgotIdResult.active
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}>
+                        {forgotIdResult.active ? '✓ ACTIVE ENROLLMENT' : '⚠ SUSPENDED'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* STUDENT VERIFICATION DETAILS */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-white border border-slate-200 rounded-md p-3.5">
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Primary Contact</span>
+                      <span className="font-mono font-medium text-slate-800">{forgotIdResult.phone || 'Contact not on file'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Student Email</span>
+                      <span className="font-mono font-medium text-slate-800 truncate block">{forgotIdResult.email || 'Email not on file'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Campus Entry Status</span>
+                      <span className="font-semibold text-emerald-700">Identity Confirmed</span>
+                    </div>
+                  </div>
+
+                  {/* ISSUE EMERGENCY PASS FORM */}
+                  <div className="bg-indigo-50/50 border border-indigo-100 rounded-md p-4 space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
+                      <Printer className="w-3.5 h-3.5 text-indigo-600" />
+                      Issue Temporary "Forgot ID" Gate Entry Slip
+                    </h4>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-medium text-slate-700">Guard Verification Remarks / Note:</label>
+                      <input
+                        type="text"
+                        value={entrySlipNotes}
+                        onChange={(e) => setEntrySlipNotes(e.target.value)}
+                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                        placeholder="e.g. Identity verified via mobile number and directory match"
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={handleIssueForgotIdSlip}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2 rounded transition shadow-xs flex items-center gap-1.5"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Issue Temporary Entry Slip</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ISSUED TEMPORARY SLIP PREVIEW */}
+              {issuedSlip && (
+                <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-emerald-200 pb-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <h3 className="text-sm font-bold text-emerald-900">
+                        Official Emergency Entry Slip Issued
+                      </h3>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded">
+                      {issuedSlip.passNumber}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-white border border-emerald-200 rounded p-3">
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Student Name</span>
+                      <strong className="text-slate-900">{issuedSlip.studentName}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">PRN</span>
+                      <strong className="text-slate-900 font-mono">{issuedSlip.studentPrn}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Issued Gate</span>
+                      <strong className="text-slate-900">{issuedSlip.gateName}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Issue Time</span>
+                      <strong className="text-slate-900 font-mono">{issuedSlip.timeIssued}</strong>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-emerald-800 m-0">
+                    <strong>Guard Audit Note:</strong> {issuedSlip.notes}
+                  </p>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-medium text-xs px-3 py-1.5 rounded transition flex items-center gap-1.5"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Print Slip
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIssuedSlip(null);
+                        setForgotIdResult(null);
+                        setForgotIdQuery('');
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3 py-1.5 rounded transition"
+                    >
+                      Done & Ready Next
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1198,12 +1495,208 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       {/* 6. MODALS & SUB-FLOWS */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
 
-      {/* A. VISITOR WEBCAM MODAL */}
+      {/* DEDICATED VISITOR PHONE SEARCH MODAL (NO CAMERA) */}
+      <AnimatePresence>
+        {isPhoneSearchModalOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => {
+              setIsPhoneSearchModalOpen(false);
+              setPhoneSearchResult(null);
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-lg w-full bg-white border border-slate-200/90 rounded-2xl p-6 shadow-2xl relative space-y-4 text-slate-800 font-sans"
+            >
+              {/* Modal Header */}
+              <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <Phone className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900 leading-snug">
+                      Find Visitor by Mobile Number
+                    </h3>
+                    <p className="text-xs text-slate-500 font-normal">
+                      Direct phone database search — fast check-in / check-out without camera.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPhoneSearchModalOpen(false);
+                    setPhoneSearchResult(null);
+                  }}
+                  className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-700 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Search Input Form */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const q = phoneSearchInput.trim();
+                  if (!q) {
+                    toast.error('Please enter a mobile number');
+                    return;
+                  }
+                  setIsSearchingPhone(true);
+                  try {
+                    // 1. Try active inside visitors list first
+                    const activeMatch = activeVisitors.find(
+                      (v) => v.mobile?.replace(/\D/g, '') === q.replace(/\D/g, '') || v.mobile === q
+                    );
+                    if (activeMatch) {
+                      setPhoneSearchResult(activeMatch);
+                      setIsSearchingPhone(false);
+                      return;
+                    }
+
+                    // 2. Query backend lookup by mobile
+                    const lookup = await visitorApi.lookupByMobile(q);
+                    if (lookup) {
+                      setPhoneSearchResult(lookup);
+                    } else {
+                      toast.info('No registered visitor found with this mobile number');
+                      setPhoneSearchResult(null);
+                    }
+                  } catch {
+                    toast.info('No visitor found matching this mobile number');
+                    setPhoneSearchResult(null);
+                  } finally {
+                    setIsSearchingPhone(false);
+                  }
+                }}
+                className="flex gap-2"
+              >
+                <div className="relative flex-1">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="tel"
+                    autoFocus
+                    placeholder="Enter 10-digit mobile number (e.g. 9822012345)..."
+                    value={phoneSearchInput}
+                    onChange={(e) => setPhoneSearchInput(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 hover:border-slate-400 focus:border-indigo-600 focus:bg-white rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 outline-none transition font-mono"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSearchingPhone}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow-xs disabled:opacity-50 shrink-0"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>{isSearchingPhone ? 'Searching...' : 'Find Visitor'}</span>
+                </button>
+              </form>
+
+              {/* Search Results Display */}
+              {phoneSearchResult ? (
+                <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-semibold text-base shadow-xs shrink-0">
+                        {phoneSearchResult.name?.charAt(0)?.toUpperCase() || 'V'}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">{phoneSearchResult.name}</h4>
+                        <p className="text-xs font-mono text-slate-600">{phoneSearchResult.mobile}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Host: <span className="font-medium text-slate-700">{phoneSearchResult.hostName || 'General Inquiry'}</span> ({phoneSearchResult.hostDepartment || 'General'})
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border shrink-0 ${
+                      phoneSearchResult.status === 'ACTIVE'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-slate-100 text-slate-700 border-slate-200'
+                    }`}>
+                      {phoneSearchResult.status || 'RECORDED'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-white border border-slate-200 rounded-lg p-3">
+                    <div>
+                      <span className="text-slate-400 text-[11px] block">Purpose</span>
+                      <span className="font-medium text-slate-800">{phoneSearchResult.purpose || 'Campus Visit'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px] block">Pass #</span>
+                      <span className="font-mono font-medium text-slate-800">{phoneSearchResult.passNumber || `VP-${phoneSearchResult.id}`}</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Action Buttons */}
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-200/80">
+                    {/* If inside, provide 1-click Exit */}
+                    {activeVisitors.some((v) => v.id === phoneSearchResult.id) ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          visitorCheckOutMutation.mutate({ visitorId: phoneSearchResult.id });
+                          setIsPhoneSearchModalOpen(false);
+                          setPhoneSearchResult(null);
+                        }}
+                        disabled={visitorCheckOutMutation.isPending}
+                        className="bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow-xs"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Confirm Exit</span>
+                      </button>
+                    ) : (
+                      /* If not currently inside, allow 1-click Check-In */
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVFormName(phoneSearchResult.name);
+                          setVFormMobile(phoneSearchResult.mobile);
+                          setVFormHost(phoneSearchResult.hostName || '');
+                          setVFormDept(phoneSearchResult.hostDepartment || 'IT');
+                          setVFormPurpose(phoneSearchResult.purpose || '');
+                          setVFormVehicle(phoneSearchResult.vehicleNumber || '');
+                          setVFormIdNumber(phoneSearchResult.idProofNumber || '');
+                          setIsPhoneSearchModalOpen(false);
+                          setPhoneSearchResult(null);
+                          setIsNewVisitorModalOpen(true);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow-xs"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        <span>New Entry Pass for this Visitor</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                  <Phone className="w-8 h-8 text-slate-300 mx-auto mb-1.5" />
+                  <p className="text-xs text-slate-600 font-medium">No camera needed.</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Search using visitor's 10-digit mobile number for immediate profile lookup.
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* A. VISITOR WEBCAM MODAL (FOR OPTION 2: IDENTIFY BY PHOTO ONLY) */}
       <VisitorWebcamModal
         isOpen={isWebcamOpen}
         onClose={() => setIsWebcamOpen(false)}
         onRecognized={handleVisitorRecognized}
         onRegisterNew={handleVisitorRegisterNew}
+        initialShowMobileLookup={webcamInitialMobileLookup}
       />
 
       {/* B. VISITOR REGISTRATION / VERIFICATION REVIEW MODAL */}
@@ -1478,6 +1971,195 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                     </p>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* GUARD REVIEW & APPROVE / REJECT STUDENT PASS MODAL */}
+      <AnimatePresence>
+        {reviewModalPass && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setReviewModalPass(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-lg w-full max-h-[92vh] overflow-y-auto bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-2xl relative space-y-4 text-slate-800 font-sans leading-relaxed box-border"
+            >
+              {/* Modal Header */}
+              <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900 leading-snug">
+                      Review Student Pass Request
+                    </h3>
+                    <p className="text-xs text-slate-500 font-normal">
+                      Verify details and make a security clearance decision.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReviewModalPass(null)}
+                  className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-700 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Student Summary Banner Card */}
+              <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-semibold text-base shadow-xs shrink-0">
+                    {reviewModalPass.studentName?.charAt(0)?.toUpperCase() || 'S'}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-semibold text-slate-900">
+                        {reviewModalPass.studentName}
+                      </h4>
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-medium">
+                        PRN: {reviewModalPass.studentPrn}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-normal mt-0.5">
+                      {('studentHostel' in reviewModalPass && reviewModalPass.studentHostel)
+                        ? `Hostel ${reviewModalPass.studentHostel} (${reviewModalPass.studentRoom || reviewModalPass.roomNumber || ''})`
+                        : ('studentDepartment' in reviewModalPass && reviewModalPass.studentDepartment)
+                        ? reviewModalPass.studentDepartment
+                        : 'Student'}
+                      {reviewModalPass.studentClass ? ` • Class ${reviewModalPass.studentClass}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-amber-50 border border-amber-200 text-amber-800 shrink-0">
+                  Pending Clearance
+                </span>
+              </div>
+
+              {/* Travel & Purpose Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="border border-slate-200/90 rounded-xl p-3.5 bg-white space-y-1 shadow-xs">
+                  <span className="text-xs text-slate-500 font-medium block">
+                    Purpose of Leave
+                  </span>
+                  <p className="text-sm font-medium text-slate-800 break-words">
+                    {('purpose' in reviewModalPass ? reviewModalPass.purpose : reviewModalPass.reason) || 'Campus Leave'}
+                  </p>
+                </div>
+
+                <div className="border border-slate-200/90 rounded-xl p-3.5 bg-white space-y-1 shadow-xs">
+                  <span className="text-xs text-slate-500 font-medium block">
+                    Destination
+                  </span>
+                  <p className="text-sm font-medium text-slate-800 break-words">
+                    {reviewModalPass.destination || ('destinationAddress' in reviewModalPass ? reviewModalPass.destinationAddress : 'Pune')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Schedule Timing Window */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl p-3.5 border border-amber-200 bg-amber-50/50 space-y-1">
+                  <span className="text-xs font-medium text-amber-900 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-700" />
+                    Scheduled Departure
+                  </span>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {reviewModalPass.departureTime
+                      ? new Date(reviewModalPass.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : 'Scheduled'}
+                  </p>
+                </div>
+
+                <div className="rounded-xl p-3.5 border border-emerald-200 bg-emerald-50/50 space-y-1">
+                  <span className="text-xs font-medium text-emerald-900 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                    Expected Return
+                  </span>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {reviewModalPass.expectedReturnTime
+                      ? new Date(reviewModalPass.expectedReturnTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : 'Scheduled'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Guard Decision Inputs */}
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="text-xs font-medium text-slate-700 block mb-1">
+                    Approval Notes (Optional):
+                  </label>
+                  <input
+                    type="text"
+                    value={guardApprovalNotes}
+                    onChange={(e) => setGuardApprovalNotes(e.target.value)}
+                    placeholder="e.g. Identity and reason verified at gate"
+                    className="w-full bg-slate-50/60 border border-slate-300 hover:border-slate-400 focus:border-indigo-600 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-800 outline-none transition placeholder:text-slate-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-700 block mb-1">
+                    Rejection Reason (Required if Rejecting):
+                  </label>
+                  <input
+                    type="text"
+                    value={guardRejectionReason}
+                    onChange={(e) => setGuardRejectionReason(e.target.value)}
+                    placeholder="e.g. Incomplete details / unauthorized departure"
+                    className="w-full bg-slate-50/60 border border-slate-300 hover:border-slate-400 focus:border-rose-600 focus:bg-white rounded-lg px-3 py-2 text-xs text-slate-800 outline-none transition placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap sm:flex-nowrap justify-end items-center gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  disabled={guardApproveMutation.isPending}
+                  onClick={() => {
+                    if (!guardRejectionReason.trim()) {
+                      toast.error('Please enter a rejection reason before rejecting');
+                      return;
+                    }
+                    guardApproveMutation.mutate({
+                      passId: reviewModalPass.id,
+                      approved: false,
+                      rejectionReason: guardRejectionReason.trim(),
+                      isHostel: reviewModalPass.passType === 'HOSTEL_OUTPASS',
+                    });
+                  }}
+                  className="w-full sm:w-auto text-center shrink-0 whitespace-nowrap bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 font-medium text-xs px-4 py-2.5 rounded-lg transition disabled:opacity-50"
+                >
+                  Reject Request
+                </button>
+                <button
+                  type="button"
+                  disabled={guardApproveMutation.isPending}
+                  onClick={() => {
+                    guardApproveMutation.mutate({
+                      passId: reviewModalPass.id,
+                      approved: true,
+                      notes: guardApprovalNotes.trim() || undefined,
+                      isHostel: reviewModalPass.passType === 'HOSTEL_OUTPASS',
+                    });
+                  }}
+                  className="w-full sm:w-auto text-center shrink-0 whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-5 py-2.5 rounded-lg transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>Approve Pass</span>
+                </button>
               </div>
             </motion.div>
           </div>

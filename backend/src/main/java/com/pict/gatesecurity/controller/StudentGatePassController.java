@@ -29,7 +29,7 @@ public class StudentGatePassController {
     private final StudentGatePassService studentGatePassService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'HOSTEL_WARDEN', 'STUDENT')")
     @Operation(summary = "Create Gate Pass", description = "Creates a new student gate pass request")
     public ResponseEntity<ApiResponse<StudentGatePassResponse>> createPass(
             @Valid @RequestBody StudentGatePassRequest request,

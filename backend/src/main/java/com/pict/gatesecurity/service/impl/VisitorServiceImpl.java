@@ -160,6 +160,10 @@ public class VisitorServiceImpl implements VisitorService {
         User performer = userRepository.findByUsername(performingUsername).orElse(null);
 
         visitor.setTimeOut(OffsetDateTime.now());
+        visitor.setStatus(PassStatus.COMPLETED);
+        visitor.setClosedAt(OffsetDateTime.now());
+        visitor.setClosedBy(performingUsername);
+        visitor.setClosureReason("Normal Gate Checkout");
         if (StringUtils.hasText(request.getNotes())) {
             String updatedNotes = (visitor.getNotes() != null ? visitor.getNotes() + " | " : "") + "Checkout Note: " + request.getNotes();
             visitor.setNotes(updatedNotes);
@@ -186,14 +190,14 @@ public class VisitorServiceImpl implements VisitorService {
     @Override
     @Transactional(readOnly = true)
     public List<VisitorResponse> getActiveVisitorsInside() {
-        return visitorRepository.findByTimeOutIsNull().stream()
+        return visitorRepository.findAllActiveInsideCampus().stream()
                 .map(visitorMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<VisitorResponse> getVisitors(String query, HostDepartment department, HostType hostType, Boolean isBlacklisted, Boolean activeInside, Pageable pageable, String performingUsername) {
+    public Page<VisitorResponse> getVisitors(String query, HostDepartment department, HostType hostType, Boolean isBlacklisted, Boolean activeInside, PassStatus status, Pageable pageable, String performingUsername) {
         User user = userRepository.findByUsername(performingUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + performingUsername));
 
@@ -224,10 +228,21 @@ public class VisitorServiceImpl implements VisitorService {
                 predicates.add(cb.equal(root.get("isBlacklistedMatch"), isBlacklisted));
             }
 
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
             if (Boolean.TRUE.equals(activeInside)) {
                 predicates.add(cb.isNull(root.get("timeOut")));
+                predicates.add(cb.notEqual(root.get("status"), PassStatus.AUTO_CLOSED_EOD));
+                predicates.add(cb.notEqual(root.get("status"), PassStatus.PENDING));
+                predicates.add(cb.notEqual(root.get("status"), PassStatus.REJECTED));
             } else if (Boolean.FALSE.equals(activeInside)) {
-                predicates.add(cb.isNotNull(root.get("timeOut")));
+                predicates.add(cb.or(
+                        cb.isNotNull(root.get("timeOut")),
+                        cb.equal(root.get("status"), PassStatus.AUTO_CLOSED_EOD),
+                        cb.equal(root.get("status"), PassStatus.REJECTED)
+                ));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -270,6 +285,7 @@ public class VisitorServiceImpl implements VisitorService {
                         .similarity(matchResult.getSimilarity())
                         .numFaces(matchResult.getNumFaces())
                         .isAmbiguous(matchResult.getIsAmbiguous())
+                        .matchType(matchResult.getMatchType())
                         .message(matchResult.getMessage())
                         .quality(matchResult.getQuality())
                         .build();
@@ -282,6 +298,7 @@ public class VisitorServiceImpl implements VisitorService {
                 .similarity(matchResult.getSimilarity())
                 .numFaces(matchResult.getNumFaces())
                 .isAmbiguous(matchResult.getIsAmbiguous())
+                .matchType(matchResult.getMatchType())
                 .message(matchResult.getMessage())
                 .quality(matchResult.getQuality())
                 .build();
@@ -325,20 +342,29 @@ public class VisitorServiceImpl implements VisitorService {
                 .or(() -> userRepository.findFirstByOrderByIdAsc())
                 .orElse(null);
 
+        // Prevent duplicate active check-in
+        String cleanMobile = com.pict.gatesecurity.util.ValidationUtil.normalizePhone(request.getMobile());
+        String cleanName = com.pict.gatesecurity.util.ValidationUtil.normalizeName(request.getName());
+        visitorRepository.findFirstByMobileAndTimeOutIsNullOrderByTimeInDesc(cleanMobile)
+                .ifPresent(v -> {
+                    throw new BadRequestException("Visitor with mobile " + cleanMobile
+                            + " is already checked in (Visitor ID: " + v.getId() + " at " + v.getTimeIn() + ")");
+                });
+
         // Automatic Watchlist Check
-        List<WatchlistEntry> matches = watchlistRepository.findMatchingEntries(request.getMobile(), request.getName());
+        List<WatchlistEntry> matches = watchlistRepository.findMatchingEntries(cleanMobile, cleanName);
         boolean isBlacklistedMatch = !matches.isEmpty();
 
         Visitor visitor = Visitor.builder()
-                .name(request.getName())
-                .mobile(request.getMobile())
-                .purpose(request.getPurpose())
-                .hostName(request.getHostName())
+                .name(cleanName)
+                .mobile(cleanMobile)
+                .purpose(request.getPurpose() != null ? request.getPurpose().trim() : "")
+                .hostName(StringUtils.hasText(request.getHostName()) ? request.getHostName().trim() : "General Inquiry")
                 .hostType(request.getHostType())
                 .hostDepartment(request.getHostDepartment())
                 .studentPrn(request.getStudentPrn())
                 .gate(gate)
-                .vehicleNumber(request.getVehicleNumber())
+                .vehicleNumber(com.pict.gatesecurity.util.ValidationUtil.normalizeVehicleNumber(request.getVehicleNumber()))
                 .timeIn(OffsetDateTime.now())
                 .timeOut(null)
                 .idProofType(StringUtils.hasText(request.getIdProofType()) ? request.getIdProofType() : "Digital Pass")
@@ -360,6 +386,23 @@ public class VisitorServiceImpl implements VisitorService {
         ));
 
         return visitorMapper.toResponse(savedVisitor);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public VisitorResponse findLatestByMobile(String mobile) {
+        if (!StringUtils.hasText(mobile)) {
+            return null;
+        }
+        String cleaned = mobile.replaceAll("[^0-9]", "");
+        if (cleaned.length() > 10 && cleaned.startsWith("91")) {
+            cleaned = cleaned.substring(2);
+        }
+        final String searchMobile = cleaned;
+        return visitorRepository.findFirstByMobileOrderByTimeInDesc(searchMobile)
+                .or(() -> visitorRepository.findFirstByMobileOrderByTimeInDesc(mobile))
+                .map(visitorMapper::toResponse)
+                .orElse(null);
     }
 
     @Override
@@ -496,6 +539,21 @@ public class VisitorServiceImpl implements VisitorService {
     public VisitorResponse approveToken(Long id, String performingUsername) {
         Visitor visitor = visitorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Visitor", "id", id));
+        if (visitor.getStatus() == PassStatus.APPROVED && visitor.getTimeOut() == null) {
+            return visitorMapper.toResponse(visitor);
+        }
+        if (visitor.getTimeOut() != null) {
+            throw new BadRequestException("Visit has already been completed/closed at " + visitor.getTimeOut());
+        }
+        String cleanMobile = visitor.getMobile();
+        visitorRepository.findFirstByMobileAndTimeOutIsNullOrderByTimeInDesc(cleanMobile)
+                .ifPresent(v -> {
+                    if (!v.getId().equals(visitor.getId())) {
+                        throw new BadRequestException("Visitor with mobile " + cleanMobile
+                                + " is already checked in (Visitor ID: " + v.getId() + " at " + v.getTimeIn() + ")");
+                    }
+                });
+
         visitor.setStatus(PassStatus.APPROVED);
         visitor.setTimeIn(OffsetDateTime.now());
         visitor.setNotes((visitor.getNotes() != null ? visitor.getNotes() + " | " : "") + "Approved by Guard @" + performingUsername);

@@ -60,4 +60,18 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
     Optional<Visitor> findFirstByCreatedByIdOrderByCreatedAtDesc(Long userId);
 
     Optional<Visitor> findFirstByMobileOrderByCreatedAtDesc(String mobile);
+
+    // EOD Closure Queries
+    @Query("SELECT v FROM Visitor v WHERE v.timeOut IS NULL AND v.status != 'AUTO_CLOSED_EOD' AND v.timeIn < :cutoff")
+    List<Visitor> findEligibleForEodClosure(@Param("cutoff") OffsetDateTime cutoff);
+
+    @Query("SELECT v FROM Visitor v WHERE v.timeOut IS NULL AND v.status != 'AUTO_CLOSED_EOD' AND v.status != 'PENDING' AND v.status != 'REJECTED'")
+    List<Visitor> findAllActiveInsideCampus();
+
+    @Query("SELECT COUNT(v) FROM Visitor v WHERE v.timeOut IS NULL AND v.status != 'AUTO_CLOSED_EOD' AND v.status != 'PENDING' AND v.status != 'REJECTED'")
+    long countActiveInsideCampus();
+
+    long countByStatus(com.pict.gatesecurity.entity.enums.PassStatus status);
+
+    long countByStatusAndClosedAtBetween(com.pict.gatesecurity.entity.enums.PassStatus status, OffsetDateTime start, OffsetDateTime end);
 }

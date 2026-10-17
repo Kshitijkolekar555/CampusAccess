@@ -40,3 +40,5 @@ __pycache__/
 face-service/face_service.db
 backend/uploads/
 *.onnx
+
+face-service/faces.db

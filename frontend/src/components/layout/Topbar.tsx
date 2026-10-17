@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { Bell, LogOut, User as UserIcon, Menu } from 'lucide-react';
+import { LogOut, Menu, Search, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface TopbarProps {
@@ -10,128 +11,66 @@ interface TopbarProps {
 export const Topbar: React.FC<TopbarProps> = ({ onToggleMenu }) => {
   const { user, logout } = useAuthStore();
 
+  const userInitial = user?.fullName?.trim()?.charAt(0)?.toUpperCase() || user?.username?.charAt(0)?.toUpperCase() || 'U';
+  const roleDisplay = user?.role ? user.role.replace(/_/g, ' ') : '';
+
   return (
-    <header
-      className="px-3 sm:px-6"
-      style={{
-        height: 52,
-        background: 'white',
-        borderBottom: '1px solid var(--line)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 20,
-        flexShrink: 0,
-      }}
-    >
+    <header className="h-[52px] px-3 sm:px-6 bg-white border-b border-slate-200/90 flex items-center justify-between sticky top-0 z-20 shrink-0">
       {/* Left controls: Mobile Menu + Search */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="flex items-center gap-3">
         {onToggleMenu && (
           <button
             type="button"
             onClick={onToggleMenu}
             aria-label="Toggle navigation menu"
-            className="md:hidden flex items-center justify-center rounded text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-            style={{ minWidth: 44, minHeight: 44, padding: 8 }}
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
           >
             <Menu className="w-5 h-5" />
           </button>
         )}
 
-        {/* Page search — underline style (hidden on very small mobile to prevent overflow) */}
-        <div className="hidden sm:flex items-center gap-2" style={{ borderBottom: '1px solid var(--line)', paddingBottom: 6 }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
+        {/* Global search */}
+        <div className="hidden sm:flex items-center gap-2 border-b border-slate-200 pb-1 focus-within:border-indigo-500 transition-colors">
+          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           <input
             type="text"
             placeholder="Search visitors, passes…"
-            style={{
-              background: 'none', border: 'none', outline: 'none',
-              fontFamily: 'Inter, sans-serif', fontSize: 13,
-              color: 'var(--text)', width: 180,
-              caretColor: 'var(--accent)',
-            }}
-            className="placeholder:text-[var(--mute)]"
+            className="bg-transparent border-none outline-none font-sans text-xs sm:text-[13px] text-slate-800 placeholder:text-slate-400 w-44 md:w-56 focus:outline-none"
           />
         </div>
       </div>
 
-      {/* Right controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Role label */}
-        {user?.role && (
-          <span
-            className="hidden xs:inline-block"
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
-              color: 'var(--accent)',
-            }}
-          >
-            {user.role.replace('_', ' ')}
+      {/* Right controls: Role + User Profile + Logout */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        {roleDisplay && (
+          <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold tracking-wider uppercase bg-indigo-50/80 text-indigo-700 border border-indigo-200/60">
+            <Shield className="w-3 h-3 text-indigo-500" />
+            {roleDisplay}
           </span>
         )}
 
-        {/* Notifications */}
-        <Link
-          to="/notifications"
-          style={{
-            position: 'relative', display: 'flex', alignItems: 'center',
-            color: 'var(--mute)', textDecoration: 'none',
-          }}
-        >
-          <Bell className="w-4 h-4" />
-          <span
-            style={{
-              position: 'absolute', top: -2, right: -2,
-              width: 6, height: 6, borderRadius: '50%',
-              background: 'var(--accent)',
-              border: '1.5px solid white',
-            }}
-          />
-        </Link>
-
         {/* User + logout */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 16, borderLeft: '1px solid var(--line)' }}>
+        <div className="flex items-center gap-3 pl-3 sm:pl-4 border-l border-slate-200">
           <Link
             to="/profile"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              textDecoration: 'none',
-            }}
+            className="flex items-center gap-2 text-decoration-none group"
+            title="View Profile"
           >
-            <div
-              style={{
-                width: 28, height: 28, borderRadius: 4,
-                background: 'var(--ink)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 11, color: '#e8e6e2',
-              }}
-            >
-              {user?.fullName?.charAt(0) || 'U'}
+            <div className="w-7 h-7 rounded bg-slate-900 flex items-center justify-center font-sans font-bold text-xs text-slate-100 group-hover:bg-indigo-600 transition-colors shadow-xs">
+              {userInitial}
             </div>
-            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>
-              {user?.username}
+            <span className="font-sans text-[13px] font-medium text-slate-800 group-hover:text-indigo-600 transition-colors max-w-[120px] truncate">
+              {user?.fullName || user?.username || 'User'}
             </span>
           </Link>
 
           <button
+            type="button"
             onClick={logout}
             title="Sign out"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--mute)', display: 'flex', padding: 0, transition: 'color 0.12s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#be123c')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--mute)')}
+            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>

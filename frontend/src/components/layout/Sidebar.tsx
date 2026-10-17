@@ -5,7 +5,7 @@ import { UserRole } from '../../types';
 import {
   LayoutDashboard, Users, Car, Truck, GraduationCap, Home,
   ShieldCheck, Clock, UserCheck, DoorClosed, Bell, User as UserIcon,
-  LogOut, X
+  LogOut, X, Ticket
 } from 'lucide-react';
 
 interface MenuItem {
@@ -19,20 +19,16 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: 'Dashboard',        path: '/dashboard',       icon: <LayoutDashboard className="w-3.5 h-3.5" />, category: 'overview' },
   { title: 'Visitors',         path: '/visitors',        icon: <Users className="w-3.5 h-3.5" />,          roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
+  { title: 'Student Passes',   path: '/student-passes',  icon: <GraduationCap className="w-3.5 h-3.5" />,  roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT'], category: 'gate' },
+  { title: 'Campus Outpasses', path: '/outpasses',       icon: <Home className="w-3.5 h-3.5" />,           roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT'], category: 'gate' },
   { title: 'Vehicles',         path: '/vehicles',        icon: <Car className="w-3.5 h-3.5" />,            roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
   { title: 'Vendors',          path: '/vendors',         icon: <Truck className="w-3.5 h-3.5" />,          roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
-  { title: 'Duty Shifts',      path: '/shifts',          icon: <Clock className="w-3.5 h-3.5" />,          roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
-  { title: 'Student Passes',   path: '/student-passes',  icon: <GraduationCap className="w-3.5 h-3.5" />,  roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT'], category: 'academic' },
-  { title: 'Hostel Outpasses', path: '/hostel-outpasses',icon: <Home className="w-3.5 h-3.5" />,           roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT'], category: 'academic' },
-  { title: 'Gates',            path: '/gates',           icon: <DoorClosed className="w-3.5 h-3.5" />,     roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'academic' },
-  { title: 'Notifications',    path: '/notifications',   icon: <Bell className="w-3.5 h-3.5" />,           roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT'], category: 'admin' },
   { title: 'Profile',          path: '/profile',         icon: <UserIcon className="w-3.5 h-3.5" />,       category: 'admin' },
 ];
 
 const CATS = [
   { key: 'overview',  label: 'Overview'      },
   { key: 'gate',      label: 'Gate & Ops'    },
-  { key: 'academic',  label: 'Campus'        },
   { key: 'admin',     label: 'Admin'         },
 ];
 
@@ -107,105 +103,83 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         />
       )}
 
-      {/* Main Sidebar (Desktop Sticky / Mobile Drawer) */}
+      {/* Main Responsive Sidebar Container */}
       <aside
-        className={`fixed md:sticky top-0 left-0 z-50 md:z-30 h-screen w-64 md:w-[220px] bg-white border-r border-slate-200 flex flex-col flex-shrink-0 transition-transform duration-200 ease-in-out select-none ${
-          isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-[#e2e8f0] flex flex-col transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
+        style={{ fontFamily: 'Inter, sans-serif' }}
       >
         {/* Brand Header */}
-        <div style={S.brand} className="justify-between items-center">
-          <img
-            src="/logo.png"
-            alt="CampusAccess"
-            style={{ height: 38, width: 'auto', objectFit: 'contain', display: 'block' }}
-          />
-
-          {/* Mobile Close Button */}
+        <div style={S.brand} className="justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shadow-indigo-600/30">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="font-bold text-sm tracking-tight text-slate-900 leading-tight">CampusAccess</div>
+              <div className="text-[10px] text-slate-500 font-medium">PICT Security Terminal</div>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            aria-label="Close navigation"
-            className="md:hidden flex items-center justify-center p-2 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-            style={{ minWidth: 44, minHeight: 44 }}
+            className="md:hidden p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav style={S.nav}>
+        {/* Navigation Menu */}
+        <nav style={S.nav} className="space-y-6">
           {CATS.map((cat) => {
-            const items = filteredMenu.filter((m) => m.category === cat.key);
-            if (items.length === 0) return null;
+            const items = filteredMenu.filter((i) => (i.category || 'gate') === cat.key);
+            if (!items.length) return null;
 
             return (
-              <div key={cat.key} style={{ marginBottom: 8 }}>
+              <div key={cat.key}>
                 <div style={S.catLabel}>{cat.label}</div>
-                {items.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => {
-                      if (onClose) onClose();
-                    }}
-                    style={({ isActive }) => ({
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 9,
-                      padding: '8px 10px',
-                      borderRadius: 4,
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: 13,
-                      fontWeight: isActive ? 600 : 500,
-                      color: isActive ? '#4f46e5' : '#334155',
-                      textDecoration: 'none',
-                      borderLeft: isActive ? '3px solid #4f46e5' : '3px solid transparent',
-                      background: isActive ? '#eef2ff' : 'transparent',
-                      transition: 'color 0.12s, background 0.12s',
-                      marginBottom: 2,
-                    })}
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <span style={{ flexShrink: 0, color: isActive ? '#4f46e5' : '#64748b' }}>{item.icon}</span>
-                        <span>{item.title}</span>
-                      </>
-                    )}
-                  </NavLink>
-                ))}
+                <div className="space-y-1 mt-1">
+                  {items.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                          isActive
+                            ? 'bg-indigo-50 text-indigo-700 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        }`
+                      }
+                    >
+                      {item.icon}
+                      <span>{item.title}</span>
+                    </NavLink>
+                  ))}
+                </div>
               </div>
             );
           })}
         </nav>
 
-        {/* User Footer */}
+        {/* Footer Profile & Logout */}
         <div style={S.footer}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, overflow: 'hidden' }}>
-            <div style={S.avatar}>{user?.fullName?.charAt(0) || 'U'}</div>
-            <div style={{ overflow: 'hidden' }}>
-              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: '#0f172a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.fullName || 'User'}
-              </p>
-              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#4f46e5', margin: 0 }}>
-                {user?.role || 'Guest'}
-              </p>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div style={S.avatar}>
+              {user?.fullName ? user.fullName[0].toUpperCase() : 'U'}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 truncate">{user?.fullName || 'User'}</div>
+              <div className="text-[10px] text-slate-500 capitalize truncate">{user?.role?.toLowerCase() || 'Role'}</div>
             </div>
           </div>
-
           <button
             onClick={() => {
-              if (onClose) onClose();
               logout();
+              navigate('/login');
             }}
-            title="Sign out"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#64748b', padding: 8, display: 'flex',
-              borderRadius: 3, transition: 'color 0.12s',
-              minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
+            title="Sign out of terminal"
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>

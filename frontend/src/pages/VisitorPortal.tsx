@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { visitorApi } from '../api/visitors';
 import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
 import type { VisitorRecognitionResponse } from '../types';
+import facultiesData from '../data/faculties.json';
 
 /* ── colour tokens ────────────────────────────────────────────────────────── */
 const C = {
@@ -32,8 +33,9 @@ interface UInputProps {
   icon?: React.ReactNode;
   required?: boolean;
   disabled?: boolean;
+  list?: string;
 }
-const UInput: React.FC<UInputProps> = ({ label, type = 'text', value, onChange, placeholder, icon, required, disabled }) => {
+const UInput: React.FC<UInputProps> = ({ label, type = 'text', value, onChange, placeholder, icon, required, disabled, list }) => {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ marginBottom: 18 }}>
@@ -52,6 +54,7 @@ const UInput: React.FC<UInputProps> = ({ label, type = 'text', value, onChange, 
         <input
           type={type} value={value} onChange={e => onChange(e.target.value)}
           placeholder={placeholder} required={required} disabled={disabled}
+          list={list}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           style={{
             flex: 1, background: 'transparent', border: 'none', outline: 'none',
@@ -134,6 +137,11 @@ export const VisitorPortal: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedVisitor, setSubmittedVisitor] = useState<any>(null);
 
+  // Filter real faculty records matching selected department
+  const facultyOptions = React.useMemo(() => {
+    return facultiesData.filter(f => f.department === hostDept);
+  }, [hostDept]);
+
   /* ── camera recognition handlers (from shared VisitorWebcamModal) ────────── */
   const handleVisitorRecognized = (match: VisitorRecognitionResponse, blob: Blob | null) => {
     setRecognitionResult(match);
@@ -141,7 +149,8 @@ export const VisitorPortal: React.FC = () => {
       setCapturedBlob(blob);
       setCapturedPreview(URL.createObjectURL(blob));
     } else if (match.photoPath) {
-      setCapturedPreview(`http://localhost:8081/${match.photoPath.replace(/^\/+/, '')}`);
+      const cleanPath = match.photoPath.startsWith('/') ? match.photoPath : `/${match.photoPath}`;
+      setCapturedPreview(cleanPath);
     }
 
     // Pre-fill returning visitor fields
@@ -180,15 +189,16 @@ export const VisitorPortal: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const cleanVehicle = vehicle.trim().toUpperCase().replace(/[\s\-]/g, '');
       const visitorData = {
         name:            name.trim(),
-        mobile:          mobile.trim(),
+        mobile:          mobile.trim().replace(/\D/g, ''),
         purpose:         purpose.trim(),
         hostName:        hostName.trim() || 'General Inquiry',
         hostType:        hostType || 'OTHER',
         hostDepartment:  hostDept || 'ADMIN',
         gateId:          1,
-        vehicleNumber:   vehicle.trim() || undefined,
+        vehicleNumber:   cleanVehicle || undefined,
         email:           email.trim() || undefined,
         // If returning, pass existing visitor ID so backend can update rather than create
         ...(recognitionResult?.matched && recognitionResult?.visitorId
@@ -201,7 +211,13 @@ export const VisitorPortal: React.FC = () => {
       setStep('CONFIRM');
       toast.success('Visitor registration successful! Proceed to the gate for security verification.');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || 'Registration failed — please try again.');
+      const errData = err.response?.data;
+      if (errData?.errors && typeof errData.errors === 'object') {
+        const errorList = Object.values(errData.errors).join(', ');
+        toast.error(`Validation failed: ${errorList}`);
+      } else {
+        toast.error(errData?.message || err.message || 'Registration failed — please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -333,34 +349,25 @@ export const VisitorPortal: React.FC = () => {
             {/* ════════ STEP: CAMERA ════════════════════════════════════════ */}
             {step === 'CAMERA' && (
               <motion.div key="camera" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.accent, margin: '0 0 12px' }}>
-                  Step 1 of 3 · Facial Verification
-                </p>
-                <h1 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 'clamp(22px, 3.5vw, 32px)', color: C.text, margin: '0 0 10px', letterSpacing: '-0.02em' }}>
-                  Capture your photo
+                <span className="inline-block text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-0.5 mb-2.5">
+                  Facial Verification
+                </span>
+                <h1 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 'clamp(20px, 3vw, 26px)', color: C.text, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                  Photo Verification
                 </h1>
-                <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13.5, color: C.mute, margin: '0 0 24px', lineHeight: 1.65, maxWidth: 620 }}>
-                  We use your photo to check if you've visited PICT before. If recognised, your visit profile is auto-filled. First-time visitors will be enrolled for rapid recognition on future visits.
+                <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.mute, margin: '0 0 20px', lineHeight: 1.5, maxWidth: 600 }}>
+                  Take a photo to verify your visitor profile or enroll for swift gate clearance.
                 </p>
 
                 {/* Shared VisitorWebcamModal rendered inline */}
-                <div style={{ maxWidth: 680, marginBottom: 24 }}>
+                <div style={{ maxWidth: 680, marginBottom: 16 }}>
                   <VisitorWebcamModal
                     isOpen={true}
                     inline={true}
-                    title="Camera Verification Terminal"
-                    subtitle="Look straight into the camera, capture your photo, and scan against campus records"
                     onClose={() => navigate('/enter')}
                     onRecognized={handleVisitorRecognized}
                     onRegisterNew={handleVisitorRegisterNew}
                   />
-                </div>
-
-                <div style={{ marginTop: 24, padding: '14px 18px', background: 'rgba(47,93,124,0.06)', border: `1px solid rgba(47,93,124,0.15)`, borderRadius: 6, maxWidth: 680 }}>
-                  <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 12.5, color: C.mute, margin: 0, lineHeight: 1.6 }}>
-                    <strong style={{ color: C.text }}>Why is your photo needed?</strong><br />
-                    Your photo is stored securely and used exclusively for gate security clearance. All campus entries require physical guard authorization regardless of match status.
-                  </p>
                 </div>
               </motion.div>
             )}
@@ -384,32 +391,31 @@ export const VisitorPortal: React.FC = () => {
             {/* ════════ STEP: RETURNING VISITOR ═════════════════════════════ */}
             {step === 'RETURNING' && recognitionResult && (
               <motion.div key="returning" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.green, margin: '0 0 12px' }}>
-                  ✓ Returning Visitor Recognised
-                </p>
-                <h1 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 'clamp(22px, 3.5vw, 30px)', color: C.text, margin: '0 0 10px', letterSpacing: '-0.02em' }}>
-                  Welcome back!
+                <span className="inline-block text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 mb-2.5">
+                  Visitor Recognised
+                </span>
+                <h1 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 'clamp(20px, 3vw, 26px)', color: C.text, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                  Welcome back
                 </h1>
-                <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13.5, color: C.mute, margin: '0 0 28px', lineHeight: 1.65 }}>
-                  We found your previous visit record ({((1 - (recognitionResult.confidenceDistance ?? 0.25)) * 100).toFixed(0)}% match confidence). 
-                  Your details are pre-filled below. Please confirm or update them and fill in today's visit purpose.
+                <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.mute, margin: '0 0 20px', lineHeight: 1.5 }}>
+                  Profile details have been auto-filled. Confirm or update below.
                 </p>
 
                 {/* Recognised banner */}
                 <div style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
-                  background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 4, marginBottom: 28,
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                  background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, marginBottom: 20,
                 }}>
                   {capturedPreview && (
-                    <img src={capturedPreview} alt="Your photo" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid #4ade80', flexShrink: 0 }} />
+                    <img src={capturedPreview} alt="Photo" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #4ade80', flexShrink: 0 }} />
                   )}
                   <div>
-                    <p style={{ fontFamily: 'Inter,sans-serif', fontWeight: 600, fontSize: 14, color: '#065f46', margin: '0 0 3px' }}>
+                    <p style={{ fontFamily: 'Inter,sans-serif', fontWeight: 600, fontSize: 13.5, color: '#065f46', margin: 0 }}>
                       <Sparkles size={13} style={{ display: 'inline', marginRight: 5 }} />
-                      {recognitionResult.visitorName || name || 'Visitor'} recognised
+                      {recognitionResult.visitorName || name || 'Visitor'}
                     </p>
-                    <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#047857', margin: 0 }}>
-                      Previous visits on record. Details auto-filled from last visit.
+                    <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 11.5, color: '#047857', margin: '2px 0 0' }}>
+                      Profile found · Details auto-filled
                     </p>
                   </div>
                 </div>
@@ -420,7 +426,19 @@ export const VisitorPortal: React.FC = () => {
                     <UInput label="Mobile Number" value={mobile} onChange={setMobile} type="tel" placeholder="10-digit number" icon={<Phone size={14} />} required />
                   </div>
                   <UInput label="Email (optional)" value={email} onChange={setEmail} type="email" placeholder="you@example.com" icon={<Mail size={14} />} />
-                  <UInput label="Host Name / Person being visited" value={hostName} onChange={setHostName} placeholder="e.g. Prof. Sharma" icon={<Shield size={14} />} />
+                  <UInput
+                    label="Host Name / Person being visited"
+                    value={hostName}
+                    onChange={setHostName}
+                    placeholder="e.g. Prof. Sharma"
+                    icon={<Shield size={14} />}
+                    list="returning-faculty-list"
+                  />
+                  <datalist id="returning-faculty-list">
+                    {facultyOptions.map(f => (
+                      <option key={`${f.name}-${f.email}`} value={f.name}>{`${f.name} (${f.department})`}</option>
+                    ))}
+                  </datalist>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }} className="form-grid">
                     <USelect label="Host Type" value={hostType} onChange={setHostType} options={HOST_TYPES} required />
                     <USelect label="Department" value={hostDept} onChange={setHostDept} options={DEPARTMENTS} required />
@@ -443,16 +461,14 @@ export const VisitorPortal: React.FC = () => {
             {/* ════════ STEP: REGISTER (new visitor) ════════════════════════ */}
             {step === 'REGISTER' && (
               <motion.div key="register" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.accent, margin: '0 0 12px' }}>
-                  Step 2 of 3
-                </p>
-                <h1 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 'clamp(22px, 3.5vw, 30px)', color: C.text, margin: '0 0 10px', letterSpacing: '-0.02em' }}>
-                  Your visit details
+                <span className="inline-block text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-0.5 mb-2.5">
+                  Visitor Details
+                </span>
+                <h1 style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 'clamp(20px, 3vw, 26px)', color: C.text, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                  Visit Details
                 </h1>
-                <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13.5, color: C.mute, margin: '0 0 24px', lineHeight: 1.65 }}>
-                  {capturedBlob
-                    ? "No previous record found. Please fill in your details below. Your photo has been captured for future recognition."
-                    : "Please fill in your visitor details below."}
+                <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.mute, margin: '0 0 20px', lineHeight: 1.5 }}>
+                  Enter your details to generate your campus digital entry pass.
                 </p>
 
                 {/* Photo preview strip */}
@@ -475,7 +491,19 @@ export const VisitorPortal: React.FC = () => {
                     <UInput label="Mobile Number" value={mobile} onChange={setMobile} type="tel" placeholder="10-digit number" icon={<Phone size={14} />} required />
                   </div>
                   <UInput label="Email (optional)" value={email} onChange={setEmail} type="email" placeholder="you@example.com" icon={<Mail size={14} />} />
-                  <UInput label="Host Name / Person being visited" value={hostName} onChange={setHostName} placeholder="e.g. Prof. Sharma" icon={<Shield size={14} />} />
+                  <UInput
+                    label="Host Name / Person being visited"
+                    value={hostName}
+                    onChange={setHostName}
+                    placeholder="e.g. Prof. Sharma"
+                    icon={<Shield size={14} />}
+                    list="register-faculty-list"
+                  />
+                  <datalist id="register-faculty-list">
+                    {facultyOptions.map(f => (
+                      <option key={`${f.name}-${f.email}`} value={f.name}>{`${f.name} (${f.department})`}</option>
+                    ))}
+                  </datalist>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }} className="form-grid">
                     <USelect label="Host Type" value={hostType} onChange={setHostType} options={HOST_TYPES} required />
                     <USelect label="Department" value={hostDept} onChange={setHostDept} options={DEPARTMENTS} required />

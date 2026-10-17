@@ -49,14 +49,13 @@ public class DashboardServiceImpl implements DashboardService {
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
     @Override
-    @Cacheable(value = CacheConfig.CACHE_ADMIN_DASHBOARD, key = "'admin'")
     public AdminDashboardResponse getAdminDashboard() {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime dayStart = ReportSpecifications.toStartOfDay(now.toLocalDate());
         OffsetDateTime dayEnd = ReportSpecifications.toEndOfDay(now.toLocalDate());
 
         long todayVisitors = visitorRepository.countByTimeInBetween(dayStart, dayEnd);
-        long visitorsInside = visitorRepository.countByTimeOutIsNull();
+        long visitorsInside = visitorRepository.countActiveInsideCampus();
         long todayVehicles = vehicleLogRepository.countByEntryTimeBetween(dayStart, dayEnd);
         long vehiclesInside = vehicleLogRepository.countByExitTimeIsNull();
         long todayGatePasses = studentGatePassRepository.countByCreatedAtBetween(dayStart, dayEnd);
@@ -100,7 +99,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @Cacheable(value = CacheConfig.CACHE_GUARD_DASHBOARD, key = "#userId")
+    @Transactional
     public GuardSelfDashboardResponse getGuardSelfDashboard(Long userId) {
         Guard guard = guardRepository.findByUserId(userId)
                 .orElseGet(() -> {
@@ -142,7 +141,7 @@ public class DashboardServiceImpl implements DashboardService {
             vehiclesExitedToday = vehicleLogRepository.countByExitTimeBetween(dayStart, dayEnd);
             materialsProcessedToday = vendorVisitRepository.countByEntryTimeBetweenAndGateId(dayStart, dayEnd, gateId);
             studentPassesProcessedToday = studentGatePassRepository.countByCreatedAtBetween(dayStart, dayEnd);
-            activeVisitorsInsideCampus = visitorRepository.countByTimeOutIsNull();
+            activeVisitorsInsideCampus = visitorRepository.countActiveInsideCampus();
             hostelVerifications = hostelOutpassRepository.countByGateIdAndCreatedAtBetween(gateId, dayStart, dayEnd);
         } else {
             visitorsEnteredToday = visitorRepository.countByTimeInBetween(dayStart, dayEnd);
@@ -151,7 +150,7 @@ public class DashboardServiceImpl implements DashboardService {
             vehiclesExitedToday = vehicleLogRepository.countByExitTimeBetween(dayStart, dayEnd);
             materialsProcessedToday = vendorVisitRepository.countByEntryTimeBetween(dayStart, dayEnd);
             studentPassesProcessedToday = studentGatePassRepository.countByCreatedAtBetween(dayStart, dayEnd);
-            activeVisitorsInsideCampus = visitorRepository.countByTimeOutIsNull();
+            activeVisitorsInsideCampus = visitorRepository.countActiveInsideCampus();
         }
 
         long shiftDurationMinutes = 0;

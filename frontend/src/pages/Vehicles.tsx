@@ -98,6 +98,7 @@ export const Vehicles: React.FC = () => {
     onSuccess: () => {
       toast.success('Vehicle entry logged successfully!');
       queryClient.invalidateQueries({ queryKey: ['vehicle-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
       refetchLogs();
       setEntryVehicle(null);
       setDriverName('');
@@ -116,6 +117,7 @@ export const Vehicles: React.FC = () => {
     onSuccess: () => {
       toast.success('Vehicle exit recorded successfully!');
       queryClient.invalidateQueries({ queryKey: ['vehicle-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
       refetchLogs();
     },
     onError: (err: any) => {
@@ -304,10 +306,10 @@ export const Vehicles: React.FC = () => {
           <DataTable columns={vehicleColumns} data={vehiclePage?.content || []} isLoading={loadingVehicles} />
           {vehiclePage && (
             <Pagination
-              currentPage={vehiclePage.pageNumber}
+              currentPage={vehiclePage.page ?? vehiclePage.pageNumber ?? page}
               totalPages={vehiclePage.totalPages}
               totalElements={vehiclePage.totalElements}
-              pageSize={vehiclePage.pageSize}
+              pageSize={vehiclePage.size ?? vehiclePage.pageSize}
               onPageChange={setPage}
             />
           )}
@@ -317,10 +319,10 @@ export const Vehicles: React.FC = () => {
           <DataTable columns={logColumns} data={logsPage?.content || []} isLoading={loadingLogs} />
           {logsPage && (
             <Pagination
-              currentPage={logsPage.pageNumber}
+              currentPage={logsPage.page ?? logsPage.pageNumber ?? page}
               totalPages={logsPage.totalPages}
               totalElements={logsPage.totalElements}
-              pageSize={logsPage.pageSize}
+              pageSize={logsPage.size ?? logsPage.pageSize}
               onPageChange={setPage}
             />
           )}
@@ -436,13 +438,7 @@ export const Vehicles: React.FC = () => {
         maxWidth="md"
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Select
-              label="Location Gate"
-              value={entryGateId}
-              onChange={(e) => setEntryGateId(Number(e.target.value))}
-              options={gates?.map((g) => ({ label: g.name, value: g.id }))}
-            />
+          <div>
             <Select
               label="Mandatory Purpose"
               value={purpose}

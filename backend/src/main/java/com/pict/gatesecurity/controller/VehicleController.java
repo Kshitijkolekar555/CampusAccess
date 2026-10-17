@@ -29,7 +29,7 @@ public class VehicleController {
     private final VehicleService vehicleService;
 
     @PostMapping("/register")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Register Vehicle", description = "Registers a vehicle in the system")
     public ResponseEntity<ApiResponse<VehicleResponse>> registerVehicle(
             @Valid @RequestBody VehicleRegisterRequest request,
@@ -40,7 +40,7 @@ public class VehicleController {
     }
 
     @PostMapping("/{vehicleId}/entry")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Record Vehicle Entry", description = "Records vehicle entry through a gate")
     public ResponseEntity<ApiResponse<VehicleLogResponse>> recordEntry(
             @PathVariable Long vehicleId,
@@ -52,7 +52,7 @@ public class VehicleController {
     }
 
     @PutMapping("/logs/{logId}/exit")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Record Vehicle Exit", description = "Records vehicle exit")
     public ResponseEntity<ApiResponse<VehicleLogResponse>> recordExit(
             @PathVariable Long logId,
@@ -63,7 +63,7 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Get Vehicle by ID", description = "Fetches vehicle details by ID")
     public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleById(@PathVariable Long id) {
         VehicleResponse response = vehicleService.getVehicleById(id);
@@ -71,7 +71,7 @@ public class VehicleController {
     }
 
     @GetMapping("/registration/{registrationNumber}")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Get Vehicle by Registration", description = "Fetches vehicle details by registration number")
     public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleByRegistrationNumber(
             @PathVariable String registrationNumber) {
@@ -80,7 +80,7 @@ public class VehicleController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Search & Filter Vehicles", description = "Paginated list of vehicles filtered by search query, category, or blacklist status")
     public ResponseEntity<ApiResponse<PageResponse<VehicleResponse>>> getVehicles(
             @RequestParam(required = false) String query,
@@ -99,7 +99,7 @@ public class VehicleController {
     }
 
     @GetMapping("/logs")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
     @Operation(summary = "Search & Filter Vehicle Logs", description = "Paginated list of vehicle entry/exit logs")
     public ResponseEntity<ApiResponse<PageResponse<VehicleLogResponse>>> getVehicleLogs(
             @RequestParam(required = false) Long vehicleId,
