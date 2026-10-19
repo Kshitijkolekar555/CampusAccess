@@ -98,6 +98,12 @@ public class VisitorServiceImpl implements VisitorService {
             log.warn("WATCHLIST WARNING: Visitor {} (Mobile: {}) matched watchlist entries!", cleanName, cleanMobile);
         }
 
+        String photoUrlToUse = StringUtils.hasText(request.getPhotoUrl())
+                ? request.getPhotoUrl()
+                : visitorRepository.findFirstByMobileOrderByIdDesc(cleanMobile)
+                        .map(Visitor::getPhotoUrl)
+                        .orElse(null);
+
         Visitor visitor = Visitor.builder()
                 .name(cleanName)
                 .mobile(cleanMobile)
@@ -112,7 +118,7 @@ public class VisitorServiceImpl implements VisitorService {
                 .timeOut(null)
                 .idProofType(request.getIdProofType())
                 .idProofNumber(request.getIdProofNumber())
-                .photoUrl(request.getPhotoUrl())
+                .photoUrl(photoUrlToUse)
                 .isBlacklistedMatch(isBlacklistedMatch)
                 .notes(request.getNotes())
                 .createdBy(createdBy)

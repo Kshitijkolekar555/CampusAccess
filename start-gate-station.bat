@@ -29,7 +29,9 @@ if exist "venv\Scripts\python.exe" (
 :: 3. Start Spring Boot Backend Server
 echo [3/4] Initializing Spring Boot Security Backend (Port 8081)...
 cd /d "%~dp0backend"
-start "CampusAccess Backend" cmd /k "mvn spring-boot:run"
+set "DB_PASSWORD=root"
+set "SPRING_DATASOURCE_PASSWORD=root"
+start "CampusAccess Backend" cmd /k "set SPRING_DATASOURCE_PASSWORD=root && mvn spring-boot:run"
 
 :: 4. Start Vite Frontend Client (Port 3002)
 echo [4/4] Initializing Web Client Terminal (Port 3002)...

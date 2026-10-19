@@ -300,6 +300,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
     } else if (match.photoPath) {
       const cleanPath = match.photoPath.startsWith('/') ? match.photoPath : `/${match.photoPath}`;
       setVisitorPhotoPreview(cleanPath);
+      setVisitorCapturedBlob(null);
     }
     // Pre-fill form values
     if (match.visitorName) setVFormName(match.visitorName);
@@ -309,8 +310,84 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
     if (match.purpose) setVFormPurpose(match.purpose);
     if (match.vehicleNumber) setVFormVehicle(match.vehicleNumber);
     if (match.idProofNumber) setVFormIdNumber(match.idProofNumber);
+    if (match.idProofType) setVFormIdType(match.idProofType);
     setIsWebcamOpen(false);
+    setIsPhoneSearchModalOpen(false);
     setIsNewVisitorModalOpen(true);
+  };
+
+  const populateVisitorForCheckIn = (visitor: any) => {
+    const rawPhoto = visitor.photoUrl || visitor.photoPath;
+    const cleanPath = rawPhoto ? (rawPhoto.startsWith('/') ? rawPhoto : `/${rawPhoto}`) : null;
+
+    const match: VisitorRecognitionResponse = {
+      matched: true,
+      visitorId: visitor.id,
+      visitorName: visitor.name,
+      mobileNumber: visitor.mobile,
+      hostPersonOrDepartment: `${visitor.hostName || ''} (${visitor.hostDepartment || ''})`.trim(),
+      purpose: visitor.purpose,
+      photoPath: cleanPath || undefined,
+      hostName: visitor.hostName,
+      hostType: visitor.hostType,
+      hostDepartment: visitor.hostDepartment,
+      studentPrn: visitor.studentPrn,
+      idProofType: visitor.idProofType,
+      idProofNumber: visitor.idProofNumber,
+      vehicleNumber: visitor.vehicleNumber,
+      similarity: 1.0,
+      confidenceDistance: 0.0,
+      matchType: 'exact',
+      message: 'Visitor profile loaded via mobile number'
+    };
+
+    handleVisitorRecognized(match, null);
+  };
+
+  const handlePhoneSearch = async (targetPhone?: string) => {
+    const q = (typeof targetPhone === 'string' ? targetPhone : phoneSearchInput).trim();
+    const cleanDigits = q.replace(/\D/g, '');
+    if (!cleanDigits) {
+      toast.error('Please enter a mobile number');
+      return;
+    }
+    if (cleanDigits.length < 10) {
+      toast.error('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
+    setIsSearchingPhone(true);
+    try {
+      // 1. Try active inside visitors list first
+      const activeMatch = activeVisitors.find(
+        (v) => (v.mobile?.replace(/\D/g, '') === cleanDigits) || v.mobile === q
+      );
+
+      // 2. Query backend lookup by mobile
+      const lookup = await visitorApi.lookupByMobile(cleanDigits);
+      const visitor = activeMatch || lookup;
+
+      if (visitor && visitor.name) {
+        setPhoneSearchResult(visitor);
+
+        // If visitor is currently inside campus, show options in modal (Exit vs Re-authorize)
+        if (activeMatch) {
+          toast.info(`Visitor ${visitor.name} is currently inside campus`);
+        } else {
+          // Returning visitor: directly populate and open pass authorization modal (like Option 2!)
+          populateVisitorForCheckIn(visitor);
+          toast.success(`Visitor profile fetched for ${visitor.name}`);
+        }
+      } else {
+        toast.info('No registered visitor found with this mobile number');
+        setPhoneSearchResult(null);
+      }
+    } catch {
+      toast.info('No visitor found matching this mobile number');
+      setPhoneSearchResult(null);
+    } finally {
+      setIsSearchingPhone(false);
+    }
   };
 
   const handleVisitorRegisterNew = (blob: Blob | null) => {
@@ -331,6 +408,9 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       return;
     }
     const idNum = vFormIdNumber.trim() || `VT-${Math.floor(100000 + Math.random() * 900000)}`;
+    const existingPhoto = recognizedVisitorData?.photoPath ||
+      (typeof visitorPhotoPreview === 'string' && !visitorPhotoPreview.startsWith('blob:') ? visitorPhotoPreview : undefined);
+
     visitorCheckInMutation.mutate({
       photoBlob: visitorCapturedBlob,
       data: {
@@ -344,6 +424,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
         idProofType: vFormIdType,
         idProofNumber: idNum,
         vehicleNumber: vFormVehicle.trim() || undefined,
+        photoUrl: existingPhoto,
       }
     });
   };
@@ -1590,39 +1671,9 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
 
               {/* Search Input Form */}
               <form
-                onSubmit={async (e) => {
+                onSubmit={(e) => {
                   e.preventDefault();
-                  const q = phoneSearchInput.trim();
-                  if (!q) {
-                    toast.error('Please enter a mobile number');
-                    return;
-                  }
-                  setIsSearchingPhone(true);
-                  try {
-                    // 1. Try active inside visitors list first
-                    const activeMatch = activeVisitors.find(
-                      (v) => v.mobile?.replace(/\D/g, '') === q.replace(/\D/g, '') || v.mobile === q
-                    );
-                    if (activeMatch) {
-                      setPhoneSearchResult(activeMatch);
-                      setIsSearchingPhone(false);
-                      return;
-                    }
-
-                    // 2. Query backend lookup by mobile
-                    const lookup = await visitorApi.lookupByMobile(q);
-                    if (lookup) {
-                      setPhoneSearchResult(lookup);
-                    } else {
-                      toast.info('No registered visitor found with this mobile number');
-                      setPhoneSearchResult(null);
-                    }
-                  } catch {
-                    toast.info('No visitor found matching this mobile number');
-                    setPhoneSearchResult(null);
-                  } finally {
-                    setIsSearchingPhone(false);
-                  }
+                  handlePhoneSearch();
                 }}
                 className="flex gap-2"
               >
@@ -1633,7 +1684,14 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                     autoFocus
                     placeholder="Enter 10-digit mobile number (e.g. 9822012345)..."
                     value={phoneSearchInput}
-                    onChange={(e) => setPhoneSearchInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPhoneSearchInput(val);
+                      const clean = val.replace(/\D/g, '');
+                      if (clean.length === 10) {
+                        handlePhoneSearch(clean);
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-300 hover:border-slate-400 focus:border-indigo-600 focus:bg-white rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 outline-none transition font-mono"
                   />
                 </div>
@@ -1642,7 +1700,11 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                   disabled={isSearchingPhone}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow-xs disabled:opacity-50 shrink-0"
                 >
-                  <Search className="w-3.5 h-3.5" />
+                  {isSearchingPhone ? (
+                    <Clock className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Search className="w-3.5 h-3.5" />
+                  )}
                   <span>{isSearchingPhone ? 'Searching...' : 'Find Visitor'}</span>
                 </button>
               </form>
@@ -1652,9 +1714,21 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                 <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-semibold text-base shadow-xs shrink-0">
-                        {phoneSearchResult.name?.charAt(0)?.toUpperCase() || 'V'}
-                      </div>
+                      {phoneSearchResult.photoUrl || (phoneSearchResult as any).photoPath ? (
+                        <img
+                          src={
+                            (phoneSearchResult.photoUrl || (phoneSearchResult as any).photoPath).startsWith('/')
+                              ? (phoneSearchResult.photoUrl || (phoneSearchResult as any).photoPath)
+                              : `/${phoneSearchResult.photoUrl || (phoneSearchResult as any).photoPath}`
+                          }
+                          alt={phoneSearchResult.name}
+                          className="w-12 h-12 rounded-lg object-cover border border-slate-300 shadow-xs shrink-0 bg-white"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-semibold text-base shadow-xs shrink-0">
+                          {phoneSearchResult.name?.charAt(0)?.toUpperCase() || 'V'}
+                        </div>
+                      )}
                       <div>
                         <h4 className="text-sm font-semibold text-slate-900">{phoneSearchResult.name}</h4>
                         <p className="text-xs font-mono text-slate-600">{phoneSearchResult.mobile}</p>
@@ -1664,11 +1738,11 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                       </div>
                     </div>
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border shrink-0 ${
-                      phoneSearchResult.status === 'ACTIVE'
+                      activeVisitors.some((v) => v.id === phoneSearchResult.id)
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : 'bg-slate-100 text-slate-700 border-slate-200'
                     }`}>
-                      {phoneSearchResult.status || 'RECORDED'}
+                      {activeVisitors.some((v) => v.id === phoneSearchResult.id) ? 'CURRENTLY INSIDE' : 'REGISTERED PROFILE'}
                     </span>
                   </div>
 
@@ -1685,41 +1759,40 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
 
                   {/* Quick Action Buttons */}
                   <div className="flex justify-end gap-2 pt-2 border-t border-slate-200/80">
-                    {/* If inside, provide 1-click Exit */}
+                    {/* If inside, provide 1-click Exit AND option to view/re-authorize */}
                     {activeVisitors.some((v) => v.id === phoneSearchResult.id) ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          visitorCheckOutMutation.mutate({ visitorId: phoneSearchResult.id });
-                          setIsPhoneSearchModalOpen(false);
-                          setPhoneSearchResult(null);
-                        }}
-                        disabled={visitorCheckOutMutation.isPending}
-                        className="bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow-xs"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Confirm Exit</span>
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => populateVisitorForCheckIn(phoneSearchResult)}
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs px-3 py-2 rounded-lg transition flex items-center gap-1.5"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>View Pass</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            visitorCheckOutMutation.mutate({ visitorId: phoneSearchResult.id });
+                            setIsPhoneSearchModalOpen(false);
+                            setPhoneSearchResult(null);
+                          }}
+                          disabled={visitorCheckOutMutation.isPending}
+                          className="bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow-xs"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Confirm Exit</span>
+                        </button>
+                      </>
                     ) : (
                       /* If not currently inside, allow 1-click Check-In */
                       <button
                         type="button"
-                        onClick={() => {
-                          setVFormName(phoneSearchResult.name);
-                          setVFormMobile(phoneSearchResult.mobile);
-                          setVFormHost(phoneSearchResult.hostName || '');
-                          setVFormDept(phoneSearchResult.hostDepartment || 'IT');
-                          setVFormPurpose(phoneSearchResult.purpose || '');
-                          setVFormVehicle(phoneSearchResult.vehicleNumber || '');
-                          setVFormIdNumber(phoneSearchResult.idProofNumber || '');
-                          setIsPhoneSearchModalOpen(false);
-                          setPhoneSearchResult(null);
-                          setIsNewVisitorModalOpen(true);
-                        }}
+                        onClick={() => populateVisitorForCheckIn(phoneSearchResult)}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow-xs"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
-                        <span>New Entry Pass for this Visitor</span>
+                        <span>Auto-Fill & Authorize Entry Pass</span>
                       </button>
                     )}
                   </div>
@@ -1828,7 +1901,22 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                       maxLength={10}
                       placeholder="e.g. 9876543210"
                       value={vFormMobile}
-                      onChange={(e) => setVFormMobile(e.target.value)}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        setVFormMobile(val);
+                        const cleanDigits = val.replace(/\D/g, '');
+                        if (cleanDigits.length === 10 && !recognizedVisitorData) {
+                          try {
+                            const lookup = await visitorApi.lookupByMobile(cleanDigits);
+                            if (lookup && lookup.name) {
+                              toast.success(`Found previous record for ${lookup.name}! Details auto-filled.`);
+                              populateVisitorForCheckIn(lookup);
+                            }
+                          } catch {
+                            // continue manual registration
+                          }
+                        }
+                      }}
                       className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-indigo-500"
                     />
                   </div>

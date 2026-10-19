@@ -22,6 +22,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         changeOrigin: true,
       },
+      '/visitor-photos': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
     },
   },
 });
