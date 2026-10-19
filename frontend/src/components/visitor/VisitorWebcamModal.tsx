@@ -580,6 +580,9 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                 <Button variant="outline" size="sm" onClick={() => startCamera(selectedDeviceId || undefined)}>
                   Try Again
                 </Button>
+                <Button variant="secondary" size="sm" leftIcon={<UserPlus className="w-4 h-4" />} onClick={handleManualEntry}>
+                  Manual Registration
+                </Button>
               </div>
             </div>
           )}
@@ -841,6 +844,17 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                 className="w-full sm:w-auto"
               >
                 {hasCapture ? 'Recognise' : 'Capture & Scan'}
+              </Button>
+            )}
+
+            {hasCapture && !recognitionResult && (
+              <Button
+                variant="secondary"
+                leftIcon={<UserPlus className="w-4 h-4" />}
+                onClick={handleManualEntry}
+                className="w-full sm:w-auto !bg-slate-700 hover:!bg-slate-800 text-white"
+              >
+                Register as New with Photo
               </Button>
             )}
 

@@ -124,11 +124,11 @@ def find_best_match(query_embedding: np.ndarray, threshold: float = 0.35, appear
     best_match_id, min_distance = subject_scores[0]
     second_min_distance = subject_scores[1][1] if len(subject_scores) > 1 else 1.0
 
-    # Ambiguity check: ONLY triggers if it's a borderline match (dist >= 0.22)
-    # and two different people are within a tiny margin (0.02)
+    # Ambiguity check: ONLY triggers if match is outside exact threshold (> threshold)
+    # and two candidates have virtually identical borderline scores
     is_ambiguous = False
-    if len(subject_scores) > 1 and min_distance > 0.22 and min_distance <= appearance_shift_threshold:
-        if (second_min_distance - min_distance) < 0.02 and second_min_distance <= appearance_shift_threshold:
+    if len(subject_scores) > 1 and min_distance > threshold and min_distance <= appearance_shift_threshold:
+        if (second_min_distance - min_distance) < 0.01 and second_min_distance <= appearance_shift_threshold:
             is_ambiguous = True
 
     if not is_ambiguous:

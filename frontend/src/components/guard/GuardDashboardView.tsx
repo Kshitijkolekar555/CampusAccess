@@ -45,7 +45,9 @@ import {
   Car,
   Users,
   LogOut,
+  Upload,
 } from 'lucide-react';
+import { compressImageFile } from '../../utils/imageCompression';
 
 import { toast } from 'sonner';
 
@@ -157,6 +159,30 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
   const [vFormVehicle, setVFormVehicle] = useState('');
   const [vFormIdType, setVFormIdType] = useState('Aadhaar');
   const [vFormIdNumber, setVFormIdNumber] = useState('');
+
+  // Photo upload input reference for manual visitor registration
+  const visitorPhotoUploadRef = React.useRef<HTMLInputElement>(null);
+
+  const handleVisitorPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      toast.info('Compressing visitor photo...');
+      const compressed = await compressImageFile(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.8,
+        format: 'image/jpeg',
+      });
+      setVisitorCapturedBlob(compressed.blob);
+      setVisitorPhotoPreview(compressed.dataUrl);
+      toast.success('Visitor photo attached successfully!');
+    } catch (err: any) {
+      toast.error('Failed to attach photo: ' + (err.message || 'Unknown error'));
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
 
   // Live clock
   useEffect(() => {
@@ -1857,21 +1883,103 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
               </div>
 
               <form onSubmit={handleVisitorFormSubmit} className="p-5 space-y-3.5 overflow-y-auto flex-1">
-                {/* Photo Preview Badge */}
-                {visitorPhotoPreview && (
-                  <div className="bg-slate-50 border border-slate-200 rounded p-3 flex items-center gap-3">
-                    <img
-                      src={visitorPhotoPreview}
-                      alt="Captured"
-                      className="w-14 h-14 rounded object-cover border border-slate-200 bg-white"
-                    />
-                    <div className="text-xs">
-                      <p className="font-semibold text-slate-800">
-                        {recognizedVisitorData?.matched ? 'Matched Returning Face' : 'Captured Visitor Photo'}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        Stored in database for automated recognition on future visits.
-                      </p>
+                {/* Hidden File Input for Direct Photo Upload / Mobile Camera */}
+                <input
+                  ref={visitorPhotoUploadRef}
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  onChange={handleVisitorPhotoUpload}
+                  className="hidden"
+                />
+
+                {/* Photo Preview / Capture Card */}
+                {visitorPhotoPreview ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={visitorPhotoPreview}
+                        alt="Visitor"
+                        className="w-14 h-14 rounded-lg object-cover border border-slate-300 bg-white shadow-xs shrink-0"
+                      />
+                      <div className="text-xs">
+                        <p className="font-semibold text-slate-900">
+                          {recognizedVisitorData?.matched ? 'Visitor Photo on File' : 'Visitor Photo Attached'}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          {visitorCapturedBlob ? 'Enrolled for automatic face ID on next visit' : 'Previous face template on record'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNewVisitorModalOpen(false);
+                          setIsWebcamOpen(true);
+                        }}
+                        className="text-xs font-medium text-indigo-600 hover:text-indigo-800 px-2.5 py-1.5 rounded-md border border-indigo-200 bg-white hover:bg-indigo-50 transition flex items-center gap-1"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Retake</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => visitorPhotoUploadRef.current?.click()}
+                        className="text-xs font-medium text-slate-600 hover:text-slate-800 px-2.5 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 transition flex items-center gap-1"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVisitorCapturedBlob(null);
+                          if (visitorPhotoPreview?.startsWith('blob:')) {
+                            URL.revokeObjectURL(visitorPhotoPreview);
+                          }
+                          setVisitorPhotoPreview(null);
+                        }}
+                        className="text-xs text-rose-500 hover:text-rose-700 p-1.5 rounded hover:bg-rose-50 transition"
+                        title="Remove Photo"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-indigo-50/70 border border-dashed border-indigo-300 rounded-lg p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 shrink-0">
+                        <Camera className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900">Take Visitor Photo (Biometric Enrollment)</h4>
+                        <p className="text-[11px] text-slate-500">
+                          Capture live face photo or upload an image to enroll for fast future visits.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNewVisitorModalOpen(false);
+                          setIsWebcamOpen(true);
+                        }}
+                        className="flex-1 sm:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-3 py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Open Camera</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => visitorPhotoUploadRef.current?.click()}
+                        className="flex-1 sm:flex-initial bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium text-xs px-3 py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload Photo</span>
+                      </button>
                     </div>
                   </div>
                 )}
