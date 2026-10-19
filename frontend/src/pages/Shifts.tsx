@@ -224,15 +224,15 @@ export const Shifts: React.FC = () => {
             </p>
           </div>
 
-          <div className="shrink-0 flex items-center gap-3">
+          <div className="w-full md:w-auto shrink-0 flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
             {!currentShift ? (
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 w-full sm:w-auto">
+                <div className="flex flex-col flex-1 sm:flex-initial">
                   <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
                     Select Gate:
                   </label>
                   <select
-                    className="bg-white text-slate-900 border border-slate-300 rounded px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-500"
+                    className="bg-white text-slate-900 border border-slate-300 rounded px-3 py-2 text-xs font-medium focus:outline-none focus:border-indigo-500 w-full"
                     value={selectedGateId}
                     onChange={(e) => setSelectedGateId(Number(e.target.value))}
                   >
@@ -252,11 +252,11 @@ export const Shifts: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-0 sm:pt-4">
                   <button
                     onClick={() => startMutation.mutate()}
                     disabled={startMutation.isPending}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2.5 rounded transition shadow-xs flex items-center gap-1.5"
+                    className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 py-2.5 min-h-[40px] rounded transition shadow-xs flex items-center gap-1.5"
                   >
                     <Play className="w-4 h-4" />
                     Start Shift
@@ -264,10 +264,10 @@ export const Shifts: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <button
                   onClick={() => setIsLogModalOpen(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2.5 rounded transition shadow-xs flex items-center gap-1.5"
+                  className="flex-1 sm:flex-initial justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2.5 min-h-[40px] rounded transition shadow-xs flex items-center gap-1.5"
                 >
                   <PlusCircle className="w-4 h-4" />
                   Log Activity
@@ -275,7 +275,7 @@ export const Shifts: React.FC = () => {
                 <button
                   onClick={() => endMutation.mutate()}
                   disabled={endMutation.isPending}
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs px-4 py-2.5 rounded transition shadow-xs flex items-center gap-1.5"
+                  className="flex-1 sm:flex-initial justify-center bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs px-4 py-2.5 min-h-[40px] rounded transition shadow-xs flex items-center gap-1.5"
                 >
                   <Square className="w-4 h-4" />
                   End Shift

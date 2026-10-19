@@ -373,7 +373,32 @@ export interface GuardSelfDashboardResponse {
   studentPassesProcessedToday?: number;
   hostelVerifications?: number;
   activeVisitorsInsideCampus: number;
+  todayTotalVisitors?: number;
+  todayApprovedVisitors?: number;
+  todayRejectedVisitors?: number;
+  todayCurrentlyInside?: number;
+  todayCheckedOutVisitors?: number;
   recentLogs: ShiftLog[];
+}
+
+export interface SystemStatisticsResponse {
+  filterType: 'LIFETIME' | 'TODAY' | 'YESTERDAY' | 'THIS_MONTH' | 'MONTH' | 'CUSTOM';
+  fromDate?: string;
+  toDate?: string;
+  label: string;
+  totalVisitors: number;
+  approvedVisitors: number;
+  rejectedVisitors: number;
+  completedVisits: number;
+  currentlyInside: number;
+  totalVehicles: number;
+  totalStudentPasses: number;
+  totalHostelOutpasses: number;
+  totalVendorVisits: number;
+  pendingTokens: number;
+  generatedAt: string;
+  generatedBy: string;
+  gateName?: string;
 }
 
 export interface StudentAuthDto {

@@ -126,7 +126,7 @@ export const Users: React.FC = () => {
           </h2>
           <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Manage user accounts, roles, credentials, and access permissions.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {page > 0 && (
             <Button variant="outline" leftIcon={<ArrowLeft className="w-4 h-4" />} onClick={() => setPage(page - 1)}>
               Back to Previous Page
@@ -152,7 +152,7 @@ export const Users: React.FC = () => {
       {/* Create User Modal */}
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create System Account">
         <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Full Name" required value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
             <Input label="Username / Employee / PRN Code" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
             <Input label="Password" type="password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
@@ -172,11 +172,11 @@ export const Users: React.FC = () => {
               ]}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             <Input label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
-          <div className="flex justify-end gap-3 pt-4" style={{ borderTop: '1px solid var(--line)' }}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4" style={{ borderTop: '1px solid var(--line)' }}>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={createMutation.isPending}>Create User</Button>
           </div>

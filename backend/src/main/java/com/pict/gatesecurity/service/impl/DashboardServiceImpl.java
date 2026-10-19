@@ -7,10 +7,12 @@ import com.pict.gatesecurity.dto.report.GuardPerformanceResponse;
 import com.pict.gatesecurity.dto.report.PeakHoursResponse;
 import com.pict.gatesecurity.entity.*;
 import com.pict.gatesecurity.entity.enums.*;
+import com.pict.gatesecurity.exception.BadRequestException;
 import com.pict.gatesecurity.exception.ResourceNotFoundException;
 import com.pict.gatesecurity.repository.*;
 import com.pict.gatesecurity.service.DashboardService;
 import com.pict.gatesecurity.util.ReportSpecifications;
+import org.springframework.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -196,6 +198,13 @@ public class DashboardServiceImpl implements DashboardService {
             }
         }
 
+        long todayTotalVisitors = visitorRepository.countTotalVisitorsBetween(dayStart, dayEnd);
+        long todayApprovedVisitors = visitorRepository.countApprovedBetween(dayStart, dayEnd,
+                List.of(PassStatus.APPROVED, PassStatus.COMPLETED, PassStatus.AUTO_CLOSED_EOD));
+        long todayRejectedVisitors = visitorRepository.countRejectedBetween(dayStart, dayEnd);
+        long todayCurrentlyInside = visitorRepository.countUniqueActiveInsideCampus();
+        long todayCheckedOutVisitors = visitorRepository.countCompletedBetween(dayStart, dayEnd);
+
         return GuardSelfDashboardResponse.builder()
                 .guardName(guardName)
                 .guardId(guardCode)
@@ -214,12 +223,161 @@ public class DashboardServiceImpl implements DashboardService {
                 .materialsProcessedToday(materialsProcessedToday)
                 .studentPassesProcessedToday(studentPassesProcessedToday)
                 .activeVisitorsInsideCampus(activeVisitorsInsideCampus)
+                .todayTotalVisitors(todayTotalVisitors)
+                .todayApprovedVisitors(todayApprovedVisitors)
+                .todayRejectedVisitors(todayRejectedVisitors)
+                .todayCurrentlyInside(todayCurrentlyInside)
+                .todayCheckedOutVisitors(todayCheckedOutVisitors)
                 .shiftDurationMinutes(shiftDurationMinutes)
                 .visitorsProcessed(visitorsEnteredToday)
                 .vehiclesProcessed(vehiclesEnteredToday)
                 .vendorEntries(materialsProcessedToday)
                 .hostelVerifications(hostelVerifications)
                 .recentLogs(recentLogs)
+                .build();
+    }
+
+    @Override
+    public SystemStatisticsResponse getSystemStatistics(String filterType, LocalDate fromDate, LocalDate toDate, Integer year, Integer month, Long userId) {
+        String effectiveFilter = StringUtils.hasText(filterType) ? filterType.trim().toUpperCase() : "LIFETIME";
+
+        LocalDate today = LocalDate.now(IST);
+        OffsetDateTime start = null;
+        OffsetDateTime end = null;
+        String label = "Lifetime (All Historical Records)";
+        LocalDate effectiveFrom = null;
+        LocalDate effectiveTo = null;
+
+        switch (effectiveFilter) {
+            case "TODAY" -> {
+                effectiveFrom = today;
+                effectiveTo = today;
+                start = ReportSpecifications.toStartOfDay(today);
+                end = ReportSpecifications.toEndOfDay(today);
+                label = "Today (" + today + ")";
+            }
+            case "YESTERDAY" -> {
+                LocalDate yesterday = today.minusDays(1);
+                effectiveFrom = yesterday;
+                effectiveTo = yesterday;
+                start = ReportSpecifications.toStartOfDay(yesterday);
+                end = ReportSpecifications.toEndOfDay(yesterday);
+                label = "Yesterday (" + yesterday + ")";
+            }
+            case "THIS_MONTH" -> {
+                LocalDate firstOfMonth = today.withDayOfMonth(1);
+                effectiveFrom = firstOfMonth;
+                effectiveTo = today;
+                start = ReportSpecifications.toStartOfDay(firstOfMonth);
+                end = ReportSpecifications.toEndOfDay(today);
+                label = "This Month (" + firstOfMonth + " to " + today + ")";
+            }
+            case "MONTH" -> {
+                int y = (year != null && year > 2000) ? year : today.getYear();
+                int m = (month != null && month >= 1 && month <= 12) ? month : today.getMonthValue();
+                LocalDate firstDay = LocalDate.of(y, m, 1);
+                LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
+                effectiveFrom = firstDay;
+                effectiveTo = lastDay;
+                start = ReportSpecifications.toStartOfDay(firstDay);
+                end = ReportSpecifications.toEndOfDay(lastDay);
+                label = firstDay.getMonth().name() + " " + y;
+            }
+            case "CUSTOM" -> {
+                if (fromDate == null || toDate == null) {
+                    throw new BadRequestException("Start date and end date are required for custom date range filter");
+                }
+                if (toDate.isBefore(fromDate)) {
+                    throw new BadRequestException("End date cannot be earlier than start date");
+                }
+                effectiveFrom = fromDate;
+                effectiveTo = toDate;
+                start = ReportSpecifications.toStartOfDay(fromDate);
+                end = ReportSpecifications.toEndOfDay(toDate);
+                label = "Custom Range (" + fromDate + " to " + toDate + ")";
+            }
+            default -> {
+                effectiveFilter = "LIFETIME";
+                label = "Lifetime (All Available Historical Records)";
+            }
+        }
+
+        long totalVisitors;
+        long approvedVisitors;
+        long rejectedVisitors;
+        long completedVisits;
+
+        long totalVehicles;
+        long totalStudentPasses;
+        long totalHostelOutpasses;
+        long totalVendorVisits;
+
+        if (start != null && end != null) {
+            totalVisitors = visitorRepository.countTotalVisitorsBetween(start, end);
+            approvedVisitors = visitorRepository.countApprovedBetween(start, end,
+                    List.of(PassStatus.APPROVED, PassStatus.COMPLETED, PassStatus.AUTO_CLOSED_EOD));
+            rejectedVisitors = visitorRepository.countRejectedBetween(start, end);
+            completedVisits = visitorRepository.countCompletedBetween(start, end);
+
+            totalVehicles = vehicleLogRepository.countByEntryTimeBetween(start, end);
+            totalStudentPasses = studentGatePassRepository.countByCreatedAtBetween(start, end);
+            totalHostelOutpasses = hostelOutpassRepository.countByCreatedAtBetween(start, end);
+            totalVendorVisits = vendorVisitRepository.countByEntryTimeBetween(start, end);
+        } else {
+            totalVisitors = visitorRepository.count();
+            approvedVisitors = visitorRepository.countByStatusIn(
+                    List.of(PassStatus.APPROVED, PassStatus.COMPLETED, PassStatus.AUTO_CLOSED_EOD));
+            rejectedVisitors = visitorRepository.countByStatus(PassStatus.REJECTED);
+            completedVisits = visitorRepository.countByStatus(PassStatus.COMPLETED);
+
+            totalVehicles = vehicleLogRepository.count();
+            totalStudentPasses = studentGatePassRepository.count();
+            totalHostelOutpasses = hostelOutpassRepository.count();
+            totalVendorVisits = vendorVisitRepository.count();
+        }
+
+        // Live occupancy is logically consistent with real-time on-campus presence
+        long currentlyInside = visitorRepository.countUniqueActiveInsideCampus();
+        long pendingTokens = visitorRepository.countByStatus(PassStatus.PENDING);
+
+        String guardName = "Security Officer";
+        String gateName = "All Gates / Main Gate";
+        if (userId != null) {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                guardName = user.getFullName() != null ? user.getFullName() : user.getUsername();
+            }
+            Guard guard = guardRepository.findByUserId(userId).orElse(null);
+            if (guard != null) {
+                if (guard.getAssignedGate() != null) {
+                    gateName = guard.getAssignedGate().getName();
+                } else {
+                    Optional<Shift> shiftOpt = shiftRepository.findByGuardIdAndStatus(guard.getId(), ShiftStatus.ONGOING);
+                    if (shiftOpt.isPresent() && shiftOpt.get().getGate() != null) {
+                        gateName = shiftOpt.get().getGate().getName();
+                    }
+                }
+            }
+        }
+
+        return SystemStatisticsResponse.builder()
+                .filterType(effectiveFilter)
+                .fromDate(effectiveFrom)
+                .toDate(effectiveTo)
+                .label(label)
+                .totalVisitors(totalVisitors)
+                .approvedVisitors(approvedVisitors)
+                .rejectedVisitors(rejectedVisitors)
+                .completedVisits(completedVisits)
+                .currentlyInside(currentlyInside)
+                .totalVehicles(totalVehicles)
+                .totalStudentPasses(totalStudentPasses)
+                .totalHostelOutpasses(totalHostelOutpasses)
+                .totalVendorVisits(totalVendorVisits)
+                .pendingTokens(pendingTokens)
+                .generatedAt(OffsetDateTime.now())
+                .generatedBy(guardName)
+                .gateName(gateName)
                 .build();
     }
 

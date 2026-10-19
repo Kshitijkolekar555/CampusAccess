@@ -793,15 +793,16 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
         )}
 
         {/* ── Action bar ── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
 
           {/* Left: start / retake */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {cameraState === 'idle' && !hasCapture ? (
               <Button
                 variant="primary"
                 leftIcon={<Camera className="w-4 h-4" />}
                 onClick={() => startCamera(selectedDeviceId || undefined)}
+                className="flex-1 sm:flex-initial"
               >
                 Start Camera
               </Button>
@@ -811,6 +812,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                 leftIcon={<RefreshCw className="w-4 h-4" />}
                 onClick={handleRetake}
                 disabled={isRecognizing}
+                className="flex-1 sm:flex-initial"
               >
                 Retake
               </Button>
@@ -822,19 +824,21 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
               size="sm"
               leftIcon={<Phone className="w-3.5 h-3.5 text-indigo-600" />}
               onClick={() => setShowMobileLookup((prev) => !prev)}
+              className="flex-1 sm:flex-initial whitespace-nowrap"
             >
               {showMobileLookup ? 'Hide Mobile Lookup' : 'Lookup by Mobile'}
             </Button>
           </div>
 
           {/* Right: scan / proceed */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {canScan && (
               <Button
                 variant="primary"
                 leftIcon={<ScanFace className="w-4 h-4" />}
                 isLoading={isRecognizing}
                 onClick={handleScanAndRecognise}
+                className="w-full sm:w-auto"
               >
                 {hasCapture ? 'Recognise' : 'Capture & Scan'}
               </Button>
@@ -848,6 +852,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                     variant="primary"
                     leftIcon={<ShieldCheck className="w-4 h-4" />}
                     onClick={handleProceedWithResult}
+                    className="w-full sm:w-auto"
                   >
                     Confirm & Auto-Fill Details
                   </Button>
@@ -856,7 +861,7 @@ export const VisitorWebcamModal: React.FC<VisitorWebcamModalProps> = ({
                     variant="primary"
                     leftIcon={<UserPlus className="w-4 h-4" />}
                     onClick={handleManualEntry}
-                    className="!bg-amber-600 hover:!bg-amber-700 text-white shadow-sm"
+                    className="w-full sm:w-auto !bg-amber-600 hover:!bg-amber-700 text-white shadow-sm"
                   >
                     Go to Registration
                   </Button>

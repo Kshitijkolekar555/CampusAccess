@@ -265,7 +265,9 @@ export const VisitorPortal: React.FC = () => {
         *:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; }
         @media (max-width: 640px) {
           .form-grid { grid-template-columns: 1fr !important; }
-          .visitor-content { padding: 24px 20px !important; }
+          .visitor-content { padding: 20px 16px !important; }
+          .visitor-header { padding: 0 16px !important; }
+          .visitor-stepper { padding: 10px 16px !important; }
         }
       `}</style>
 
@@ -275,19 +277,20 @@ export const VisitorPortal: React.FC = () => {
         background: 'rgba(250,250,248,0.92)', backdropFilter: 'blur(8px)',
         borderBottom: `1px solid ${C.line}`,
       }}>
-        <div style={{
-          maxWidth: 960, margin: '0 auto', padding: '0 32px',
-          height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        <div className="visitor-header" style={{
+          maxWidth: 960, margin: '0 auto', padding: '0 24px',
+          height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
         }}>
           <button onClick={() => navigate('/enter')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: C.mute, fontSize: 13, fontFamily: 'Inter,sans-serif' }}>
-            <ArrowLeft size={14} />
-            Back
+            aria-label="Back to portal selection"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: C.mute, fontSize: 13, fontFamily: 'Inter,sans-serif', padding: '6px 8px', minHeight: 36 }}>
+            <ArrowLeft size={16} />
+            <span>Back</span>
           </button>
-          <img src="/logo.png" alt="CampusAccess" style={{ height: 34, objectFit: 'contain' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px', background: 'rgba(47,93,124,0.08)', borderRadius: 3, border: `1px solid rgba(47,93,124,0.18)` }}>
+          <img src="/logo.png" alt="CampusAccess" style={{ height: 32, objectFit: 'contain' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'rgba(47,93,124,0.08)', borderRadius: 4, border: `1px solid rgba(47,93,124,0.18)` }}>
             <Users size={13} style={{ color: C.accent }} />
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.accent }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.accent }} className="hidden sm:inline">
               Visitor Portal
             </span>
           </div>
@@ -295,8 +298,8 @@ export const VisitorPortal: React.FC = () => {
       </header>
 
       {/* ── Progress indicator ──────────────────────────────────────────────── */}
-      <div style={{ borderBottom: `1px solid ${C.line}`, background: 'white' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '12px 32px', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ borderBottom: `1px solid ${C.line}`, background: 'white', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div className="visitor-stepper" style={{ maxWidth: 720, margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 6, minWidth: 'max-content' }}>
           {[
             { key: 'CAMERA', label: 'Camera' },
             { key: 'RECOGNIZING', label: 'Identifying' },
@@ -333,7 +336,7 @@ export const VisitorPortal: React.FC = () => {
                   }}>{s.label}</span>
                 </div>
                 {i < arr.filter(x => x.key !== 'RECOGNIZING').length - 1 && (
-                  <div style={{ flex: 1, height: 1, background: C.line, minWidth: 12 }} />
+                  <div style={{ width: 24, height: 1, background: C.line, flexShrink: 0 }} />
                 )}
               </React.Fragment>
             );

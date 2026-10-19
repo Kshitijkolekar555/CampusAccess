@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -62,58 +63,83 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        String cleanUsername = request.getUsername() != null ? request.getUsername().trim() : "";
+        String cleanPassword = request.getPassword() != null ? request.getPassword() : "";
+
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(cleanUsername, cleanPassword)
             );
+        } catch (BadCredentialsException e) {
+            // Check student default password or case mismatch fallback
+            Optional<User> studentOpt = userRepository.findFirstByUsernameIgnoreCase(cleanUsername)
+                    .or(() -> studentProfileRepository.findFirstByPrnIgnoreCase(cleanUsername).map(com.pict.gatesecurity.entity.StudentProfile::getUser));
 
-            User user = userRepository.findByUsername(request.getUsername())
-                    .orElseGet(() -> userRepository.findByEmail(request.getUsername())
-                            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + request.getUsername())));
-
-            if (!Boolean.TRUE.equals(user.getActive())) {
-                throw new UnauthorizedException("Account is disabled");
-            }
-
-            // Enforce supported login roles: Only Guard and Student are permitted to authenticate
-            UserRole role = user.getRole();
-            boolean isAllowedRole = role == UserRole.STUDENT
-                    || role == UserRole.GUARD
-                    || role == UserRole.SECURITY_GUARD
-                    || role == UserRole.SECURITY_OFFICER;
-
-            if (!isAllowedRole) {
-                log.warn("Blocked login attempt for unsupported role: {} (user={})", role, user.getUsername());
-                throw new UnauthorizedException("Login is restricted to Security Guard and Student accounts only. Admin, Faculty, and Warden accounts are not permitted to log in.");
-            }
-
-            if (request.getExpectedRole() != null && !request.getExpectedRole().isBlank()) {
-                String expRole = request.getExpectedRole().trim();
-                boolean roleMatches = user.getRole().name().equalsIgnoreCase(expRole)
-                        || (user.getRole().name().contains("GUARD") && expRole.contains("GUARD"));
-                if (!roleMatches) {
-                    throw new BadRequestException("Role Mismatch: Account '" + user.getUsername() + "' is registered as " + user.getRole().name() + ", not " + request.getExpectedRole());
+            if (studentOpt.isPresent() && studentOpt.get().getRole() == UserRole.STUDENT) {
+                User student = studentOpt.get();
+                // Check if password matches enrollment number / username / PRN ignoring case
+                if (cleanPassword.equalsIgnoreCase(student.getUsername()) ||
+                    cleanPassword.equalsIgnoreCase(cleanUsername)) {
+                    log.info("Student {} authenticated via default enrollment number password fallback", student.getUsername());
+                    // Sync password hash
+                    student.setPasswordHash(passwordEncoder.encode(cleanPassword));
+                    userRepository.save(student);
+                    return buildAuthResponse(student, request);
                 }
             }
 
-            String accessToken = jwtUtil.generateAccessToken(user.getUsername(), user.getRole().name());
-            String refreshTokenStr = jwtUtil.generateRefreshToken(user.getUsername());
-
-            persistRefreshToken(user, refreshTokenStr);
-
-            auditLogService.logAction(user, "LOGIN", "User", user.getId(), null, Map.of("username", user.getUsername()));
-
-            return AuthResponse.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(refreshTokenStr)
-                    .tokenType("Bearer")
-                    .user(userMapper.toResponse(user))
-                    .build();
-
-        } catch (BadCredentialsException e) {
             log.warn("Login failed for user {}: bad credentials", request.getUsername());
             throw new BadCredentialsException("Invalid username or password");
         }
+
+        User user = userRepository.findFirstByUsernameIgnoreCase(cleanUsername)
+                .orElseGet(() -> userRepository.findFirstByEmailIgnoreCase(cleanUsername)
+                        .orElseGet(() -> studentProfileRepository.findFirstByPrnIgnoreCase(cleanUsername)
+                                .map(com.pict.gatesecurity.entity.StudentProfile::getUser)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + cleanUsername))));
+
+        return buildAuthResponse(user, request);
+    }
+
+    private AuthResponse buildAuthResponse(User user, LoginRequest request) {
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new UnauthorizedException("Account is disabled");
+        }
+
+        // Enforce supported login roles: Only Guard and Student are permitted to authenticate
+        UserRole role = user.getRole();
+        boolean isAllowedRole = role == UserRole.STUDENT
+                || role == UserRole.GUARD
+                || role == UserRole.SECURITY_GUARD
+                || role == UserRole.SECURITY_OFFICER;
+
+        if (!isAllowedRole) {
+            log.warn("Blocked login attempt for unsupported role: {} (user={})", role, user.getUsername());
+            throw new UnauthorizedException("Login is restricted to Security Guard and Student accounts only. Admin, Faculty, and Warden accounts are not permitted to log in.");
+        }
+
+        if (request.getExpectedRole() != null && !request.getExpectedRole().isBlank()) {
+            String expRole = request.getExpectedRole().trim();
+            boolean roleMatches = user.getRole().name().equalsIgnoreCase(expRole)
+                    || (user.getRole().name().contains("GUARD") && expRole.contains("GUARD"));
+            if (!roleMatches) {
+                throw new BadRequestException("Role Mismatch: Account '" + user.getUsername() + "' is registered as " + user.getRole().name() + ", not " + request.getExpectedRole());
+            }
+        }
+
+        String accessToken = jwtUtil.generateAccessToken(user.getUsername(), user.getRole().name());
+        String refreshTokenStr = jwtUtil.generateRefreshToken(user.getUsername());
+
+        persistRefreshToken(user, refreshTokenStr);
+
+        auditLogService.logAction(user, "LOGIN", "User", user.getId(), null, Map.of("username", user.getUsername()));
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshTokenStr)
+                .tokenType("Bearer")
+                .user(userMapper.toResponse(user))
+                .build();
     }
 
     @Override
@@ -284,25 +310,53 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateResourceException("Username '" + request.getUsername() + "' is already taken");
         }
 
+        String phone = (request.getPhone() != null && !request.getPhone().isBlank()) ? request.getPhone().trim() : null;
+        String email = (request.getEmail() != null && !request.getEmail().isBlank()) ? request.getEmail().trim().toLowerCase() : null;
+
         User user = User.builder()
-                .username(request.getUsername())
+                .username(request.getUsername().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
-                .fullName(request.getFullName())
-                .phone(request.getPhone())
-                .email(request.getEmail())
+                .fullName(request.getFullName().trim())
+                .phone(phone)
+                .email(email)
                 .active(true)
                 .build();
 
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.saveAndFlush(user);
 
-        auditLogService.logAction(savedUser, "REGISTER", "User", savedUser.getId(), null, Map.of(
-                "username", savedUser.getUsername(),
-                "role", savedUser.getRole().name()
-        ));
+        // Ensure a StudentProfile exists for new student accounts
+        if (savedUser.getRole() == UserRole.STUDENT && studentProfileRepository != null) {
+            String prn = savedUser.getUsername().toUpperCase();
+            if (studentProfileRepository.findByUserId(savedUser.getId()).isEmpty() &&
+                !studentProfileRepository.existsByPrn(prn)) {
+                com.pict.gatesecurity.entity.StudentProfile profile = com.pict.gatesecurity.entity.StudentProfile.builder()
+                        .user(savedUser)
+                        .prn(prn)
+                        .department("General")
+                        .academicYear("FE")
+                        .active(true)
+                        .build();
+                studentProfileRepository.save(profile);
+                log.info("Created default StudentProfile for new student: {}", savedUser.getUsername());
+            }
+        }
+
+        try {
+            auditLogService.logAction(savedUser, "REGISTER", "User", savedUser.getId(), null, Map.of(
+                    "username", savedUser.getUsername(),
+                    "role", savedUser.getRole().name()
+            ));
+        } catch (Exception e) {
+            log.warn("Failed to audit register action for user {}: {}", savedUser.getUsername(), e.getMessage());
+        }
 
         if (savedUser.getEmail() != null) {
-            notificationService.sendAccountCreatedEmail(savedUser);
+            try {
+                notificationService.sendAccountCreatedEmail(savedUser);
+            } catch (Exception e) {
+                log.warn("Failed to send welcome email to {}: {}", savedUser.getEmail(), e.getMessage());
+            }
         }
 
         log.info("New user registered: {}", savedUser.getUsername());

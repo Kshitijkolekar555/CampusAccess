@@ -1,5 +1,5 @@
 import { api } from './axios';
-import { ApiResponse, Guard, GuardDashboard, PageResponse, Shift, ShiftLog } from '../types';
+import { ApiResponse, Guard, GuardDashboard, PageResponse, Shift, ShiftLog, SystemStatisticsResponse } from '../types';
 
 export const guardApi = {
   createGuard: async (data: any) => {
@@ -83,5 +83,16 @@ export const guardApi = {
       }
       throw err;
     }
+  },
+
+  getSystemStatistics: async (params?: {
+    filterType?: string;
+    fromDate?: string;
+    toDate?: string;
+    year?: number;
+    month?: number;
+  }) => {
+    const res = await api.get<ApiResponse<SystemStatisticsResponse>>('/dashboard/statistics', { params });
+    return res.data.data;
   },
 };

@@ -20,7 +20,11 @@ if %errorlevel% neq 0 (
 :: 2. Start Python Neural Face Recognition Microservice
 echo [2/4] Initializing Face Recognition Microservice (Port 8001)...
 cd /d "%~dp0face-service"
-start "CampusAccess Face Service" cmd /k "python -m uvicorn app:app --host 0.0.0.0 --port 8001 --reload"
+if exist "venv\Scripts\python.exe" (
+    start "CampusAccess Face Service" cmd /k "venv\Scripts\python.exe -m uvicorn app:app --host 0.0.0.0 --port 8001"
+) else (
+    start "CampusAccess Face Service" cmd /k "python -m uvicorn app:app --host 0.0.0.0 --port 8001"
+)
 
 :: 3. Start Spring Boot Backend Server
 echo [3/4] Initializing Spring Boot Security Backend (Port 8081)...

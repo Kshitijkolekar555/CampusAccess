@@ -18,9 +18,6 @@ import {
 } from '../../types';
 import {
   ShieldCheck,
-  UserCheck,
-  LogOut,
-  Users,
   PlusCircle,
   GraduationCap,
   Search,
@@ -46,8 +43,10 @@ import {
   UserX,
   Printer,
   Car,
-  Ticket,
+  Users,
+  LogOut,
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 
 interface GuardDashboardViewProps {
@@ -235,6 +234,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
     onSuccess: (data) => {
       toast.info(`Token rejected for ${data.name || 'visitor'}.`);
       queryClient.invalidateQueries({ queryKey: ['guard-pending-tokens'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Failed to reject token');
@@ -560,6 +560,11 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
     visitorsEnteredToday: activeVisitors.length,
     visitorsExitedToday: 0,
     activeVisitorsInsideCampus: activeVisitors.length,
+    todayTotalVisitors: activeVisitors.length,
+    todayApprovedVisitors: activeVisitors.length,
+    todayRejectedVisitors: 0,
+    todayCurrentlyInside: activeVisitors.length,
+    todayCheckedOutVisitors: 0,
     studentPassesProcessedToday: 0,
     hostelVerifications: 0,
   };
@@ -595,7 +600,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 self-end md:self-center">
+        <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto self-stretch sm:self-auto pt-2 sm:pt-0 border-t border-slate-800 sm:border-t-0">
           <span className="text-xs text-slate-400 font-sans flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             {liveTime}
@@ -603,11 +608,121 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
           {onToggleDetailedView && (
             <button
               onClick={onToggleDetailedView}
-              className="text-xs sm:text-sm text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-600/80 hover:border-slate-500 px-4 py-1.5 rounded-md transition font-medium shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="text-xs sm:text-sm text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-600/80 hover:border-slate-500 px-3.5 py-1.5 rounded-md transition font-medium shadow-xs flex items-center gap-1.5 cursor-pointer min-h-[36px]"
             >
               <span>Details</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* 1.1 DAILY STATISTICS BELOW GUARD'S NAME */}
+      <div className="bg-[#0f172a] text-white rounded-lg p-3 sm:p-3.5 border border-slate-800 shadow-xs -mt-3">
+        <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-1 mb-2.5 pb-2 border-b border-slate-800/80">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              Today's Visitor Statistics
+            </h2>
+          </div>
+          <span className="text-[11px] font-mono text-slate-400">
+            {new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5">
+          {/* Total Visitors */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-md p-2.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider block truncate">
+                Total Visitors
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-bold text-white font-mono">
+                  {summaryData.todayTotalVisitors ?? summaryData.visitorsEnteredToday ?? 0}
+                </span>
+                <span className="text-[10px] text-slate-400">today</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Approved Visitors */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-md p-2.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-emerald-400/90 tracking-wider block truncate">
+                Approved
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-bold text-emerald-300 font-mono">
+                  {summaryData.todayApprovedVisitors ?? summaryData.visitorsEnteredToday ?? 0}
+                </span>
+                <span className="text-[10px] text-slate-400">today</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rejected Visitors */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-md p-2.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+              <XCircle className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-rose-400/90 tracking-wider block truncate">
+                Rejected
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-bold text-rose-300 font-mono">
+                  {summaryData.todayRejectedVisitors ?? 0}
+                </span>
+                <span className="text-[10px] text-slate-400">today</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Currently Inside */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-md p-2.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
+              <LogIn className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-sky-400/90 tracking-wider block truncate">
+                Currently Inside
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-base font-bold text-sky-300 font-mono">
+                  {summaryData.todayCurrentlyInside ?? summaryData.activeVisitorsInsideCampus ?? 0}
+                </span>
+                <span className="inline-flex items-center gap-1 text-[9px] text-sky-400 bg-sky-950/60 px-1 py-0.5 rounded border border-sky-800/50">
+                  <span className="w-1 h-1 rounded-full bg-sky-400 animate-pulse" />
+                  Live
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Checked Out */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-md p-2.5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+              <LogOut className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-purple-400/90 tracking-wider block truncate">
+                Checked Out
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-bold text-purple-300 font-mono">
+                  {summaryData.todayCheckedOutVisitors ?? summaryData.visitorsExitedToday ?? 0}
+                </span>
+                <span className="text-[10px] text-slate-400">today</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -793,74 +908,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
         </div>
       )}
 
-      {/* ───────────────────────────────────────────────────────────────────────── */}
-      {/* 3. CAMPUS ACTIVITY & STATISTICAL METRICS */}
-      {/* ───────────────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Metric 1: Active Visitors Inside Campus */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              Active Visitors
-            </p>
-            <p className="text-xl sm:text-2xl font-bold font-mono text-emerald-600 mt-0.5">
-              {summaryData.activeVisitorsInsideCampus ?? activeVisitors.length}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Currently on campus</p>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-            <Users className="w-5 h-5" />
-          </div>
-        </div>
 
-        {/* Metric 2: Visitors Entered Today */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              Visitors In Today
-            </p>
-            <p className="text-xl sm:text-2xl font-bold font-mono text-slate-900 mt-0.5">
-              {summaryData.visitorsEnteredToday ?? 0}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Verified entries</p>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-            <UserCheck className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* Metric 3: Visitors Exited Today */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              Visitors Out Today
-            </p>
-            <p className="text-xl sm:text-2xl font-bold font-mono text-slate-900 mt-0.5">
-              {summaryData.visitorsExitedToday ?? 0}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Logged exits</p>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 shrink-0">
-            <LogOut className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* Metric 4: Student Passes / Hostel Passes Processed Today */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              Passes Processed
-            </p>
-            <p className="text-xl sm:text-2xl font-bold font-mono text-indigo-600 mt-0.5">
-              {(summaryData.studentPassesProcessedToday ?? 0) + (summaryData.hostelVerifications ?? 0)}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Student & hostel</p>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-            <Ticket className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {/* 4. GATE OPERATIONS: FOUR PRIMARY OPTIONS */}

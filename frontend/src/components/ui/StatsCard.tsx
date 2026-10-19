@@ -10,7 +10,7 @@ interface StatsCardProps {
   };
   description?: string;
   /** colorTheme is accepted for backward-compat but ignored visually */
-  colorTheme?: 'indigo' | 'emerald' | 'amber' | 'cyan' | 'purple';
+  colorTheme?: 'indigo' | 'emerald' | 'amber' | 'cyan' | 'purple' | 'rose';
 }
 
 export const StatsCard: React.FC<StatsCardProps> = ({

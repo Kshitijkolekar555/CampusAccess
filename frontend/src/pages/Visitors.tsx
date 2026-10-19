@@ -259,7 +259,7 @@ export const Visitors: React.FC = () => {
     <div className="space-y-6">
       {/* Contextual Back Navigation & Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
           <Button
             variant="outline"
             size="sm"
@@ -272,34 +272,35 @@ export const Visitors: React.FC = () => {
             }}
             leftIcon={<ArrowLeft className="w-4 h-4" />}
             title="Return to previous page"
+            className="shrink-0"
           >
             Back
           </Button>
 
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               Visitor Registers & Visit History
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 line-clamp-2 sm:line-clamp-none">
               Comprehensive audit log of campus visitor entries, verified exits, and automated end-of-day closures.
             </p>
           </div>
         </div>
 
         {/* Live Metrics Header Badges */}
-        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Total Visitors Entered Today (includes checked out & auto-closed) */}
-          <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg shadow-xs">
-            <Users className="w-4 h-4 text-indigo-600" />
-            <span className="text-xs font-semibold text-indigo-950">
+          <div className="flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg shadow-xs">
+            <Users className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span className="text-xs font-semibold text-indigo-950 whitespace-nowrap">
               Entered Today: <strong className="font-bold text-indigo-700">{guardSummary?.visitorsEnteredToday ?? pageData?.totalElements ?? 0}</strong>
             </span>
           </div>
 
           {/* Currently Inside Badge */}
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg shadow-xs">
-            <Shield className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs font-semibold text-emerald-900">
+          <div className="flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg shadow-xs">
+            <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-xs font-semibold text-emerald-900 whitespace-nowrap">
               Currently Inside: <strong className="font-bold text-emerald-700">{activeVisitors.length}</strong>
             </span>
           </div>
@@ -309,7 +310,7 @@ export const Visitors: React.FC = () => {
       {/* Multi-Dimensional Filter Bar (State preserved in URL) */}
       <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search Input */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 w-full max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -321,12 +322,12 @@ export const Visitors: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => updateParam('status', e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500"
+            className="flex-1 sm:flex-initial text-xs bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500"
           >
             <option value="">All Visit Statuses</option>
             <option value="ACTIVE">Active Inside Only</option>
@@ -338,7 +339,7 @@ export const Visitors: React.FC = () => {
           <select
             value={hostTypeFilter}
             onChange={(e) => updateParam('hostType', e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500"
+            className="flex-1 sm:flex-initial text-xs bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500"
           >
             <option value="">All Host Categories</option>
             <option value="FACULTY">Faculty / Teachers</option>
@@ -354,7 +355,7 @@ export const Visitors: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={() => setSearchParams(new URLSearchParams())}
-              className="text-xs text-slate-500 hover:text-slate-800"
+              className="text-xs text-slate-500 hover:text-slate-800 whitespace-nowrap"
             >
               Reset Filters
             </Button>
@@ -404,7 +405,7 @@ export const Visitors: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs bg-white border border-slate-200 rounded-lg p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white border border-slate-200 rounded-lg p-4">
               <div>
                 <span className="text-slate-400 block text-[11px]">Host Person</span>
                 <span className="font-semibold text-slate-800">{detailVisitor.hostName}</span>

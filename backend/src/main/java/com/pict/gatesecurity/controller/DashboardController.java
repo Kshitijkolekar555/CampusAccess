@@ -52,6 +52,24 @@ public class DashboardController {
         return ResponseEntity.ok(ApiResponse.success(dashboardService.getGuardSelfDashboard(userId)));
     }
 
+    // ==================== SYSTEM & GUARD STATISTICS ====================
+
+    @GetMapping("/statistics")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @Operation(summary = "System Statistics",
+            description = "Lifetime and date/month filtered statistics with real-time occupancy")
+    public ResponseEntity<ApiResponse<SystemStatisticsResponse>> getSystemStatistics(
+            @RequestParam(required = false, defaultValue = "LIFETIME") String filterType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = resolveUserId(userDetails);
+        return ResponseEntity.ok(ApiResponse.success(
+                dashboardService.getSystemStatistics(filterType, fromDate, toDate, year, month, userId)));
+    }
+
     // ==================== WARDEN DASHBOARD ====================
 
     @GetMapping("/warden")

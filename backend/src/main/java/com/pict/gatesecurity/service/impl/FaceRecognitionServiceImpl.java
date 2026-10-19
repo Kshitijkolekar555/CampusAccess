@@ -67,9 +67,10 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                 Number numFaces = (Number) resMap.get("numFaces");
                 Boolean isAmbiguous = Boolean.TRUE.equals(resMap.get("isAmbiguous"));
                 String message = (String) resMap.get("message");
+                String matchType = (String) resMap.get("matchType");
                 Map<String, Object> quality = (Map<String, Object>) resMap.get("quality");
 
-                log.info("Face recognition service response: matched={}, faceId={}, distance={}, similarity={}", matched, faceId, distance, similarity);
+                log.info("Face recognition service response: matched={}, faceId={}, distance={}, similarity={}, matchType={}", matched, faceId, distance, similarity, matchType);
                 return FaceRecognitionResponse.builder()
                         .matched(matched)
                         .faceId(faceId)
@@ -77,6 +78,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
                         .similarity(similarity != null ? similarity.doubleValue() : 0.0)
                         .numFaces(numFaces != null ? numFaces.intValue() : 0)
                         .isAmbiguous(isAmbiguous)
+                        .matchType(matchType)
                         .message(message)
                         .quality(quality)
                         .build();

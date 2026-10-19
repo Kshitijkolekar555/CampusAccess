@@ -389,7 +389,7 @@ export const StudentPasses: React.FC = () => {
       </div>
 
       {/* PRN Search & Type Filter Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
+      <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -429,26 +429,26 @@ export const StudentPasses: React.FC = () => {
         </div>
 
         {/* Tab Filters */}
-        <div className="flex items-center gap-2 border-t border-slate-100 pt-2.5 text-xs">
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2.5 text-xs">
           <span className="text-slate-400 font-medium">Filter view:</span>
           <button
             type="button"
             onClick={() => setActiveTab('ALL')}
-            className={`px-2.5 py-1 rounded-md font-medium transition ${activeTab === 'ALL' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-2.5 py-1.5 rounded-md font-medium transition ${activeTab === 'ALL' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
           >
             All Passes ({unifiedPasses.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('GATE_PASSES')}
-            className={`px-2.5 py-1 rounded-md font-medium transition ${activeTab === 'GATE_PASSES' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-2.5 py-1.5 rounded-md font-medium transition ${activeTab === 'GATE_PASSES' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
           >
             Academic Gate Passes
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('HOSTEL_OUTPASSES')}
-            className={`px-2.5 py-1 rounded-md font-medium transition ${activeTab === 'HOSTEL_OUTPASSES' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-2.5 py-1.5 rounded-md font-medium transition ${activeTab === 'HOSTEL_OUTPASSES' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
           >
             Hostel Outpasses
           </button>

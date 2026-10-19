@@ -80,10 +80,12 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private void send(Notification notification) {
-        String subject = notification.getSubject();
-        String body = notification.getBody();
-        Notification saved = notificationRepository.save(notification);
-        sendAsync(saved);
+        try {
+            Notification saved = notificationRepository.save(notification);
+            sendAsync(saved);
+        } catch (Exception e) {
+            log.warn("Failed to save or send notification: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -118,17 +120,24 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void sendAccountCreatedEmail(User user) {
-        Context context = new Context();
-        context.setVariable("name", user.getFullName());
-        context.setVariable("username", user.getUsername());
-        context.setVariable("role", user.getRole().name());
+        if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+            return;
+        }
+        try {
+            Context context = new Context();
+            context.setVariable("name", user.getFullName());
+            context.setVariable("username", user.getUsername());
+            context.setVariable("role", user.getRole().name());
 
-        String subject = "Welcome to PICT Gate Security";
-        String body = templateEngine.process("email/account-created", context);
+            String subject = "Welcome to PICT Gate Security";
+            String body = templateEngine.process("email/account-created", context);
 
-        Notification notification = buildNotification(user, user.getEmail(),
-                NotificationEventType.ACCOUNT_CREATED, subject, body);
-        send(notification);
+            Notification notification = buildNotification(user, user.getEmail(),
+                    NotificationEventType.ACCOUNT_CREATED, subject, body);
+            send(notification);
+        } catch (Exception e) {
+            log.warn("Failed to send account-created email for {}: {}", user.getUsername(), e.getMessage());
+        }
     }
 
     @Override

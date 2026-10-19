@@ -12,6 +12,10 @@ public interface StudentProfileRepository extends JpaRepository<StudentProfile, 
 
     Optional<StudentProfile> findByPrn(String prn);
 
+    Optional<StudentProfile> findByPrnIgnoreCase(String prn);
+
+    Optional<StudentProfile> findFirstByPrnIgnoreCase(String prn);
+
     Optional<StudentProfile> findByRollNumber(String rollNumber);
 
     Optional<StudentProfile> findByUserId(Long userId);

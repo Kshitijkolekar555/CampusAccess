@@ -28,6 +28,8 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
 
     Optional<Visitor> findFirstByMobileOrderByTimeInDesc(String mobile);
 
+    Optional<Visitor> findFirstByMobileOrderByIdDesc(String mobile);
+
     Optional<Visitor> findByFaceId(String faceId);
 
     Optional<Visitor> findFirstByFaceIdOrderByTimeInDesc(String faceId);
@@ -73,5 +75,22 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long>, JpaSpec
 
     long countByStatus(com.pict.gatesecurity.entity.enums.PassStatus status);
 
+    long countByStatusIn(java.util.Collection<com.pict.gatesecurity.entity.enums.PassStatus> statuses);
+
     long countByStatusAndClosedAtBetween(com.pict.gatesecurity.entity.enums.PassStatus status, OffsetDateTime start, OffsetDateTime end);
+
+    @Query("SELECT COUNT(v) FROM Visitor v WHERE (v.timeIn BETWEEN :start AND :end) OR (v.createdAt BETWEEN :start AND :end)")
+    long countTotalVisitorsBetween(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end);
+
+    @Query("SELECT COUNT(v) FROM Visitor v WHERE v.status IN :statuses AND ((v.timeIn BETWEEN :start AND :end) OR (v.createdAt BETWEEN :start AND :end))")
+    long countApprovedBetween(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end, @Param("statuses") java.util.Collection<com.pict.gatesecurity.entity.enums.PassStatus> statuses);
+
+    @Query("SELECT COUNT(v) FROM Visitor v WHERE v.status = com.pict.gatesecurity.entity.enums.PassStatus.REJECTED AND ((v.timeOut BETWEEN :start AND :end) OR (v.createdAt BETWEEN :start AND :end))")
+    long countRejectedBetween(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end);
+
+    @Query("SELECT COUNT(v) FROM Visitor v WHERE v.timeOut BETWEEN :start AND :end AND v.timeOut IS NOT NULL")
+    long countCompletedBetween(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end);
+
+    @Query("SELECT COUNT(DISTINCT v.mobile) FROM Visitor v WHERE v.timeOut IS NULL AND v.status NOT IN (com.pict.gatesecurity.entity.enums.PassStatus.AUTO_CLOSED_EOD, com.pict.gatesecurity.entity.enums.PassStatus.PENDING, com.pict.gatesecurity.entity.enums.PassStatus.REJECTED)")
+    long countUniqueActiveInsideCampus();
 }

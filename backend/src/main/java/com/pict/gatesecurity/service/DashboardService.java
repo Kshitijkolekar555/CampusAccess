@@ -13,6 +13,8 @@ public interface DashboardService {
 
     GuardSelfDashboardResponse getGuardSelfDashboard(Long userId);
 
+    SystemStatisticsResponse getSystemStatistics(String filterType, LocalDate fromDate, LocalDate toDate, Integer year, Integer month, Long userId);
+
     WardenDashboardResponse getWardenDashboard(String hostel);
 
     DailyTrendResponse getDailyTrends(LocalDate fromDate, LocalDate toDate);

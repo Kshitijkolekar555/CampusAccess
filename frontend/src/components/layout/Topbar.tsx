@@ -23,7 +23,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleMenu }) => {
             type="button"
             onClick={onToggleMenu}
             aria-label="Toggle navigation menu"
-            className="md:hidden flex items-center justify-center w-9 h-9 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="md:hidden flex items-center justify-center w-10 h-10 min-w-[40px] min-h-[40px] rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -50,16 +50,16 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleMenu }) => {
         )}
 
         {/* User + logout */}
-        <div className="flex items-center gap-3 pl-3 sm:pl-4 border-l border-slate-200">
+        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-slate-200">
           <Link
             to="/profile"
-            className="flex items-center gap-2 text-decoration-none group"
+            className="flex items-center gap-2 text-decoration-none group min-h-[38px] py-1"
             title="View Profile"
           >
             <div className="w-7 h-7 rounded bg-slate-900 flex items-center justify-center font-sans font-bold text-xs text-slate-100 group-hover:bg-indigo-600 transition-colors shadow-xs">
               {userInitial}
             </div>
-            <span className="font-sans text-[13px] font-medium text-slate-800 group-hover:text-indigo-600 transition-colors max-w-[120px] truncate">
+            <span className="font-sans text-[13px] font-medium text-slate-800 group-hover:text-indigo-600 transition-colors max-w-[100px] sm:max-w-[140px] truncate">
               {user?.fullName || user?.username || 'User'}
             </span>
           </Link>
@@ -68,7 +68,8 @@ export const Topbar: React.FC<TopbarProps> = ({ onToggleMenu }) => {
             type="button"
             onClick={logout}
             title="Sign out"
-            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            aria-label="Sign out"
+            className="p-2 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
           >
             <LogOut className="w-4 h-4" />
           </button>

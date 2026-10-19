@@ -33,10 +33,9 @@ public class UserCreateRequest {
     @jakarta.validation.constraints.Pattern(regexp = "^[a-zA-Z\\s.']{2,150}$", message = "Full name must contain letters and spaces only")
     private String fullName;
 
-    @jakarta.validation.constraints.Pattern(regexp = "^[6-9][0-9]{9}$", message = "Phone number must be a valid 10-digit Indian mobile number")
+    @jakarta.validation.constraints.Pattern(regexp = "^$|^[6-9][0-9]{9}$", message = "Phone number must be a valid 10-digit Indian mobile number")
     private String phone;
 
-    @Email(message = "Email must be valid")
-    @jakarta.validation.constraints.Pattern(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "Email format is invalid")
+    @jakarta.validation.constraints.Pattern(regexp = "^$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "Email format is invalid")
     private String email;
 }

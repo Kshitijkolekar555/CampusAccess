@@ -11,6 +11,7 @@ import com.pict.gatesecurity.entity.enums.HostDepartment;
 import com.pict.gatesecurity.entity.enums.HostType;
 import com.pict.gatesecurity.entity.enums.PassStatus;
 import java.util.UUID;
+import java.util.Optional;
 import com.pict.gatesecurity.exception.BadRequestException;
 import com.pict.gatesecurity.exception.ResourceNotFoundException;
 import com.pict.gatesecurity.mapper.VisitorMapper;
@@ -252,17 +253,46 @@ public class VisitorServiceImpl implements VisitorService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public VisitorRecognitionResponse recognizeVisitorFace(MultipartFile photo) {
         if (photo == null || photo.isEmpty()) {
             throw new BadRequestException("Photo file is required for face recognition");
         }
 
         FaceRecognitionResponse matchResult = faceRecognitionService.recognize(photo);
-        log.info("Face recognition response score distance={}", matchResult.getDistance());
+        log.info("Face recognition response score distance={}, similarity={}, matched={}, faceId={}",
+                matchResult.getDistance(), matchResult.getSimilarity(), matchResult.getMatched(), matchResult.getFaceId());
 
         if (Boolean.TRUE.equals(matchResult.getMatched()) && StringUtils.hasText(matchResult.getFaceId())) {
-            var visitorOpt = visitorRepository.findFirstByFaceIdOrderByTimeInDesc(matchResult.getFaceId());
+            String matchedFaceId = matchResult.getFaceId();
+            var visitorOpt = visitorRepository.findFirstByFaceIdOrderByTimeInDesc(matchedFaceId);
+
+            // Fallback: If not found directly by faceId, check if any visitor has an unlinked photo matching this face
+            if (visitorOpt.isEmpty()) {
+                List<Visitor> visitorsWithPhotos = visitorRepository.findAll().stream()
+                        .filter(v -> StringUtils.hasText(v.getPhotoPath()) || StringUtils.hasText(v.getPhotoUrl()))
+                        .toList();
+
+                for (Visitor v : visitorsWithPhotos) {
+                    String photoPath = StringUtils.hasText(v.getPhotoPath()) ? v.getPhotoPath() : v.getPhotoUrl();
+                    String cleanName = photoPath.contains("/") ? photoPath.substring(photoPath.lastIndexOf('/') + 1) : photoPath;
+                    File photoFile = new File("uploads/visitor-photos", cleanName);
+                    if (!photoFile.exists()) {
+                        photoFile = new File(photoPath.startsWith("/") ? photoPath.substring(1) : photoPath);
+                    }
+                    if (photoFile.exists()) {
+                        FaceRecognitionResponse photoMatch = faceRecognitionService.recognize(photoFile);
+                        if (Boolean.TRUE.equals(photoMatch.getMatched()) && matchedFaceId.equals(photoMatch.getFaceId())) {
+                            log.info("Resolved unlinked visitor ID={} (name={}) to matched faceId={}", v.getId(), v.getName(), matchedFaceId);
+                            v.setFaceId(matchedFaceId);
+                            visitorRepository.save(v);
+                            visitorOpt = Optional.of(v);
+                            break;
+                        }
+                    }
+                }
+            }
+
             if (visitorOpt.isPresent()) {
                 Visitor v = visitorOpt.get();
                 log.info("Face matched to existing visitor: ID={}, Name={}", v.getId(), v.getName());
@@ -273,7 +303,7 @@ public class VisitorServiceImpl implements VisitorService {
                         .mobileNumber(v.getMobile())
                         .hostPersonOrDepartment(v.getHostName() + " (" + v.getHostDepartment() + ")")
                         .purpose(v.getPurpose())
-                        .photoPath(v.getPhotoPath())
+                        .photoPath(StringUtils.hasText(v.getPhotoPath()) ? v.getPhotoPath() : v.getPhotoUrl())
                         .hostName(v.getHostName())
                         .hostType(v.getHostType())
                         .hostDepartment(v.getHostDepartment())
@@ -289,6 +319,18 @@ public class VisitorServiceImpl implements VisitorService {
                         .message(matchResult.getMessage())
                         .quality(matchResult.getQuality())
                         .build();
+            } else {
+                log.warn("Biometric face match found (faceId={}) but no matching visitor profile in database", matchedFaceId);
+                return VisitorRecognitionResponse.builder()
+                        .matched(false)
+                        .confidenceDistance(matchResult.getDistance())
+                        .similarity(matchResult.getSimilarity())
+                        .numFaces(matchResult.getNumFaces())
+                        .isAmbiguous(false)
+                        .matchType("unmapped")
+                        .message("Face matched in biometric records, but no visitor profile is registered. Please register as a new visitor.")
+                        .quality(matchResult.getQuality())
+                        .build();
             }
         }
 
@@ -299,7 +341,7 @@ public class VisitorServiceImpl implements VisitorService {
                 .numFaces(matchResult.getNumFaces())
                 .isAmbiguous(matchResult.getIsAmbiguous())
                 .matchType(matchResult.getMatchType())
-                .message(matchResult.getMessage())
+                .message(matchResult.getMessage() != null ? matchResult.getMessage() : "No matching visitor face record found.")
                 .quality(matchResult.getQuality())
                 .build();
     }
@@ -327,6 +369,13 @@ public class VisitorServiceImpl implements VisitorService {
 
                 // Enroll face embedding with Python service
                 faceId = faceRecognitionService.enroll(destFile);
+                if (faceId == null) {
+                    FaceRecognitionResponse existingMatch = faceRecognitionService.recognize(destFile);
+                    if (Boolean.TRUE.equals(existingMatch.getMatched()) && StringUtils.hasText(existingMatch.getFaceId())) {
+                        faceId = existingMatch.getFaceId();
+                        log.info("Recognized and linked existing enrolled faceId={}", faceId);
+                    }
+                }
                 log.info("Enrolled face with faceId={}", faceId);
             } catch (IOException e) {
                 log.error("Failed to save visitor photo file", e);
@@ -394,13 +443,13 @@ public class VisitorServiceImpl implements VisitorService {
         if (!StringUtils.hasText(mobile)) {
             return null;
         }
-        String cleaned = mobile.replaceAll("[^0-9]", "");
-        if (cleaned.length() > 10 && cleaned.startsWith("91")) {
-            cleaned = cleaned.substring(2);
-        }
-        final String searchMobile = cleaned;
-        return visitorRepository.findFirstByMobileOrderByTimeInDesc(searchMobile)
-                .or(() -> visitorRepository.findFirstByMobileOrderByTimeInDesc(mobile))
+        String cleaned = com.pict.gatesecurity.util.ValidationUtil.normalizePhone(mobile);
+        final String raw = mobile.trim();
+        final String searchMobile = (cleaned != null && !cleaned.isBlank()) ? cleaned : raw;
+
+        return visitorRepository.findFirstByMobileOrderByIdDesc(searchMobile)
+                .or(() -> visitorRepository.findFirstByMobileOrderByTimeInDesc(searchMobile))
+                .or(() -> visitorRepository.findFirstByMobileOrderByIdDesc(raw))
                 .map(visitorMapper::toResponse)
                 .orElse(null);
     }
@@ -462,6 +511,13 @@ public class VisitorServiceImpl implements VisitorService {
 
                 // Enroll face embedding with Python service
                 faceId = faceRecognitionService.enroll(destFile);
+                if (faceId == null) {
+                    FaceRecognitionResponse existingMatch = faceRecognitionService.recognize(destFile);
+                    if (Boolean.TRUE.equals(existingMatch.getMatched()) && StringUtils.hasText(existingMatch.getFaceId())) {
+                        faceId = existingMatch.getFaceId();
+                        log.info("Recognized and linked existing enrolled faceId for token request: {}", faceId);
+                    }
+                }
                 log.info("Enrolled face embedding for token request: faceId={}", faceId);
             } catch (Exception e) {
                 log.warn("Face enrollment during token generation could not be completed: {}", e.getMessage());

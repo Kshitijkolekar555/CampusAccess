@@ -77,6 +77,12 @@ export const LandingPage: React.FC = () => {
           .lp-hero-grid { grid-template-columns: 1fr !important; }
           .lp-module-grid { grid-template-columns: 1fr !important; }
         }
+        @media (max-width: 640px) {
+          .lp-nav-secondary { display: none !important; }
+          .lp-container-padding { padding-left: 16px !important; padding-right: 16px !important; }
+          .lp-hero-section { padding: 48px 16px 40px !important; }
+          .lp-section-padding { padding: 40px 16px !important; }
+        }
       `}</style>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -84,20 +90,20 @@ export const LandingPage: React.FC = () => {
         position: 'sticky', top: 0, zIndex: 40, background: 'rgba(250,250,248,0.92)',
         backdropFilter: 'blur(8px)', borderBottom: `1px solid ${C.line}`,
       }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 32px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="lp-container-padding" style={{ maxWidth: 1080, margin: '0 auto', padding: '0 32px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Wordmark */}
           <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
-            <img src="/logo.png" alt="CampusAccess" style={{ height: 38, width: 'auto', objectFit: 'contain' }} />
+            <img src="/logo.png" alt="CampusAccess" style={{ height: 34, width: 'auto', objectFit: 'contain' }} />
           </div>
 
           {/* Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-            <a href="#modules" className="lp-nav-link">Modules</a>
-            <a href="#about" className="lp-nav-link">About</a>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <a href="#modules" className="lp-nav-link lp-nav-secondary">Modules</a>
+            <a href="#about" className="lp-nav-link lp-nav-secondary">About</a>
             <button
               onClick={() => navigate('/enter')}
               className="lp-cta-primary"
-              style={{ padding: '8px 18px', fontSize: 12 }}
+              style={{ padding: '8px 16px', fontSize: 12, minHeight: 38 }}
             >
               Enter System <ArrowRight size={12} className="arrow" />
             </button>
@@ -106,7 +112,7 @@ export const LandingPage: React.FC = () => {
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', padding: '80px 32px 72px', overflow: 'hidden' }}>
+      <section className="lp-hero-section" style={{ position: 'relative', padding: '80px 32px 72px', overflow: 'hidden' }}>
         {/* Clearly visible campus bg image */}
         <div style={{
           position: 'absolute', inset: 0,
@@ -158,12 +164,12 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ── Thin rule ──────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 32px' }}>
+      <div className="lp-container-padding" style={{ maxWidth: 1080, margin: '0 auto', padding: '0 32px' }}>
         <div style={{ borderTop: `1px solid ${C.line}` }} />
       </div>
 
       {/* ── Module grid ────────────────────────────────────────────────── */}
-      <section id="modules" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px' }}>
+      <section id="modules" className="lp-container-padding lp-section-padding" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px' }}>
         {/* Section heading */}
         <div style={{ marginBottom: 36 }}>
           <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.mute, margin: '0 0 10px 0' }}>
@@ -193,12 +199,12 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ── Thin rule ──────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 32px' }}>
+      <div className="lp-container-padding" style={{ maxWidth: 1080, margin: '0 auto', padding: '0 32px' }}>
         <div style={{ borderTop: `1px solid ${C.line}` }} />
       </div>
 
       {/* ── About Section ────────────────────────────────────────────────── */}
-      <section id="about" style={{ maxWidth: 1080, margin: '0 auto', padding: '72px 32px' }}>
+      <section id="about" className="lp-container-padding lp-section-padding" style={{ maxWidth: 1080, margin: '0 auto', padding: '72px 32px' }}>
         <div style={{ marginBottom: 40 }}>
           <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.accent, fontWeight: 600, margin: '0 0 10px 0' }}>
             About the System

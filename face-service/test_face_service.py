@@ -57,7 +57,7 @@ def test_first_time_vs_returning_visitor_lifecycle(emb):
     conn.close()
 
     # Step A: Query before enrollment -> must be unrecognised (First-Time Visitor)
-    match_id, dist, is_ambig = db.find_best_match(emb, threshold=0.40)
+    match_id, dist, is_ambig, match_type = db.find_best_match(emb, threshold=0.40)
     assert match_id is None, "New visitor should not match any registered visitor"
     print("  -> First-Time Visitor correctly classified as Unmatched.")
 
@@ -67,7 +67,7 @@ def test_first_time_vs_returning_visitor_lifecycle(emb):
     print("  -> Enrolled test visitor embedding into biometric database.")
 
     # Step C: Returning visit with identical / minor variation frame
-    match_id_returning, dist_ret, is_ambig_ret = db.find_best_match(emb, threshold=0.40)
+    match_id_returning, dist_ret, is_ambig_ret, match_type_ret = db.find_best_match(emb, threshold=0.40)
     assert match_id_returning == test_face_id, "Returning visitor should match enrolled record"
     assert dist_ret < 0.05, f"Expected near-zero distance on same subject, got {dist_ret}"
     sim_pct = (1.0 - dist_ret) * 100
@@ -81,7 +81,7 @@ def test_false_match_rejection(emb):
     for i in range(50):
         fake_emb = np.random.randn(1, 128).astype(np.float32)
         fake_emb = fake_emb / np.linalg.norm(fake_emb)
-        match_id, dist, is_ambig = db.find_best_match(fake_emb, threshold=0.40)
+        match_id, dist, is_ambig, match_type = db.find_best_match(fake_emb, threshold=0.40)
         if match_id is not None:
             false_matches += 1
 

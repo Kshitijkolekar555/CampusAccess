@@ -325,20 +325,51 @@ export const Login: React.FC = () => {
           transition={{ duration:0.3 }}
           style={{ width:'100%', maxWidth:460 }}
         >
-          {/* eyebrow + switch link */}
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+          {/* Back Button to Student / Visitor Registration Portal (visible on mobile and desktop) */}
+          <div style={{ marginBottom: 20 }}>
+            <button
+              type="button"
+              onClick={() => navigate('/enter')}
+              aria-label="Back to portal selection"
+              style={{
+                background: '#ffffff',
+                border: `1px solid ${C.line}`,
+                borderRadius: 8,
+                padding: '8px 14px',
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.text,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                transition: 'all 0.18s ease',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                fontFamily: 'Inter,sans-serif',
+                minHeight: 42,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = C.accent;
+                e.currentTarget.style.color = C.accent;
+                e.currentTarget.style.background = '#f8fafc';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = C.line;
+                e.currentTarget.style.color = C.text;
+                e.currentTarget.style.background = '#ffffff';
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>Back to Student / Visitor Portals</span>
+            </button>
+          </div>
+
+          {/* eyebrow */}
+          <div style={{ marginBottom: 12 }}>
             <span style={{ fontFamily:'JetBrains Mono,monospace', fontSize:10.5, letterSpacing:'0.1em',
               textTransform:'uppercase', color:C.mute }}>
               Guard Portal
             </span>
-            {!isForgotPassword && (
-              <button type="button"
-                onClick={() => { setActionMode(actionMode === 'LOGIN' ? 'SIGNUP' : 'LOGIN'); setIsForgotPassword(false); }}
-                style={{ fontFamily:'Inter,sans-serif', fontSize:12, color:C.accent, background:'none',
-                  border:'none', cursor:'pointer', padding:0 }}>
-                {actionMode === 'LOGIN' ? 'Create an account' : 'Sign in instead'}
-              </button>
-            )}
           </div>
 
           {/* title */}
@@ -421,6 +452,19 @@ export const Login: React.FC = () => {
                 {loading ? 'Signing in…' : `Sign in as Guard`}
                 {!loading && <ArrowRight size={14} className="arrow"/>}
               </button>
+              <div style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: C.mute }}>
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setActionMode('SIGNUP'); setIsForgotPassword(false); }}
+                  style={{
+                    background: 'none', border: 'none', color: C.accent, fontWeight: 600,
+                    cursor: 'pointer', padding: 0, textDecoration: 'underline', fontFamily: 'inherit',
+                  }}
+                >
+                  Create an account
+                </button>
+              </div>
             </form>
           )}
 
@@ -443,6 +487,19 @@ export const Login: React.FC = () => {
                 {loading ? 'Creating account…' : `Register as Guard`}
                 {!loading && <ArrowRight size={14} className="arrow"/>}
               </button>
+              <div style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: C.mute }}>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setActionMode('LOGIN'); setIsForgotPassword(false); }}
+                  style={{
+                    background: 'none', border: 'none', color: C.accent, fontWeight: 600,
+                    cursor: 'pointer', padding: 0, textDecoration: 'underline', fontFamily: 'inherit',
+                  }}
+                >
+                  Sign in
+                </button>
+              </div>
             </form>
           )}
 

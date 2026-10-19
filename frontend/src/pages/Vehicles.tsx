@@ -267,10 +267,10 @@ export const Vehicles: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto whitespace-nowrap scrollbar-none pb-0.5">
         <button
           onClick={() => { setActiveTab('registered'); setPage(0); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 shrink-0 ${
             activeTab === 'registered'
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -280,7 +280,7 @@ export const Vehicles: React.FC = () => {
         </button>
         <button
           onClick={() => { setActiveTab('logs'); setPage(0); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 shrink-0 ${
             activeTab === 'logs'
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -290,7 +290,7 @@ export const Vehicles: React.FC = () => {
         </button>
         <button
           onClick={() => { setActiveTab('history'); setPage(0); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-1.5 ${
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 shrink-0 flex items-center gap-1.5 ${
             activeTab === 'history'
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -383,7 +383,7 @@ export const Vehicles: React.FC = () => {
               }
             }}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Category"
               value={form.category}
@@ -403,7 +403,7 @@ export const Vehicles: React.FC = () => {
               onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Owner Name"
               placeholder="Full Name"
@@ -422,7 +422,7 @@ export const Vehicles: React.FC = () => {
               }}
             />
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsRegisterOpen(false)}>Cancel</Button>
             <Button type="submit" variant="primary" isLoading={registerMutation.isPending}>Register Vehicle</Button>
           </div>
@@ -454,14 +454,14 @@ export const Vehicles: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Driver Name (Optional)" placeholder="Driver Name" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
             <Input label="Driver Contact (Optional)" placeholder="Mobile number" value={driverContact} onChange={(e) => setDriverContact(e.target.value)} />
           </div>
 
           <Input label="Entry Note / Vehicle Remarks" placeholder="Optional guard entry notes..." value={entryNote} onChange={(e) => setEntryNote(e.target.value)} />
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setEntryVehicle(null)}>Cancel</Button>
             <Button
               variant="primary"

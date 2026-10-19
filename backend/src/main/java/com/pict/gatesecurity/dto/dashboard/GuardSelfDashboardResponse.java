@@ -35,6 +35,13 @@ public class GuardSelfDashboardResponse {
     private long studentPassesProcessedToday;
     private long activeVisitorsInsideCampus;
 
+    // Daily statistics below guard name
+    private long todayTotalVisitors;
+    private long todayApprovedVisitors;
+    private long todayRejectedVisitors;
+    private long todayCurrentlyInside;
+    private long todayCheckedOutVisitors;
+
     // Legacy fields for backward compatibility
     private long shiftDurationMinutes;
     private long visitorsProcessed;

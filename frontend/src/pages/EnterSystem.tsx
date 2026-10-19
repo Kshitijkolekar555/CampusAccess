@@ -94,8 +94,10 @@ export const EnterSystem: React.FC = () => {
         }
 
         @media (max-width: 680px) {
-          .cards-grid { grid-template-columns: 1fr !important; }
-          .enter-section { padding: 40px 20px !important; }
+          .cards-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .enter-section { padding: 28px 16px !important; }
+          .portal-card { padding: 24px 20px !important; }
+          .portal-card .action-btn { width: 100% !important; min-height: 44px !important; }
         }
       `}</style>
 
@@ -112,45 +114,48 @@ export const EnterSystem: React.FC = () => {
         <div style={{
           maxWidth: 960,
           margin: '0 auto',
-          padding: '0 24px',
-          height: 64,
+          padding: '0 16px',
+          height: 58,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
           <button
             onClick={() => navigate('/')}
+            aria-label="Back to home"
             style={{
               background: 'none',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: 6,
               color: C.mute,
-              fontSize: 13.5,
+              fontSize: 13,
               fontWeight: 500,
-              padding: '6px 10px',
+              padding: '6px 8px',
               borderRadius: 6,
               transition: 'color 0.15s, background 0.15s',
               fontFamily: 'inherit',
+              minHeight: 38,
             }}
             onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.background = '#f1f5f9'; }}
             onMouseLeave={e => { e.currentTarget.style.color = C.mute; e.currentTarget.style.background = 'none'; }}
           >
             <ArrowLeft size={16} />
-            Back to home
+            <span>Home</span>
           </button>
 
-          <img src="/logo.png" alt="CampusAccess" style={{ height: 36, objectFit: 'contain' }} />
+          <img src="/logo.png" alt="CampusAccess" style={{ height: 32, objectFit: 'contain' }} />
 
           <button
             onClick={() => navigate('/login')}
+            aria-label="Guard Portal"
             style={{
               background: '#ffffff',
               border: `1px solid ${C.lineDark}`,
               borderRadius: 8,
-              padding: '7px 14px',
+              padding: '6px 12px',
               fontSize: 12.5,
               fontWeight: 500,
               color: C.text,
@@ -161,6 +166,7 @@ export const EnterSystem: React.FC = () => {
               transition: 'all 0.18s ease',
               boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
               fontFamily: 'inherit',
+              minHeight: 38,
             }}
             onMouseEnter={e => {
               e.currentTarget.style.borderColor = C.accent;
@@ -174,7 +180,7 @@ export const EnterSystem: React.FC = () => {
             }}
           >
             <Shield size={14} />
-            Guard Portal
+            <span>Guard Portal</span>
           </button>
         </div>
       </header>
@@ -310,12 +316,6 @@ export const EnterSystem: React.FC = () => {
                     onClick={e => { e.stopPropagation(); navigate('/student/login'); }}
                   >
                     Student Login <ArrowRight size={13} className="card-arrow" />
-                  </button>
-                  <button
-                    className="action-btn outline"
-                    onClick={e => { e.stopPropagation(); navigate('/student/register'); }}
-                  >
-                    Register
                   </button>
                 </div>
               </div>

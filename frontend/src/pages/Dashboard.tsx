@@ -10,8 +10,9 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { Input } from '../components/ui/Input';
 import { api } from '../api/axios';
 import { visitorApi } from '../api/visitors';
+import { guardApi } from '../api/guards';
 
-import { ApiResponse, GuardSelfDashboardResponse, Visitor } from '../types';
+import { ApiResponse, GuardSelfDashboardResponse, SystemStatisticsResponse, Visitor } from '../types';
 import {
   Users,
   ShieldCheck,
@@ -42,6 +43,8 @@ import {
   Sparkles,
   RefreshCw,
   ArrowLeft,
+  Printer,
+  XCircle,
 } from 'lucide-react';
 import { hostelOutpassApi } from '../api/hostelOutpasses';
 import { studentPassApi } from '../api/studentPasses';
@@ -114,13 +117,67 @@ export const Dashboard: React.FC = () => {
     retry: 2,
   });
 
+  // Details Tab Lifetime & Filtered Statistics State
+  const [statsFilterType, setStatsFilterType] = useState<'LIFETIME' | 'CUSTOM'>('LIFETIME');
+  const [statsCustomStart, setStatsCustomStart] = useState<string>('');
+  const [statsCustomEnd, setStatsCustomEnd] = useState<string>('');
+  const [appliedCustomStart, setAppliedCustomStart] = useState<string>('');
+  const [appliedCustomEnd, setAppliedCustomEnd] = useState<string>('');
+  const [customDateError, setCustomDateError] = useState<string | null>(null);
+
+  const {
+    data: systemStats,
+    isLoading: isStatsLoading,
+    isError: isStatsError,
+    refetch: refetchSystemStats,
+    isRefetching: isStatsRefetching,
+  } = useQuery<SystemStatisticsResponse>({
+    queryKey: ['system-statistics', statsFilterType, appliedCustomStart, appliedCustomEnd],
+    queryFn: async () => {
+      const params: any = { filterType: statsFilterType };
+      if (statsFilterType === 'CUSTOM') {
+        if (appliedCustomStart) params.fromDate = appliedCustomStart;
+        if (appliedCustomEnd) params.toDate = appliedCustomEnd;
+      }
+      return await guardApi.getSystemStatistics(params);
+    },
+    enabled: isGuard && !isSimplifiedGuardView,
+    staleTime: 4000,
+  });
+
+  const handleApplyCustomRange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!statsCustomStart || !statsCustomEnd) {
+      setCustomDateError('Please select both start date and end date.');
+      return;
+    }
+    if (new Date(statsCustomEnd) < new Date(statsCustomStart)) {
+      setCustomDateError('End date cannot be earlier than start date.');
+      return;
+    }
+    setCustomDateError(null);
+    setAppliedCustomStart(statsCustomStart);
+    setAppliedCustomEnd(statsCustomEnd);
+  };
+
+  const handleResetToLifetime = () => {
+    setStatsFilterType('LIFETIME');
+    setCustomDateError(null);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleManualRefresh = async () => {
     try {
       await Promise.all([
         refetchGuardDashboard(),
         refetchActiveVisitors(),
+        refetchSystemStats(),
         queryClient.invalidateQueries({ queryKey: ['guard-self-dashboard'] }),
         queryClient.invalidateQueries({ queryKey: ['active-visitors-dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['system-statistics'] }),
       ]);
       toast.success('Dashboard metrics refreshed');
     } catch {
@@ -570,10 +627,40 @@ export const Dashboard: React.FC = () => {
       recentLogs: [],
     };
 
+    const isLifetime = statsFilterType === 'LIFETIME';
+    const isCustom = statsFilterType === 'CUSTOM';
+
     return (
       <div className="space-y-6">
-        {/* Modern Clean Duty Terminal Card */}
-        <div className="bg-white border border-slate-200/90 rounded-xl p-5 sm:p-6 shadow-xs transition-all hover:shadow-sm">
+        {/* Printable Report Header (Visible only in print) */}
+        <div className="hidden print:block border-b-2 border-slate-900 pb-4 mb-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">CAMPUSACCESS</h1>
+              <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold mt-0.5">
+                Enterprise Gate Security & Biometric Access Terminal
+              </p>
+              <h2 className="text-lg font-bold text-slate-800 mt-2">
+                Guard Dashboard — {isLifetime ? 'Lifetime Historical Statistics Report' : `${systemStats?.label || 'Period'} Statistics Report`}
+              </h2>
+            </div>
+            <div className="text-right text-xs text-slate-600">
+              <p className="font-semibold text-slate-900">Official Audit Document</p>
+              <p>Generated: {new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'medium' })}</p>
+              <p className="mt-1 font-mono text-[11px] bg-slate-100 p-1 rounded inline-block">
+                Scope: {isLifetime ? 'Complete Lifetime Historical Dataset' : (systemStats?.label || statsFilterType)}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mt-4 pt-3 border-t border-slate-200 text-xs">
+            <div><strong>Duty Officer:</strong> {summary.guardName} ({summary.guardId})</div>
+            <div><strong>Assigned Gate:</strong> {summary.gateName}</div>
+            <div><strong>Shift:</strong> {summary.shiftName} ({summary.dutyStatus})</div>
+          </div>
+        </div>
+
+        {/* Modern Clean Duty Terminal Card (Screen only) */}
+        <div className="print:hidden bg-white border border-slate-200/90 rounded-xl p-5 sm:p-6 shadow-xs transition-all hover:shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-start sm:items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-indigo-50/80 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg shrink-0">
@@ -613,90 +700,272 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 self-stretch md:self-auto justify-end">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full md:w-auto justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsSimplifiedGuardView(true)}
                 leftIcon={<ArrowLeft className="w-3.5 h-3.5 text-slate-600" />}
-                className="shadow-xs font-medium text-slate-700 hover:text-slate-900 border-slate-300"
+                className="shadow-xs font-medium text-slate-700 hover:text-slate-900 border-slate-300 justify-center min-h-[38px]"
               >
                 Back to Dashboard
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleManualRefresh}
-                leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${(isRefetchingGuardDashboard || isRefetchingActiveVisitors) ? 'animate-spin text-indigo-600' : ''}`} />}
-                className="shadow-xs"
-                disabled={isRefetchingGuardDashboard || isRefetchingActiveVisitors}
+                onClick={handlePrint}
+                leftIcon={<Printer className="w-3.5 h-3.5 text-indigo-600" />}
+                className="shadow-xs font-semibold text-indigo-700 hover:text-indigo-900 border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 cursor-pointer justify-center min-h-[38px]"
               >
-                {isRefetchingGuardDashboard || isRefetchingActiveVisitors ? 'Refreshing...' : 'Refresh Metrics'}
+                Print Statistics
               </Button>
               <Button
-                variant="primary"
+                variant="outline"
                 size="sm"
-                onClick={() => navigate('/visitors')}
-                leftIcon={<Camera className="w-4 h-4" />}
-                className="shadow-xs"
+                onClick={handleManualRefresh}
+                leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${(isRefetchingGuardDashboard || isStatsRefetching) ? 'animate-spin text-indigo-600' : ''}`} />}
+                className="shadow-xs cursor-pointer justify-center min-h-[38px]"
+                disabled={isRefetchingGuardDashboard || isStatsRefetching}
               >
-                Open Visitor Terminal
+                {isRefetchingGuardDashboard || isStatsRefetching ? 'Refreshing...' : 'Refresh'}
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Dynamic Activity Metrics (Polling every 3s) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <StatsCard
-            title="Visitors Entered Today"
-            value={isGuardError ? '—' : isGuardLoading && !guardData ? '...' : summary.visitorsEnteredToday}
-            icon={<UserCheck className="w-6 h-6" />}
-            colorTheme="emerald"
-            description={isGuardError ? 'Data unavailable' : 'Checked in via location'}
-          />
-          <StatsCard
-            title="Visitors Exited Today"
-            value={isGuardError ? '—' : isGuardLoading && !guardData ? '...' : summary.visitorsExitedToday}
-            icon={<LogOut className="w-6 h-6" />}
-            colorTheme="indigo"
-            description={isGuardError ? 'Data unavailable' : 'Checked out via location'}
-          />
-          <StatsCard
-            title="Active Visitors Inside Campus"
-            value={isGuardError ? '—' : isGuardLoading && !guardData ? '...' : summary.activeVisitorsInsideCampus}
-            icon={<Users className="w-6 h-6" />}
-            colorTheme="emerald"
-            description={isGuardError ? 'Data unavailable' : 'Currently on campus'}
-          />
-          <StatsCard
-            title="Vehicles Entered Today"
-            value={isGuardError ? '—' : isGuardLoading && !guardData ? '...' : summary.vehiclesEnteredToday}
-            icon={<Car className="w-6 h-6" />}
-            colorTheme="cyan"
-            description={isGuardError ? 'Data unavailable' : 'Entry logs recorded'}
-          />
-          <StatsCard
-            title="Vehicles Exited Today"
-            value={isGuardError ? '—' : isGuardLoading && !guardData ? '...' : summary.vehiclesExitedToday}
-            icon={<Car className="w-6 h-6" />}
-            colorTheme="purple"
-            description={isGuardError ? 'Data unavailable' : 'Exit logs recorded'}
-          />
-          <StatsCard
-            title="Materials Processed Today"
-            value={isGuardError ? '—' : isGuardLoading && !guardData ? '...' : summary.materialsProcessedToday}
-            icon={<Package className="w-6 h-6" />}
-            colorTheme="amber"
-            description={isGuardError ? 'Data unavailable' : 'Vendor / Inward entry'}
-          />
-          <StatsCard
-            title="Student Passes Processed Today"
-            value={isGuardError ? '—' : isGuardLoading && !guardData ? '...' : (summary.studentPassesProcessedToday ?? 0)}
-            icon={<Ticket className="w-6 h-6" />}
-            colorTheme="indigo"
-            description={isGuardError ? 'Data unavailable' : 'Student gate passes'}
-          />
+        {/* Date and Month Filters Bar (Screen only) */}
+        <div className="print:hidden bg-white border border-slate-200/90 rounded-xl p-4 sm:p-5 shadow-xs">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Statistics Scope & Period Filters</h3>
+                <p className="text-xs text-slate-500">
+                  Switch between complete lifetime data and custom date range
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Lifetime Reset Button if not on lifetime */}
+            {!isLifetime && (
+              <button
+                type="button"
+                onClick={handleResetToLifetime}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Reset to Lifetime (All Records)
+              </button>
+            )}
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 mt-3.5">
+            <button
+              type="button"
+              onClick={() => { setStatsFilterType('LIFETIME'); setCustomDateError(null); }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                isLifetime
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>Lifetime (All Time)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setStatsFilterType('CUSTOM'); }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                isCustom
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>Custom Date Range</span>
+            </button>
+          </div>
+
+          {/* Sub-controls for Custom Range */}
+          {isCustom && (
+            <form onSubmit={handleApplyCustomRange} className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+              <div className="flex flex-col xs:flex-row xs:items-center gap-1.5 xs:gap-2">
+                <label className="text-xs font-medium text-slate-600 shrink-0">Start Date:</label>
+                <input
+                  type="date"
+                  value={statsCustomStart}
+                  onChange={(e) => setStatsCustomStart(e.target.value)}
+                  required
+                  className="text-xs bg-slate-50 border border-slate-300 rounded px-2.5 py-2 text-slate-800 font-medium focus:ring-1 focus:ring-indigo-500 w-full xs:w-auto min-h-[38px]"
+                />
+              </div>
+
+              <div className="flex flex-col xs:flex-row xs:items-center gap-1.5 xs:gap-2">
+                <label className="text-xs font-medium text-slate-600 shrink-0">End Date:</label>
+                <input
+                  type="date"
+                  value={statsCustomEnd}
+                  onChange={(e) => setStatsCustomEnd(e.target.value)}
+                  required
+                  className="text-xs bg-slate-50 border border-slate-300 rounded px-2.5 py-2 text-slate-800 font-medium focus:ring-1 focus:ring-indigo-500 w-full xs:w-auto min-h-[38px]"
+                />
+              </div>
+
+              <Button type="submit" variant="primary" size="sm" className="text-xs py-2 px-4 justify-center min-h-[38px]">
+                Apply Range
+              </Button>
+
+              {customDateError && (
+                <span className="text-xs text-rose-600 font-semibold flex items-center gap-1 w-full sm:w-auto">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {customDateError}
+                </span>
+              )}
+            </form>
+          )}
+        </div>
+
+        {/* PRIMARY VISITOR METRICS SECTION */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-600" />
+              <span>Visitor Access Lifecycle Metrics</span>
+              <span className="text-[11px] font-normal normal-case text-slate-500">
+                ({isLifetime ? 'Lifetime Cumulative' : systemStats?.label || 'Selected Period'})
+              </span>
+            </h2>
+            {isStatsLoading && (
+              <span className="text-xs text-indigo-600 animate-pulse font-medium">Calculating database totals...</span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {/* 1. Total Visitors Handled */}
+            <StatsCard
+              title={isLifetime ? "Total Visitors Handled" : "Visitors in Period"}
+              value={isStatsLoading ? '...' : (systemStats?.totalVisitors ?? summary.visitorsEnteredToday)}
+              icon={<Users className="w-6 h-6" />}
+              colorTheme="indigo"
+              description={isLifetime ? "All-time recorded entries" : `Recorded in selected period`}
+            />
+
+            {/* 2. Total Approved */}
+            <StatsCard
+              title="Approved Visitors"
+              value={isStatsLoading ? '...' : (systemStats?.approvedVisitors ?? summary.visitorsEnteredToday)}
+              icon={<CheckCircle2 className="w-6 h-6" />}
+              colorTheme="emerald"
+              description={isLifetime ? "Total entries approved" : "Approved within period"}
+            />
+
+            {/* 3. Total Rejected */}
+            <StatsCard
+              title="Rejected Visitors"
+              value={isStatsLoading ? '...' : (systemStats?.rejectedVisitors ?? 0)}
+              icon={<XCircle className="w-6 h-6" />}
+              colorTheme="rose"
+              description={isLifetime ? "Total tokens rejected" : "Rejected within period"}
+            />
+
+            {/* 4. Completed Visits */}
+            <StatsCard
+              title="Completed Visits"
+              value={isStatsLoading ? '...' : (systemStats?.completedVisits ?? summary.visitorsExitedToday)}
+              icon={<LogOut className="w-6 h-6" />}
+              colorTheme="purple"
+              description={isLifetime ? "All checked-out visits" : "Checked out in period"}
+            />
+
+            {/* 5. Currently Inside Campus */}
+            <StatsCard
+              title="Currently Inside Campus"
+              value={isStatsLoading ? '...' : (systemStats?.currentlyInside ?? summary.activeVisitorsInsideCampus)}
+              icon={<Building className="w-6 h-6" />}
+              colorTheme="cyan"
+              description="Live campus occupancy"
+            />
+          </div>
+        </div>
+
+        {/* SYSTEM-WIDE CROSS-DOMAIN METRICS SECTION */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Cross-Domain Campus Access Operations</span>
+              <span className="text-[11px] font-normal normal-case text-slate-500">
+                ({isLifetime ? 'System Lifetime' : systemStats?.label || 'Selected Period'})
+              </span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {/* Vehicles Logged */}
+            <StatsCard
+              title="Vehicles Logged"
+              value={isStatsLoading ? '...' : (systemStats?.totalVehicles ?? summary.vehiclesEnteredToday)}
+              icon={<Car className="w-6 h-6" />}
+              colorTheme="cyan"
+              description={isLifetime ? "All-time vehicle logs" : "Logged in selected period"}
+            />
+
+            {/* Student Gate Passes */}
+            <StatsCard
+              title="Student Gate Passes"
+              value={isStatsLoading ? '...' : (systemStats?.totalStudentPasses ?? summary.studentPassesProcessedToday ?? 0)}
+              icon={<Ticket className="w-6 h-6" />}
+              colorTheme="indigo"
+              description={isLifetime ? "Total student passes" : "Issued in period"}
+            />
+
+            {/* Hostel Outpasses */}
+            <StatsCard
+              title="Hostel Outpasses"
+              value={isStatsLoading ? '...' : (systemStats?.totalHostelOutpasses ?? summary.hostelVerifications ?? 0)}
+              icon={<GraduationCap className="w-6 h-6" />}
+              colorTheme="amber"
+              description={isLifetime ? "Total hostel outpasses" : "Processed in period"}
+            />
+
+            {/* Vendor Visits */}
+            <StatsCard
+              title="Vendor & Material Visits"
+              value={isStatsLoading ? '...' : (systemStats?.totalVendorVisits ?? summary.materialsProcessedToday)}
+              icon={<Package className="w-6 h-6" />}
+              colorTheme="emerald"
+              description={isLifetime ? "Total vendor entries" : "Entries in period"}
+            />
+
+            {/* Pending Approvals */}
+            <StatsCard
+              title="Pending Pass Approvals"
+              value={isStatsLoading ? '...' : (systemStats?.pendingTokens ?? 0)}
+              icon={<Clock className="w-6 h-6" />}
+              colorTheme="amber"
+              description="Awaiting guard clearance"
+            />
+          </div>
+        </div>
+
+        {/* Printable Report Verification Footer (Visible only in print) */}
+        <div className="hidden print:block mt-10 pt-6 border-t-2 border-slate-900 text-xs text-slate-600">
+          <div className="flex justify-between items-end">
+            <div>
+              <p className="font-semibold text-slate-800">Verification & Sign-off:</p>
+              <div className="mt-8 pt-1 border-t border-slate-400 w-64">
+                <p>Authorized Guard Signature / Seal</p>
+                <p className="text-[10px] text-slate-500">Name: {summary.guardName} (Terminal: {summary.guardId})</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-[10px] text-slate-500">Document ID: CA-SEC-{Date.now()}</p>
+              <p className="text-[10px] text-slate-500">System Timezone: Asia/Kolkata (IST)</p>
+              <p className="text-[10px] font-semibold text-slate-700 mt-1">CampusAccess Gate Security Terminal</p>
+            </div>
+          </div>
         </div>
       </div>
     );
