@@ -52,6 +52,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { toast } from 'sonner';
 import { GuardDashboardView } from '../components/guard/GuardDashboardView';
+import { GraphicalAnalyticsHub } from '../components/guard/GraphicalAnalyticsHub';
 import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
 
 export const Dashboard: React.FC = () => {
@@ -59,17 +60,20 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Role detection — only Guard and Student are supported login roles
+  // Role detection
   const role = user?.role || '';
   const isGuard = role === 'SECURITY_GUARD' || role === 'GUARD' || role === 'SECURITY_OFFICER';
   const isStudent = role === 'STUDENT';
+  const isTeacher = role === 'FACULTY' || role === 'STAFF';
 
-  // Redirect unsupported roles immediately
+  // Redirect unsupported roles or teacher role
   useEffect(() => {
-    if (!isGuard && !isStudent) {
+    if (isTeacher) {
+      navigate('/teacher', { replace: true });
+    } else if (!isGuard && !isStudent) {
       navigate('/enter');
     }
-  }, [isGuard, isStudent, navigate]);
+  }, [isGuard, isStudent, isTeacher, navigate]);
 
   const [isSimplifiedGuardView, setIsSimplifiedGuardView] = useState(true);
 
@@ -827,6 +831,11 @@ export const Dashboard: React.FC = () => {
           )}
         </div>
 
+        {/* ADVANCED GRAPHICAL ANALYTICS & TREND VISUALIZATIONS */}
+        <div className="print:hidden">
+          <GraphicalAnalyticsHub />
+        </div>
+
         {/* PRIMARY VISITOR METRICS SECTION */}
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -1113,8 +1122,67 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
     }
   };
 
+  // Update Default Password Modal State
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newStudentPassword, setNewStudentPassword] = useState('');
+  const [confirmStudentPassword, setConfirmStudentPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleStudentPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) { toast.error('Current password is required'); return; }
+    if (!newStudentPassword || newStudentPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+    if (studentPrn && newStudentPassword.trim().toUpperCase() === studentPrn.trim().toUpperCase()) {
+      toast.error('New password must not equal your college PRN');
+      return;
+    }
+    if (newStudentPassword !== confirmStudentPassword) {
+      toast.error('New password and confirmation do not match');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword: newStudentPassword,
+        confirmPassword: confirmStudentPassword,
+      });
+      toast.success('Password changed successfully! Your account is now secured.');
+      setShowPasswordModal(false);
+      setCurrentPassword('');
+      setNewStudentPassword('');
+      setConfirmStudentPassword('');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to update password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Default Password Alert Advisory Card */}
+      <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
+          <p className="text-xs text-amber-300 font-sans m-0">
+            <strong>Security Notice:</strong> If you are still using your default college PRN as your password, secure your account now.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowPasswordModal(true)}
+          className="text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 px-3 py-1 rounded font-medium transition"
+        >
+          Update Default Password
+        </button>
+      </div>
+
       {/* Hero Welcome Banner */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
@@ -1808,6 +1876,95 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
               >
                 Close Presentation Pass
               </Button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* UPDATE DEFAULT PASSWORD MODAL */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            onClick={() => setShowPasswordModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-lg p-5 sm:p-6 w-full max-w-md shadow-2xl space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                  <h3 className="text-base font-bold text-slate-900">Update Default Password</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="text-slate-400 hover:text-slate-600 text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed">
+                If your account was provisioned with your PRN as the default password, create a secure, personalized password now.
+              </p>
+
+              <form onSubmit={handleStudentPasswordChange} className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Current Password (e.g. Your PRN) *</label>
+                  <input
+                    type="password"
+                    required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">New Password (Min 6 characters, != PRN) *</label>
+                  <input
+                    type="password"
+                    required
+                    value={newStudentPassword}
+                    onChange={(e) => setNewStudentPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Confirm New Password *</label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmStudentPassword}
+                    onChange={(e) => setConfirmStudentPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordModal(false)}
+                    className="px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded transition disabled:opacity-50"
+                  >
+                    {isChangingPassword ? 'Updating...' : 'Update Password'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

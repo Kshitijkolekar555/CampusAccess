@@ -28,4 +28,9 @@ public interface StudentVerificationService {
      * Revokes biometric enrollment for student.
      */
     boolean revokeStudentBiometrics(String prn, String performingUsername);
+
+    /**
+     * Manually enrolls a student into the roster by Guard / Admin.
+     */
+    com.pict.gatesecurity.dto.user.UserResponse enrollStudentToRoster(com.pict.gatesecurity.dto.student.StudentRosterRequest request, String performingUsername);
 }

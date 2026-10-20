@@ -19,6 +19,7 @@ import { Users } from '../pages/Users';
 import { Gates } from '../pages/Gates';
 import { Notifications } from '../pages/Notifications';
 import { Profile } from '../pages/Profile';
+import { TeacherDashboardView } from '../pages/TeacherDashboardView';
 import type { UserRole } from '../types';
 
 // Protected Route Component with strict role checks
@@ -29,8 +30,8 @@ const ProtectedLayout: React.FC<{ allowedRoles?: UserRole[] }> = ({ allowedRoles
     return <Navigate to="/login" replace />;
   }
 
-  // Block unsupported roles (Admin, Faculty, Warden, etc.) from accessing the app
-  const supportedRoles: UserRole[] = ['STUDENT', 'SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER'];
+  // Supported roles include Student, Guards, Faculty, and Staff
+  const supportedRoles: UserRole[] = ['STUDENT', 'SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'STAFF', 'FACULTY', 'ADMIN'];
   if (user && !supportedRoles.includes(user.role)) {
     return <Navigate to="/login" replace />;
   }
@@ -85,6 +86,11 @@ export const AppRoutes: React.FC = () => {
         <Route path="/student-passes"   element={<StudentPasses />} />
         <Route path="/outpasses"        element={<HostelOutpasses />} />
         <Route path="/notifications"    element={<Navigate to="/dashboard" replace />} />
+      </Route>
+
+      {/* ── Teacher / Staff Routes ────────────────────────────────────── */}
+      <Route element={<ProtectedLayout allowedRoles={['FACULTY', 'STAFF', 'ADMIN']} />}>
+        <Route path="/teacher" element={<TeacherDashboardView />} />
       </Route>
 
       {/* ── Default Catch-All ─────────────────────────────────────────── */}

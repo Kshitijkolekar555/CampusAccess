@@ -38,5 +38,18 @@ export const studentApi = {
     formData.append('photo', photoBlob, 'student_camera.jpg');
     const res = await api.post<ApiResponse<StudentVerificationData>>('/students/verify-face', formData);
     return res.data.data;
+  },
+
+  enrollToRoster: async (data: {
+    prn: string;
+    fullName: string;
+    department?: string;
+    rollNumber?: string;
+    phone?: string;
+    division?: string;
+    academicYear?: string;
+  }) => {
+    const res = await api.post<ApiResponse<any>>('/students/roster', data);
+    return res.data.data;
   }
 };

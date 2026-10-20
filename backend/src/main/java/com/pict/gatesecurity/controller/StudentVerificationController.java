@@ -71,4 +71,16 @@ public class StudentVerificationController {
         studentVerificationService.revokeStudentBiometrics(prn, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(null, "Student biometrics revoked successfully"));
     }
+
+    @PostMapping("/roster")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'ADMIN', 'SECURITY_OFFICER')")
+    @Operation(summary = "Enroll New Student to Roster", description = "Manual enrollment of a new student to college roster by Guard or Admin")
+    public ResponseEntity<ApiResponse<com.pict.gatesecurity.dto.user.UserResponse>> enrollStudentToRoster(
+            @jakarta.validation.Valid @RequestBody com.pict.gatesecurity.dto.student.StudentRosterRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        com.pict.gatesecurity.dto.user.UserResponse response = studentVerificationService.enrollStudentToRoster(request, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(response, "Student enrolled to roster successfully"));
+    }
 }
+

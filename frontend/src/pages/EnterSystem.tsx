@@ -148,40 +148,77 @@ export const EnterSystem: React.FC = () => {
 
           <img src="/logo.png" alt="CampusAccess" style={{ height: 32, objectFit: 'contain' }} />
 
-          <button
-            onClick={() => navigate('/login')}
-            aria-label="Guard Portal"
-            style={{
-              background: '#ffffff',
-              border: `1px solid ${C.lineDark}`,
-              borderRadius: 8,
-              padding: '6px 12px',
-              fontSize: 12.5,
-              fontWeight: 500,
-              color: C.text,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              transition: 'all 0.18s ease',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-              fontFamily: 'inherit',
-              minHeight: 38,
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = C.accent;
-              e.currentTarget.style.color = C.accent;
-              e.currentTarget.style.background = C.accentLight;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = C.lineDark;
-              e.currentTarget.style.color = C.text;
-              e.currentTarget.style.background = '#ffffff';
-            }}
-          >
-            <Shield size={14} />
-            <span>Guard Portal</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => navigate('/login')}
+              aria-label="Staff & Faculty Portal"
+              style={{
+                background: '#ffffff',
+                border: `1px solid ${C.lineDark}`,
+                borderRadius: 8,
+                padding: '6px 12px',
+                fontSize: 12.5,
+                fontWeight: 500,
+                color: C.text,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.18s ease',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                fontFamily: 'inherit',
+                minHeight: 38,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = C.accent;
+                e.currentTarget.style.color = C.accent;
+                e.currentTarget.style.background = C.accentLight;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = C.lineDark;
+                e.currentTarget.style.color = C.text;
+                e.currentTarget.style.background = '#ffffff';
+              }}
+            >
+              <Users size={14} />
+              <span>Staff / Faculty</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/login')}
+              aria-label="Guard Portal"
+              style={{
+                background: '#ffffff',
+                border: `1px solid ${C.lineDark}`,
+                borderRadius: 8,
+                padding: '6px 12px',
+                fontSize: 12.5,
+                fontWeight: 500,
+                color: C.text,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.18s ease',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                fontFamily: 'inherit',
+                minHeight: 38,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = C.accent;
+                e.currentTarget.style.color = C.accent;
+                e.currentTarget.style.background = C.accentLight;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = C.lineDark;
+                e.currentTarget.style.color = C.text;
+                e.currentTarget.style.background = '#ffffff';
+              }}
+            >
+              <Shield size={14} />
+              <span>Guard Portal</span>
+            </button>
+          </div>
         </div>
       </header>
 

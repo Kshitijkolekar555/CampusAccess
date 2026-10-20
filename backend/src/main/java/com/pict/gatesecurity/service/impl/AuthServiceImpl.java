@@ -5,6 +5,7 @@ import com.pict.gatesecurity.dto.user.UserCreateRequest;
 import com.pict.gatesecurity.dto.user.UserResponse;
 import com.pict.gatesecurity.entity.PasswordResetToken;
 import com.pict.gatesecurity.entity.RefreshToken;
+import com.pict.gatesecurity.entity.StudentProfile;
 import com.pict.gatesecurity.entity.User;
 import com.pict.gatesecurity.entity.enums.UserRole;
 import com.pict.gatesecurity.exception.BadRequestException;
@@ -306,6 +307,19 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Registration is restricted to Student and Guard accounts only. Admin, Faculty, and Warden registration is not permitted.");
         }
 
+        if (regRole == UserRole.STUDENT) {
+            String studentPrn = request.getUsername().trim().toUpperCase();
+            boolean existsInRoster = studentProfileRepository != null &&
+                    (studentProfileRepository.existsByPrn(studentPrn) ||
+                     studentProfileRepository.findByPrnIgnoreCase(studentPrn).isPresent() ||
+                     studentProfileRepository.findByRollNumber(studentPrn).isPresent());
+
+            if (!existsInRoster) {
+                throw new com.pict.gatesecurity.exception.ForbiddenException(
+                        "PRN not found in college enrollment roster. Contact campus security or department office.");
+            }
+        }
+
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new DuplicateResourceException("Username '" + request.getUsername() + "' is already taken");
         }
@@ -325,11 +339,15 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.saveAndFlush(user);
 
-        // Ensure a StudentProfile exists for new student accounts
+        // Ensure a StudentProfile exists and is linked for new student accounts
         if (savedUser.getRole() == UserRole.STUDENT && studentProfileRepository != null) {
             String prn = savedUser.getUsername().toUpperCase();
-            if (studentProfileRepository.findByUserId(savedUser.getId()).isEmpty() &&
-                !studentProfileRepository.existsByPrn(prn)) {
+            Optional<StudentProfile> existingProfileOpt = studentProfileRepository.findByPrnIgnoreCase(prn);
+            if (existingProfileOpt.isPresent()) {
+                StudentProfile profile = existingProfileOpt.get();
+                profile.setUser(savedUser);
+                studentProfileRepository.save(profile);
+            } else if (studentProfileRepository.findByUserId(savedUser.getId()).isEmpty()) {
                 com.pict.gatesecurity.entity.StudentProfile profile = com.pict.gatesecurity.entity.StudentProfile.builder()
                         .user(savedUser)
                         .prn(prn)

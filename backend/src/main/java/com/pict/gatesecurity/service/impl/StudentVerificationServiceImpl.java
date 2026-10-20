@@ -37,6 +37,8 @@ public class StudentVerificationServiceImpl implements StudentVerificationServic
     private final UserRepository userRepository;
     private final FaceRecognitionService faceRecognitionService;
     private final AuditLogService auditLogService;
+    private final com.pict.gatesecurity.mapper.UserMapper userMapper;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -335,4 +337,82 @@ public class StudentVerificationServiceImpl implements StudentVerificationServic
         response.setAuthorizationReason("NO_ACTIVE_PASS");
         return response;
     }
+
+    @Override
+    @Transactional
+    public com.pict.gatesecurity.dto.user.UserResponse enrollStudentToRoster(com.pict.gatesecurity.dto.student.StudentRosterRequest request, String performingUsername) {
+        if (request.getPrn() == null || request.getPrn().isBlank()) {
+            throw new BadRequestException("PRN is required");
+        }
+        if (request.getFullName() == null || request.getFullName().isBlank()) {
+            throw new BadRequestException("Full name is required");
+        }
+
+        String username = request.getPrn().trim().toUpperCase();
+        String prn = username;
+        String rollNo = request.getRollNumber() != null ? request.getRollNumber().trim() : null;
+        String name = request.getFullName().trim();
+        String phone = request.getPhone() != null && !request.getPhone().isBlank() ? request.getPhone().trim() : null;
+        String branch = request.getDepartment() != null && !request.getDepartment().isBlank() ? request.getDepartment().trim() : "E&TC";
+        String division = request.getDivision() != null && !request.getDivision().isBlank() ? request.getDivision().trim() : null;
+        String academicYear = request.getAcademicYear() != null && !request.getAcademicYear().isBlank() ? request.getAcademicYear().trim() : "TE";
+        String email = username.toLowerCase() + "@pict.edu";
+
+        Optional<User> existingUserOpt = userRepository.findByUsername(username);
+        User user;
+        if (existingUserOpt.isPresent()) {
+            user = existingUserOpt.get();
+            user.setFullName(name);
+            user.setEmail(email);
+            if (phone != null) user.setPhone(phone);
+            user.setActive(true);
+            user = userRepository.save(user);
+        } else {
+            String encodedPassword = passwordEncoder.encode(username);
+            user = User.builder()
+                    .username(username)
+                    .passwordHash(encodedPassword)
+                    .role(UserRole.STUDENT)
+                    .fullName(name)
+                    .email(email)
+                    .phone(phone)
+                    .active(true)
+                    .isLateComerPermitted(true)
+                    .build();
+            user = userRepository.save(user);
+        }
+
+        Optional<StudentProfile> existingProfileOpt = studentProfileRepository.findByUserId(user.getId());
+        StudentProfile profile;
+        if (existingProfileOpt.isPresent()) {
+            profile = existingProfileOpt.get();
+            profile.setPrn(prn);
+            profile.setRollNumber(rollNo);
+            profile.setDepartment(branch);
+            profile.setAcademicYear(academicYear);
+            profile.setDivision(division);
+            profile.setActive(true);
+        } else {
+            profile = StudentProfile.builder()
+                    .user(user)
+                    .prn(prn)
+                    .rollNumber(rollNo)
+                    .department(branch)
+                    .academicYear(academicYear)
+                    .division(division)
+                    .active(true)
+                    .build();
+        }
+        studentProfileRepository.save(profile);
+
+        User guardUser = userRepository.findByUsername(performingUsername).orElse(null);
+        auditLogService.logAction(guardUser, "ROSTER_STUDENT_ENROLLED", "StudentProfile", profile.getId(), null, Map.of(
+                "prn", prn,
+                "name", name,
+                "enrolledBy", performingUsername
+        ));
+
+        return userMapper.toResponse(user);
+    }
 }
+

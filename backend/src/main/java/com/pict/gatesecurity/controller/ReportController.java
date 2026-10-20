@@ -28,7 +28,7 @@ import java.util.List;
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
 @Tag(name = "Reports & Analytics", description = "Report Generation, Export, and Analytics")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
 public class ReportController {
 
     private final ReportService reportService;

@@ -76,8 +76,10 @@ public class StudentExcelDataLoader implements CommandLineRunner {
                     user.setEmail(email);
                     if (phone != null) user.setPhone(phone);
                     user.setActive(true);
-                    // Update password to match username/enrollment (e.g. S25ET034)
-                    user.setPasswordHash(passwordEncoder.encode(username));
+                    // Do not override custom passwords already changed by the student
+                    if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+                        user.setPasswordHash(passwordEncoder.encode(username));
+                    }
                     user = userRepository.save(user);
                     updatedCount++;
                 } else {
@@ -132,10 +134,15 @@ public class StudentExcelDataLoader implements CommandLineRunner {
 
     private File findExcelFile() {
         String[] possiblePaths = {
-                "C:/Users/purva/OneDrive/Desktop/CampusAccess-Integration/TE E&TCE.xlsx",
+                "TE E&TCE (1).xlsx",
+                "../TE E&TCE (1).xlsx",
+                "../../TE E&TCE (1).xlsx",
+                "c:/Users/purva/OneDrive/Desktop/CampusAccess-BeforeDeployment/TE E&TCE (1).xlsx",
+                "c:/KshitijKolekar/campusaccesslatest/CampusAccess/TE E&TCE (1).xlsx",
+                "TE E&TCE.xlsx",
                 "../TE E&TCE.xlsx",
                 "../../TE E&TCE.xlsx",
-                "TE E&TCE.xlsx"
+                "C:/Users/purva/OneDrive/Desktop/CampusAccess-Integration/TE E&TCE.xlsx"
         };
         for (String p : possiblePaths) {
             File f = new File(p);

@@ -6,6 +6,7 @@ import { hostelOutpassApi } from '../../api/hostelOutpasses';
 import { studentPassApi } from '../../api/studentPasses';
 import { userApi } from '../../api/users';
 import { gateApi } from '../../api/gates';
+import { studentApi } from '../../api/students';
 import { VisitorWebcamModal } from '../visitor/VisitorWebcamModal';
 import {
   Visitor,
@@ -162,6 +163,45 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
 
   // Photo upload input reference for manual visitor registration
   const visitorPhotoUploadRef = React.useRef<HTMLInputElement>(null);
+
+  // Enroll New Student to Roster Modal State
+  const [isEnrollRosterModalOpen, setIsEnrollRosterModalOpen] = useState(false);
+  const [rosterPrn, setRosterPrn] = useState('');
+  const [rosterName, setRosterName] = useState('');
+  const [rosterBranch, setRosterBranch] = useState('E&TC');
+  const [rosterRollNo, setRosterRollNo] = useState('');
+  const [rosterPhone, setRosterPhone] = useState('');
+  const [rosterDivision, setRosterDivision] = useState('TY-V');
+  const [isSubmittingRoster, setIsSubmittingRoster] = useState(false);
+
+  const handleEnrollRosterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rosterPrn.trim()) { toast.error('PRN is required'); return; }
+    if (!rosterName.trim()) { toast.error('Student Name is required'); return; }
+
+    setIsSubmittingRoster(true);
+    try {
+      await studentApi.enrollToRoster({
+        prn: rosterPrn.trim().toUpperCase(),
+        fullName: rosterName.trim(),
+        department: rosterBranch.trim(),
+        rollNumber: rosterRollNo.trim() || undefined,
+        phone: rosterPhone.trim() || undefined,
+        division: rosterDivision.trim() || undefined,
+        academicYear: 'TE',
+      });
+      toast.success(`Student ${rosterPrn.toUpperCase()} enrolled to college roster successfully!`);
+      setIsEnrollRosterModalOpen(false);
+      setRosterPrn('');
+      setRosterName('');
+      setRosterRollNo('');
+      setRosterPhone('');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to enroll student to roster');
+    } finally {
+      setIsSubmittingRoster(false);
+    }
+  };
 
   const handleVisitorPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1021,16 +1061,26 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       {/* 4. GATE OPERATIONS: FOUR PRIMARY OPTIONS */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-indigo-600" />
             <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900">
               Gate Operations
             </h2>
           </div>
-          <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-            Primary Terminal Hub
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEnrollRosterModalOpen(true)}
+              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold px-2.5 py-1 rounded flex items-center gap-1.5 transition"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              Enroll New Student to Roster
+            </button>
+            <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+              Primary Terminal Hub
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -2405,6 +2455,142 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                   <span>Approve Pass</span>
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* D. ENROLL NEW STUDENT TO ROSTER MODAL (Guard / Admin Only) */}
+      <AnimatePresence>
+        {isEnrollRosterModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ scale: 0.98, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }}
+              className="bg-white border border-slate-200 rounded-lg w-full max-w-md overflow-hidden shadow-xl flex flex-col"
+            >
+              <div className="bg-[#0f172a] text-white p-4 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-indigo-400" />
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Enroll New Student to Roster</h3>
+                    <p className="text-[11px] text-slate-400">Add pre-approved student to college whitelist</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEnrollRosterModalOpen(false)}
+                  className="text-slate-400 hover:text-white transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEnrollRosterSubmit} className="p-5 space-y-3.5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    PRN / Enrollment Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. F24ET046 or S25ET043"
+                    value={rosterPrn}
+                    onChange={(e) => setRosterPrn(e.target.value.toUpperCase())}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs font-mono font-bold uppercase text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Student Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. BAGADE SHREYASH SACHIN"
+                    value={rosterName}
+                    onChange={(e) => setRosterName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Department / Branch
+                    </label>
+                    <select
+                      value={rosterBranch}
+                      onChange={(e) => setRosterBranch(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                    >
+                      <option value="E&TC">E&TC</option>
+                      <option value="IT">IT</option>
+                      <option value="CE">CE</option>
+                      <option value="AIDS">AIDS</option>
+                      <option value="ECE">ECE</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Roll Number
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 32103"
+                      value={rosterRollNo}
+                      onChange={(e) => setRosterRollNo(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Division
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. TY-V"
+                      value={rosterDivision}
+                      onChange={(e) => setRosterDivision(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Mobile Number
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="10-digit mobile"
+                      value={rosterPhone}
+                      onChange={(e) => setRosterPhone(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsEnrollRosterModalOpen(false)}
+                    className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingRoster}
+                    className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{isSubmittingRoster ? 'Enrolling...' : 'Confirm Enrollment'}</span>
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

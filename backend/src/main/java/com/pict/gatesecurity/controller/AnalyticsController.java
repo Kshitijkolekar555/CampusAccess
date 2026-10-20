@@ -18,7 +18,7 @@ import java.util.List;
 @RequestMapping("/api/v1/analytics")
 @RequiredArgsConstructor
 @Tag(name = "Analytics", description = "Analytics and Insights")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'FACULTY')")
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;

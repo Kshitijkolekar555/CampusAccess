@@ -131,15 +131,22 @@ export const Login: React.FC = () => {
     setLoading(true);
     try {
       const data = await authApi.login({ username: u, password, expectedRole: selectedRole });
-      const match = data.user.role === selectedRole ||
-        (data.user.role.includes('GUARD') && selectedRole.includes('GUARD'));
-      if (!match) {
-        toast.error(`Role mismatch: account is registered as [${data.user.role}], not [${selectedRole}].`);
+      const userRole = data.user.role;
+      const isGuardMatch = (userRole.includes('GUARD') || userRole === 'SECURITY_OFFICER') && (selectedRole.includes('GUARD') || selectedRole === 'SECURITY_OFFICER');
+      const isTeacherMatch = (userRole === 'FACULTY' || userRole === 'STAFF') && (selectedRole === 'FACULTY' || selectedRole === 'STAFF');
+      const isDirectMatch = userRole === selectedRole;
+
+      if (!isDirectMatch && !isGuardMatch && !isTeacherMatch) {
+        toast.error(`Role mismatch: account is registered as [${userRole}], not [${selectedRole}].`);
         return;
       }
       setAuth(data.user, data.accessToken, data.refreshToken);
       toast.success(`Welcome back, ${data.user.fullName}!`);
-      navigate('/dashboard');
+      if (userRole === 'FACULTY' || userRole === 'STAFF') {
+        navigate('/teacher');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Authentication failed. Please verify credentials.';
       toast.error(msg);
@@ -411,11 +418,52 @@ export const Login: React.FC = () => {
           {/* ── LOGIN FORM ────────────────────────────────────────────────── */}
           {!isForgotPassword && actionMode === 'LOGIN' && (
             <form onSubmit={handleStandardLogin}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: '#f1f5f9', padding: 4, borderRadius: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('SECURITY_GUARD')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: 4,
+                    border: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: selectedRole === 'SECURITY_GUARD' ? '#ffffff' : 'transparent',
+                    color: selectedRole === 'SECURITY_GUARD' ? '#0f172a' : '#64748b',
+                    boxShadow: selectedRole === 'SECURITY_GUARD' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Security Guard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('FACULTY')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: 4,
+                    border: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: selectedRole === 'FACULTY' ? '#ffffff' : 'transparent',
+                    color: selectedRole === 'FACULTY' ? '#0f172a' : '#64748b',
+                    boxShadow: selectedRole === 'FACULTY' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Faculty / Staff
+                </button>
+              </div>
+
               <UInput
-                label="Guard Username"
+                label={selectedRole === 'FACULTY' ? 'Staff Employee ID (empno)' : 'Guard Username'}
                 value={username}
                 onChange={setUsername}
-                placeholder="Enter guard username"
+                placeholder={selectedRole === 'FACULTY' ? 'e.g. 376 or 46' : 'Enter guard username'}
                 icon={<UserIcon size={15}/>}
                 required
                 autoComplete="username"

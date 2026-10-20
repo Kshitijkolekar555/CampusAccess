@@ -36,6 +36,9 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const isStudent = user?.role === 'STUDENT';
+  const isDefaultPasswordWarning = isStudent && user?.username;
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!oldPassword.trim()) {
@@ -44,6 +47,10 @@ export const Profile: React.FC = () => {
     }
     if (!newPassword || newPassword.length < 6) {
       toast.error('New password must be at least 6 characters');
+      return;
+    }
+    if (user?.username && newPassword.trim().toUpperCase() === user.username.trim().toUpperCase()) {
+      toast.error('New password cannot be the same as your PRN / username');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -73,6 +80,21 @@ export const Profile: React.FC = () => {
         </h2>
         <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>Manage your credentials, contact details, and account password.</p>
       </div>
+
+      {/* Default Password Alert for Students */}
+      {isDefaultPasswordWarning && (
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-start gap-3">
+          <Shield className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <span className="font-semibold text-amber-700 dark:text-amber-400 block mb-0.5">
+              Default PRN Password Security Advisory
+            </span>
+            <p className="text-amber-900/80 dark:text-amber-200/80 m-0 leading-relaxed">
+              You are currently using your default college PRN as your password. Secure your account now by updating your password below.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* User Summary Card */}
       <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5" style={{ background: 'var(--ink)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4 }}>

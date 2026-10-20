@@ -148,8 +148,8 @@ public class VisitorController {
     }
 
     @PutMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
-    @Operation(summary = "Approve Digital Token", description = "Guard approves visitor digital token and admits them to campus")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'FACULTY', 'STAFF')")
+    @Operation(summary = "Approve Digital Token", description = "Guard or Faculty approves visitor digital token and admits them to campus")
     public ResponseEntity<ApiResponse<VisitorResponse>> approveDigitalToken(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -158,8 +158,8 @@ public class VisitorController {
     }
 
     @PutMapping("/{id}/reject")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
-    @Operation(summary = "Reject Digital Token", description = "Guard rejects visitor digital token pass")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'FACULTY', 'STAFF')")
+    @Operation(summary = "Reject Digital Token", description = "Guard or Faculty rejects visitor digital token pass")
     public ResponseEntity<ApiResponse<VisitorResponse>> rejectDigitalToken(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {

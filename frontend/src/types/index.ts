@@ -30,6 +30,7 @@ export type UserRole =
   | 'VISITOR'
   | 'STUDENT'
   | 'STAFF'
+  | 'FACULTY'
   | 'GUARD';
 
 export type HostType =

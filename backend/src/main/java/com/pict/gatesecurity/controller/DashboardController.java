@@ -100,7 +100,7 @@ public class DashboardController {
     // ==================== ANALYTICS ====================
 
     @GetMapping("/analytics/daily-trends")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "Daily Trends", description = "Daily visitor, vehicle, and vendor entry trends")
     public ResponseEntity<ApiResponse<DailyTrendResponse>> getDailyTrends(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -109,7 +109,7 @@ public class DashboardController {
     }
 
     @GetMapping("/analytics/weekly-trends")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "Weekly Trends", description = "Weekly aggregated visitor count")
     public ResponseEntity<ApiResponse<List<DashboardService.TrendPoint>>> getWeeklyTrends(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -118,7 +118,7 @@ public class DashboardController {
     }
 
     @GetMapping("/analytics/monthly-trends")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "Monthly Trends", description = "Monthly aggregated visitor count")
     public ResponseEntity<ApiResponse<List<DashboardService.TrendPoint>>> getMonthlyTrends(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -127,7 +127,7 @@ public class DashboardController {
     }
 
     @GetMapping("/analytics/department")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "Department Analytics", description = "Visitor and gate pass counts by department")
     public ResponseEntity<ApiResponse<List<DashboardService.DepartmentTrendPoint>>> getDepartmentAnalytics(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -136,7 +136,7 @@ public class DashboardController {
     }
 
     @GetMapping("/analytics/gates")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "Gate Analytics", description = "Per-gate visitor, vehicle, vendor, and shift counts")
     public ResponseEntity<ApiResponse<List<DashboardService.GateTrendPoint>>> getGateAnalytics(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -145,7 +145,7 @@ public class DashboardController {
     }
 
     @GetMapping("/analytics/vehicles")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "Vehicle Analytics", description = "Vehicle entries, exits, and currently inside by category")
     public ResponseEntity<ApiResponse<List<DashboardService.VehicleTrendPoint>>> getVehicleAnalytics(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -154,7 +154,7 @@ public class DashboardController {
     }
 
     @GetMapping("/analytics/visitors")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD')")
     @Operation(summary = "Visitor Analytics", description = "Peak visitor entry hours distribution")
     public ResponseEntity<ApiResponse<List<PeakHoursResponse>>> getVisitorAnalytics(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
