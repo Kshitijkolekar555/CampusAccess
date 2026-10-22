@@ -13,9 +13,9 @@ import {
   validatePhone, validateEmail, validatePasswordStrength,
   validateName, validatePrn, normalizePhone, normalizeEmail, normalizeName,
 } from '../utils/validation';
+import { UserRole } from '../types';
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
-type UserRole = 'SECURITY_GUARD';
 type ActionMode = 'LOGIN' | 'SIGNUP';
 
 /* ─── colour tokens (CSS custom properties used inline) ─────────────────── */
@@ -29,12 +29,17 @@ const C = {
 };
 
 /* ─── role meta ──────────────────────────────────────────────────────────── */
-const ROLES: { id: UserRole; label: string }[] = [
-  { id: 'SECURITY_GUARD', label: 'Guard' },
-];
-
-const ROLE_TITLE: Record<UserRole, string> = {
+const ROLE_TITLE: Partial<Record<UserRole, string>> = {
   SECURITY_GUARD: 'Guard',
+  GUARD: 'Guard',
+  FACULTY: 'Faculty',
+  STAFF: 'Staff',
+  ADMIN: 'Admin',
+  SECURITY_OFFICER: 'Security Officer',
+  STUDENT: 'Student',
+  HOSTEL_WARDEN: 'Warden',
+  CANTEEN_MANAGER: 'Canteen',
+  VISITOR: 'Visitor',
 };
 
 /* ─── underline input ────────────────────────────────────────────────────── */
@@ -132,21 +137,16 @@ export const Login: React.FC = () => {
     try {
       const data = await authApi.login({ username: u, password, expectedRole: selectedRole });
       const userRole = data.user.role;
-      const isGuardMatch = (userRole.includes('GUARD') || userRole === 'SECURITY_OFFICER') && (selectedRole.includes('GUARD') || selectedRole === 'SECURITY_OFFICER');
-      const isTeacherMatch = (userRole === 'FACULTY' || userRole === 'STAFF') && (selectedRole === 'FACULTY' || selectedRole === 'STAFF');
+      const isGuardMatch = (userRole.includes('GUARD') || userRole === 'SECURITY_OFFICER' || userRole === 'ADMIN');
       const isDirectMatch = userRole === selectedRole;
 
-      if (!isDirectMatch && !isGuardMatch && !isTeacherMatch) {
+      if (!isDirectMatch && !isGuardMatch) {
         toast.error(`Role mismatch: account is registered as [${userRole}], not [${selectedRole}].`);
         return;
       }
       setAuth(data.user, data.accessToken, data.refreshToken);
       toast.success(`Welcome back, ${data.user.fullName}!`);
-      if (userRole === 'FACULTY' || userRole === 'STAFF') {
-        navigate('/teacher');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate('/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Authentication failed. Please verify credentials.';
       toast.error(msg);
@@ -221,7 +221,7 @@ export const Login: React.FC = () => {
   };
 
   /* ─── derived ─────────────────────────────────────────────────────────── */
-  const roleLabel = ROLE_TITLE[selectedRole];
+  const roleLabel = ROLE_TITLE[selectedRole] || selectedRole;
   const formTitle = isForgotPassword ? 'Reset password'
     : actionMode === 'LOGIN' ? 'Sign in to your account'
     : 'Create an account';
@@ -232,7 +232,17 @@ export const Login: React.FC = () => {
          className="login-split">
       <style>{`
         @media (max-width: 880px) {
-          .login-left  { display: none !important; }
+          .login-split { flex-direction: column !important; }
+          .login-left  {
+            width: 100% !important;
+            min-width: 0 !important;
+            padding: 16px 20px !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            background: #0f172a !important;
+          }
+          .login-left-body { display: none !important; }
           .login-right { width: 100% !important; padding: 32px 20px !important; }
         }
         @media (max-width: 520px) {
@@ -277,9 +287,9 @@ export const Login: React.FC = () => {
         padding:'64px 64px', flexShrink:0, position:'relative', overflow:'hidden',
       }}>
         {/* logo + wordmark */}
-        <div style={{ display:'flex', alignItems:'center', gap:10, position:'relative', zIndex:2 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, position:'relative', zIndex:2, width:'100%' }}>
           <img src="/logo.png" alt="CampusAccess" style={{ height: 40, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-        <button
+          <button
             type="button"
             onClick={() => navigate('/enter')}
             title="Back to portal selection"
@@ -291,7 +301,7 @@ export const Login: React.FC = () => {
         </div>
 
         {/* mid: rule + headline + description */}
-        <div style={{ position:'relative', zIndex:2, margin:'40px 0' }}>
+        <div className="login-left-body" style={{ position:'relative', zIndex:2, margin:'40px 0' }}>
           <div style={{ width:40, height:2.5, background:'#38bdf8', marginBottom:24 }}/>
           <h2 style={{
             fontFamily:'Inter,sans-serif', fontWeight:700,
@@ -313,8 +323,8 @@ export const Login: React.FC = () => {
           </div>
         </div>
 
-          {/* bottom institution label */}
-        <div style={{ position:'relative', zIndex:2, fontFamily:'JetBrains Mono,monospace', fontSize:10.5, letterSpacing:'0.12em',
+        {/* bottom institution label */}
+        <div className="login-left-body" style={{ position:'relative', zIndex:2, fontFamily:'JetBrains Mono,monospace', fontSize:10.5, letterSpacing:'0.12em',
           textTransform:'uppercase', color:'#94a3b8', lineHeight:1.8 }}>
           Pune Institute of Computer Technology<br/>Gate Security Terminal<br/>
           <span style={{ color:'rgba(255,255,255,0.35)', marginTop:8, display:'block' }}>Not a guard? <button type="button" onClick={() => navigate('/enter')} style={{ background:'none', border:'none', color:'#7dd3fc', cursor:'pointer', fontFamily:'JetBrains Mono,monospace', fontSize:10.5, padding:0, textDecoration:'underline', letterSpacing:'0.12em' }}>Student / Visitor portal →</button></span>
@@ -332,44 +342,6 @@ export const Login: React.FC = () => {
           transition={{ duration:0.3 }}
           style={{ width:'100%', maxWidth:460 }}
         >
-          {/* Back Button to Student / Visitor Registration Portal (visible on mobile and desktop) */}
-          <div style={{ marginBottom: 20 }}>
-            <button
-              type="button"
-              onClick={() => navigate('/enter')}
-              aria-label="Back to portal selection"
-              style={{
-                background: '#ffffff',
-                border: `1px solid ${C.line}`,
-                borderRadius: 8,
-                padding: '8px 14px',
-                fontSize: 13,
-                fontWeight: 500,
-                color: C.text,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                transition: 'all 0.18s ease',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                fontFamily: 'Inter,sans-serif',
-                minHeight: 42,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = C.accent;
-                e.currentTarget.style.color = C.accent;
-                e.currentTarget.style.background = '#f8fafc';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = C.line;
-                e.currentTarget.style.color = C.text;
-                e.currentTarget.style.background = '#ffffff';
-              }}
-            >
-              <ArrowLeft size={16} />
-              <span>Back to Student / Visitor Portals</span>
-            </button>
-          </div>
 
           {/* eyebrow */}
           <div style={{ marginBottom: 12 }}>
@@ -424,46 +396,27 @@ export const Login: React.FC = () => {
                   onClick={() => setSelectedRole('SECURITY_GUARD')}
                   style={{
                     flex: 1,
-                    padding: '8px 12px',
+                    padding: '8px 8px',
                     borderRadius: 4,
                     border: 'none',
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: 600,
-                    cursor: 'pointer',
-                    background: selectedRole === 'SECURITY_GUARD' ? '#ffffff' : 'transparent',
-                    color: selectedRole === 'SECURITY_GUARD' ? '#0f172a' : '#64748b',
-                    boxShadow: selectedRole === 'SECURITY_GUARD' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    cursor: 'default',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                     transition: 'all 0.15s ease',
                   }}
                 >
                   Security Guard
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('FACULTY')}
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: 4,
-                    border: 'none',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    background: selectedRole === 'FACULTY' ? '#ffffff' : 'transparent',
-                    color: selectedRole === 'FACULTY' ? '#0f172a' : '#64748b',
-                    boxShadow: selectedRole === 'FACULTY' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  Faculty / Staff
-                </button>
               </div>
 
               <UInput
-                label={selectedRole === 'FACULTY' ? 'Staff Employee ID (empno)' : 'Guard Username'}
+                label="Guard Username"
                 value={username}
                 onChange={setUsername}
-                placeholder={selectedRole === 'FACULTY' ? 'e.g. 376 or 46' : 'Enter guard username'}
+                placeholder="Enter guard username"
                 icon={<UserIcon size={15}/>}
                 required
                 autoComplete="username"
@@ -497,7 +450,7 @@ export const Login: React.FC = () => {
                 </button>
               </div>
               <button type="submit" className="submit-btn" disabled={loading}>
-                {loading ? 'Signing in…' : `Sign in as Guard`}
+                {loading ? 'Signing in…' : 'Sign in as Guard'}
                 {!loading && <ArrowRight size={14} className="arrow"/>}
               </button>
               <div style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: C.mute }}>

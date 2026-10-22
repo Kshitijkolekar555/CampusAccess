@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowRight, Users, Car, GraduationCap, ShieldCheck, Clock, Truck } from 'lucide-react';
+import { Shield, ArrowRight, Users, Car, GraduationCap, ShieldCheck, Clock, Truck, Menu, X } from 'lucide-react';
 
 const C = {
   ink:    '#14171c',
@@ -46,6 +46,7 @@ const modules = [
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div style={{ minHeight: '100vh', background: C.paper, color: C.text, fontFamily: 'Inter, sans-serif' }}>
@@ -73,15 +74,18 @@ export const LandingPage: React.FC = () => {
           cursor: pointer; transition: border-color .15s, color .15s; text-decoration: none;
         }
         .lp-cta-ghost:hover { border-color: ${C.text}; color: ${C.text}; }
+        .lp-mobile-menu-btn { display: none; align-items: center; justify-content: center; background: none; border: 1px solid ${C.line}; border-radius: 4px; padding: 6px 8px; color: ${C.text}; cursor: pointer; }
         @media (max-width: 700px) {
           .lp-hero-grid { grid-template-columns: 1fr !important; }
           .lp-module-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 640px) {
           .lp-nav-secondary { display: none !important; }
+          .lp-mobile-menu-btn { display: inline-flex !important; }
           .lp-container-padding { padding-left: 16px !important; padding-right: 16px !important; }
           .lp-hero-section { padding: 48px 16px 40px !important; }
           .lp-section-padding { padding: 40px 16px !important; }
+          .lp-hero-headline { font-size: clamp(24px, 6.5vw, 42px) !important; line-height: 1.2 !important; }
         }
       `}</style>
 
@@ -97,7 +101,7 @@ export const LandingPage: React.FC = () => {
           </div>
 
           {/* Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <a href="#modules" className="lp-nav-link lp-nav-secondary">Modules</a>
             <a href="#about" className="lp-nav-link lp-nav-secondary">About</a>
             <button
@@ -107,11 +111,41 @@ export const LandingPage: React.FC = () => {
             >
               Enter System <ArrowRight size={12} className="arrow" />
             </button>
+            <button
+              type="button"
+              className="lp-mobile-menu-btn"
+              onClick={() => setMobileMenuOpen(v => !v)}
+              aria-label="Toggle mobile menu"
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
           </nav>
         </div>
+
+        {/* Mobile dropdown drawer */}
+        {mobileMenuOpen && (
+          <div style={{
+            background: 'white', borderBottom: `1px solid ${C.line}`, padding: '16px 20px',
+            display: 'flex', flexDirection: 'column', gap: 12,
+          }}>
+            <a href="#modules" className="lp-nav-link" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 14, fontWeight: 500, padding: '6px 0' }}>Modules</a>
+            <a href="#about" className="lp-nav-link" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 14, fontWeight: 500, padding: '6px 0' }}>About</a>
+            <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => { setMobileMenuOpen(false); navigate('/student/login'); }} className="lp-cta-ghost" style={{ justifyContent: 'center' }}>
+                Student Portal
+              </button>
+              <button onClick={() => { setMobileMenuOpen(false); navigate('/visitor'); }} className="lp-cta-ghost" style={{ justifyContent: 'center' }}>
+                Visitor Pass Portal
+              </button>
+              <button onClick={() => { setMobileMenuOpen(false); navigate('/login'); }} className="lp-cta-ghost" style={{ justifyContent: 'center' }}>
+                Guard / Staff Login
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* ── Hero ───────────────────────────────────────────────────────── */}
+      {/* ── Hero ───────────────────────────────────────────────── */}
       <section className="lp-hero-section" style={{ position: 'relative', padding: '80px 32px 72px', overflow: 'hidden' }}>
         {/* Clearly visible campus bg image */}
         <div style={{
@@ -132,11 +166,11 @@ export const LandingPage: React.FC = () => {
           </p>
 
           {/* Headline */}
-          <h1 style={{
+          <h1 className="lp-hero-headline" style={{
             fontFamily: 'Inter, sans-serif', fontWeight: 700,
-            fontSize: 'clamp(32px, 5vw, 52px)', lineHeight: 1.15,
+            fontSize: 'clamp(28px, 5.5vw, 52px)', lineHeight: 1.18,
             color: '#0f172a', letterSpacing: '-0.02em',
-            margin: '0 0 22px 0',
+            margin: '0 0 22px 0', textWrap: 'balance',
           }}>
             Campus access control,<br />
             handled with precision.
@@ -175,7 +209,7 @@ export const LandingPage: React.FC = () => {
           <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.mute, margin: '0 0 10px 0' }}>
             System Modules
           </p>
-          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 26, color: C.text, margin: 0, letterSpacing: '-0.01em' }}>
+          <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 'clamp(20px, 3.5vw, 26px)', color: C.text, margin: 0, letterSpacing: '-0.01em', textWrap: 'balance' }}>
             Everything campus security needs.
           </h2>
         </div>

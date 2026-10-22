@@ -18,10 +18,10 @@ COPY src ./src
 RUN mvn package -Dmaven.test.skip=true -B
 
 # ---- Stage 2: Runtime ----
-FROM eclipse-temurin:17-jre-alpine AS runtime
+FROM eclipse-temurin:17-jre AS runtime
 
 # Non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 USER appuser
 
 WORKDIR /app

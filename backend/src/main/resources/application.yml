@@ -79,7 +79,7 @@ spring:
 
 # --- Server ---
 server:
-  port: 8081
+  port: ${SERVER_PORT:8080}
 
 # --- Actuator ---
 management:

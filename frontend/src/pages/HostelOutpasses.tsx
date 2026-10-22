@@ -42,10 +42,11 @@ export const HostelOutpasses: React.FC = () => {
   });
 
   const getInitialForm = () => {
-    const existing = pageData?.content?.find((o: any) => o.studentPrn === user?.username);
+    const prn = (user?.username || '').toUpperCase();
+    const existing = pageData?.content?.find((o: any) => o.studentPrn?.toUpperCase() === prn);
     return {
       studentName: user?.fullName || '',
-      studentPrn: user?.username || '',
+      studentPrn: prn,
       studentRoom: existing?.studentRoom || '',
       studentHostel: existing?.studentHostel || '',
       studentClass: existing?.studentClass || '',
@@ -64,11 +65,12 @@ export const HostelOutpasses: React.FC = () => {
   const [form, setForm] = useState(getInitialForm());
 
   React.useEffect(() => {
-    const existing = pageData?.content?.find((o: any) => o.studentPrn === user?.username);
+    const prn = (user?.username || '').toUpperCase();
+    const existing = pageData?.content?.find((o: any) => o.studentPrn?.toUpperCase() === prn);
     setForm((prev) => ({
       ...prev,
       studentName: user?.fullName || prev.studentName,
-      studentPrn: user?.username || prev.studentPrn,
+      studentPrn: prn || prev.studentPrn,
       studentRoom: prev.studentRoom || existing?.studentRoom || '',
       studentHostel: prev.studentHostel || existing?.studentHostel || '',
       studentClass: prev.studentClass || existing?.studentClass || '',
@@ -82,6 +84,7 @@ export const HostelOutpasses: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: (data: typeof form) => hostelOutpassApi.createOutpass({
       ...data,
+      studentPrn: (data.studentPrn || user?.username || '').toUpperCase(),
       departureTime: new Date(data.departureTime).toISOString(),
       expectedReturnTime: new Date(data.expectedReturnTime).toISOString(),
     }),

@@ -52,7 +52,6 @@ import { useNavigate } from 'react-router-dom';
 
 import { toast } from 'sonner';
 import { GuardDashboardView } from '../components/guard/GuardDashboardView';
-import { GraphicalAnalyticsHub } from '../components/guard/GraphicalAnalyticsHub';
 import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
 
 export const Dashboard: React.FC = () => {
@@ -65,15 +64,19 @@ export const Dashboard: React.FC = () => {
   const isGuard = role === 'SECURITY_GUARD' || role === 'GUARD' || role === 'SECURITY_OFFICER';
   const isStudent = role === 'STUDENT';
   const isTeacher = role === 'FACULTY' || role === 'STAFF';
+  const isWarden = role === 'HOSTEL_WARDEN';
+  const isAdmin = role === 'ADMIN';
 
-  // Redirect unsupported roles or teacher role
+  // Redirect unsupported roles or teacher/warden roles
   useEffect(() => {
     if (isTeacher) {
       navigate('/teacher', { replace: true });
-    } else if (!isGuard && !isStudent) {
+    } else if (isWarden) {
+      navigate('/outpasses', { replace: true });
+    } else if (!isGuard && !isStudent && !isAdmin) {
       navigate('/enter');
     }
-  }, [isGuard, isStudent, isTeacher, navigate]);
+  }, [isGuard, isStudent, isTeacher, isWarden, isAdmin, navigate]);
 
   const [isSimplifiedGuardView, setIsSimplifiedGuardView] = useState(true);
 
@@ -164,9 +167,49 @@ export const Dashboard: React.FC = () => {
     setAppliedCustomEnd(statsCustomEnd);
   };
 
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+
   const handleResetToLifetime = () => {
     setStatsFilterType('LIFETIME');
     setCustomDateError(null);
+  };
+
+  const handleExportCsv = async () => {
+    setIsExportingCsv(true);
+    try {
+      const params: Record<string, string> = { format: 'csv' };
+      if (statsFilterType === 'CUSTOM' && statsCustomStart && statsCustomEnd) {
+        params.fromDate = statsCustomStart;
+        params.toDate = statsCustomEnd;
+      }
+      const response = await api.get('/reports/visitors/export', {
+        params,
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `visitor_report_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Visitor CSV report downloaded successfully');
+    } catch {
+      try {
+        let exportUrl = '/api/v1/reports/visitors/export?format=csv';
+        if (statsFilterType === 'CUSTOM' && statsCustomStart && statsCustomEnd) {
+          exportUrl += `&fromDate=${encodeURIComponent(statsCustomStart)}&toDate=${encodeURIComponent(statsCustomEnd)}`;
+        }
+        window.open(exportUrl, '_blank');
+        toast.success('Generating CSV report download...');
+      } catch {
+        toast.error('Failed to trigger CSV export download');
+      }
+    } finally {
+      setIsExportingCsv(false);
+    }
   };
 
   const handlePrint = () => {
@@ -594,7 +637,7 @@ export const Dashboard: React.FC = () => {
 
   // RENDER STUDENT DASHBOARD (PRN Verified & Outpass Management)
   if (isStudent) {
-    const studentPrn = user?.username || 'F24IT32';
+    const studentPrn = (user?.username || 'F24IT32').toUpperCase();
     const studentName = user?.fullName || 'Shanaya';
 
     return <StudentDashboardView studentName={studentName} studentPrn={studentPrn} user={user} navigate={navigate} />;
@@ -752,17 +795,31 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Lifetime Reset Button if not on lifetime */}
-            {!isLifetime && (
+            <div className="flex items-center gap-2">
+              {/* Quick Lifetime Reset Button if not on lifetime */}
+              {!isLifetime && (
+                <button
+                  type="button"
+                  onClick={handleResetToLifetime}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Reset to Lifetime (All Records)
+                </button>
+              )}
+
+              {/* Export CSV Button */}
               <button
                 type="button"
-                onClick={handleResetToLifetime}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer"
+                onClick={handleExportCsv}
+                disabled={isExportingCsv}
+                className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-2xs disabled:opacity-60"
+                title="Export visitor data as CSV"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                Reset to Lifetime (All Records)
+                <FileText className="w-3.5 h-3.5 text-slate-600" />
+                <span>{isExportingCsv ? 'Exporting...' : 'Export CSV'}</span>
               </button>
-            )}
+            </div>
           </div>
 
           {/* Filter Pills */}
@@ -831,10 +888,6 @@ export const Dashboard: React.FC = () => {
           )}
         </div>
 
-        {/* ADVANCED GRAPHICAL ANALYTICS & TREND VISUALIZATIONS */}
-        <div className="print:hidden">
-          <GraphicalAnalyticsHub />
-        </div>
 
         {/* PRIMARY VISITOR METRICS SECTION */}
         <div>
@@ -1093,7 +1146,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
         // Hostel Overnight Outpass
         const payload = {
           studentName: studentName || user?.fullName,
-          studentPrn: studentPrn || user?.username,
+          studentPrn: (studentPrn || user?.username || '').toUpperCase(),
           studentHostel: studentHostel.trim(),
           studentRoom: studentRoom.trim(),
           studentClass: studentClass.trim() || 'BE',

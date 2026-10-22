@@ -107,22 +107,26 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Account is disabled");
         }
 
-        // Enforce supported login roles: Only Guard and Student are permitted to authenticate
+        // Enforce supported login roles
         UserRole role = user.getRole();
         boolean isAllowedRole = role == UserRole.STUDENT
                 || role == UserRole.GUARD
                 || role == UserRole.SECURITY_GUARD
-                || role == UserRole.SECURITY_OFFICER;
+                || role == UserRole.SECURITY_OFFICER
+                || role == UserRole.HOSTEL_WARDEN
+                || role == UserRole.ADMIN;
 
         if (!isAllowedRole) {
             log.warn("Blocked login attempt for unsupported role: {} (user={})", role, user.getUsername());
-            throw new UnauthorizedException("Login is restricted to Security Guard and Student accounts only. Admin, Faculty, and Warden accounts are not permitted to log in.");
+            throw new UnauthorizedException("Login is restricted to authorized accounts only.");
         }
 
         if (request.getExpectedRole() != null && !request.getExpectedRole().isBlank()) {
             String expRole = request.getExpectedRole().trim();
             boolean roleMatches = user.getRole().name().equalsIgnoreCase(expRole)
-                    || (user.getRole().name().contains("GUARD") && expRole.contains("GUARD"));
+                    || (user.getRole().name().contains("GUARD") && expRole.contains("GUARD"))
+                    || (user.getRole() == UserRole.HOSTEL_WARDEN && (expRole.contains("WARDEN") || expRole.equalsIgnoreCase("HOSTEL_WARDEN")))
+                    || (user.getRole() == UserRole.ADMIN && expRole.equalsIgnoreCase("ADMIN"));
             if (!roleMatches) {
                 throw new BadRequestException("Role Mismatch: Account '" + user.getUsername() + "' is registered as " + user.getRole().name() + ", not " + request.getExpectedRole());
             }

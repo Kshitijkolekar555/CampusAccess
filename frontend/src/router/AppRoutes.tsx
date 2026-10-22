@@ -30,8 +30,8 @@ const ProtectedLayout: React.FC<{ allowedRoles?: UserRole[] }> = ({ allowedRoles
     return <Navigate to="/login" replace />;
   }
 
-  // Supported roles include Student, Guards, Faculty, and Staff
-  const supportedRoles: UserRole[] = ['STUDENT', 'SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'STAFF', 'FACULTY', 'ADMIN'];
+  // Supported roles include Student, Guards, Faculty, Staff, Admin, and Hostel Warden
+  const supportedRoles: UserRole[] = ['STUDENT', 'SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'STAFF', 'FACULTY', 'ADMIN', 'HOSTEL_WARDEN'];
   if (user && !supportedRoles.includes(user.role)) {
     return <Navigate to="/login" replace />;
   }
@@ -81,8 +81,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="/gates"    element={<Gates />} />
       </Route>
 
-      {/* ── Guard + Student Routes ────────────────────────────────────── */}
-      <Route element={<ProtectedLayout allowedRoles={['SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'STUDENT']} />}>
+      {/* ── Passes & Outpasses (Guard, Student, Warden, Admin) ────────── */}
+      <Route element={<ProtectedLayout allowedRoles={['SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'STUDENT', 'HOSTEL_WARDEN', 'ADMIN']} />}>
         <Route path="/student-passes"   element={<StudentPasses />} />
         <Route path="/outpasses"        element={<HostelOutpasses />} />
         <Route path="/notifications"    element={<Navigate to="/dashboard" replace />} />

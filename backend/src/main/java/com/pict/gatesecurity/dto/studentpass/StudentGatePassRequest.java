@@ -20,7 +20,7 @@ public class StudentGatePassRequest {
 
     @NotBlank(message = "Student name is required")
     @Size(min = 2, max = 150, message = "Student name must be between 2 and 150 characters")
-    @jakarta.validation.constraints.Pattern(regexp = "^[a-zA-Z\\s.']{2,150}$", message = "Student name must contain letters and spaces only")
+    @jakarta.validation.constraints.Pattern(regexp = "^[a-zA-Z0-9\\s.']{2,150}$", message = "Student name must contain letters and spaces only")
     private String studentName;
 
     @NotBlank(message = "Student PRN is required")
