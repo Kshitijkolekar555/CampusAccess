@@ -28,8 +28,7 @@ import java.util.zip.ZipFile;
 @Slf4j
 public class StaffExcelDataLoader implements CommandLineRunner {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final com.pict.gatesecurity.repository.AuthorizedFacultyRepository authorizedFacultyRepository;
 
     @Override
     @Transactional
@@ -48,8 +47,8 @@ public class StaffExcelDataLoader implements CommandLineRunner {
                 return;
             }
 
-            int importedCount = 0;
-            int updatedCount = 0;
+            int addedCount = 0;
+            int existingCount = 0;
 
             for (StaffRow row : staffMembers) {
                 if (row.empNo == null || row.empNo.isBlank()) {
@@ -59,38 +58,26 @@ public class StaffExcelDataLoader implements CommandLineRunner {
                 String username = row.empNo.trim();
                 String name = (row.fullName != null && !row.fullName.isBlank()) ? row.fullName.trim() : ("Staff " + username);
                 String email = username.toLowerCase() + "@pict.edu";
-                String defaultPassword = "PICT@" + username;
+                String staffType = (row.staffType != null && !row.staffType.isBlank()) ? row.staffType.trim() : "Teaching";
+                String dept = (row.department != null && !row.department.isBlank()) ? row.department.trim() : "General";
 
-                boolean isTeaching = row.staffType != null && row.staffType.trim().equalsIgnoreCase("Teaching");
-                UserRole role = isTeaching ? UserRole.FACULTY : UserRole.STAFF;
-
-                Optional<User> existingUserOpt = userRepository.findByUsername(username);
-                if (existingUserOpt.isPresent()) {
-                    User user = existingUserOpt.get();
-                    user.setFullName(name);
-                    user.setEmail(email);
-                    user.setActive(true);
-                    if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
-                        user.setPasswordHash(passwordEncoder.encode(defaultPassword));
-                    }
-                    userRepository.save(user);
-                    updatedCount++;
-                } else {
-                    User user = User.builder()
-                            .username(username)
-                            .passwordHash(passwordEncoder.encode(defaultPassword))
-                            .role(role)
+                if (!authorizedFacultyRepository.existsByEmpNo(username)) {
+                    com.pict.gatesecurity.entity.AuthorizedFaculty af = com.pict.gatesecurity.entity.AuthorizedFaculty.builder()
+                            .empNo(username)
                             .fullName(name)
+                            .staffType(staffType)
+                            .department(dept)
                             .email(email)
-                            .active(true)
                             .build();
-                    userRepository.save(user);
-                    importedCount++;
+                    authorizedFacultyRepository.save(af);
+                    addedCount++;
+                } else {
+                    existingCount++;
                 }
             }
 
-            log.info("Staff data loader finished: {} imported, {} updated out of {} total staff records.",
-                    importedCount, updatedCount, staffMembers.size());
+            log.info("Staff data loader finished: {} authorized faculty records newly seeded, {} already existed.",
+                    addedCount, existingCount);
 
         } catch (Exception ex) {
             log.error("Failed to load staff Excel data: {}", ex.getMessage(), ex);

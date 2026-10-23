@@ -130,53 +130,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
         }
 
-        // Seed F24ET034 with default password = enrollment number
-        if (userRepository.findFirstByUsernameIgnoreCase("F24ET034").isEmpty()) {
-            log.info("Seeding student F24ET034...");
-            User f24 = userRepository.save(User.builder()
-                    .username("F24ET034")
-                    .passwordHash(passwordEncoder.encode("F24ET034"))
-                    .role(UserRole.STUDENT)
-                    .fullName("Student F24ET034")
-                    .email("f24et034@pict.edu")
-                    .phone("9876543234")
-                    .active(true)
-                    .isLateComerPermitted(true)
-                    .build());
-            studentProfileRepository.save(StudentProfile.builder()
-                    .user(f24)
-                    .prn("F24ET034")
-                    .rollNumber("32134")
-                    .department("E&TC")
-                    .academicYear("TE")
-                    .division("1")
-                    .active(true)
-                    .build());
-        }
 
-        // Seed S25ET034 with default password = enrollment number
-        if (userRepository.findFirstByUsernameIgnoreCase("S25ET034").isEmpty()) {
-            log.info("Seeding student S25ET034...");
-            User s25 = userRepository.save(User.builder()
-                    .username("S25ET034")
-                    .passwordHash(passwordEncoder.encode("S25ET034"))
-                    .role(UserRole.STUDENT)
-                    .fullName("Student S25ET034")
-                    .email("s25et034@pict.edu")
-                    .phone("9876543235")
-                    .active(true)
-                    .isLateComerPermitted(true)
-                    .build());
-            studentProfileRepository.save(StudentProfile.builder()
-                    .user(s25)
-                    .prn("S25ET034")
-                    .rollNumber("32135")
-                    .department("E&TC")
-                    .academicYear("SE")
-                    .division("2")
-                    .active(true)
-                    .build());
-        }
 
         if (userRepository.findByUsername("warden1").isEmpty()) {
             log.info("Seeding default warden user...");

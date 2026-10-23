@@ -44,35 +44,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                                 .orElse(null)));
 
         if (user == null) {
-            // Auto-provision student account for institutional enrollment format (e.g. F24ET034, S25ET034)
-            if (cleanUsername.matches("(?i)^[A-Z0-9_-]{4,25}$")) {
-                String upper = cleanUsername.toUpperCase();
-                log.info("Auto-provisioning institutional student account for enrollment number: {}", upper);
-                User newStudent = User.builder()
-                        .username(upper)
-                        .passwordHash(fallbackPasswordEncoder.encode(upper))
-                        .role(UserRole.STUDENT)
-                        .fullName("Student " + upper)
-                        .email(upper.toLowerCase() + "@pict.edu")
-                        .phone("9876543210")
-                        .active(true)
-                        .isLateComerPermitted(true)
-                        .build();
-                user = userRepository.save(newStudent);
-
-                StudentProfile profile = StudentProfile.builder()
-                        .user(user)
-                        .prn(upper)
-                        .rollNumber(upper)
-                        .department("E&TC")
-                        .academicYear("TE")
-                        .division("1")
-                        .active(true)
-                        .build();
-                studentProfileRepository.save(profile);
-            } else {
-                throw new UsernameNotFoundException("User not found: " + username);
-            }
+            throw new UsernameNotFoundException("User not found: " + username);
         }
 
         return org.springframework.security.core.userdetails.User.builder()

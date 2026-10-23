@@ -13,6 +13,7 @@ import com.pict.gatesecurity.entity.enums.UserRole;
 import com.pict.gatesecurity.exception.BadRequestException;
 import com.pict.gatesecurity.mapper.VisitorMapper;
 import com.pict.gatesecurity.repository.GateRepository;
+import com.pict.gatesecurity.repository.NotificationRepository;
 import com.pict.gatesecurity.repository.UserRepository;
 import com.pict.gatesecurity.repository.VisitorRepository;
 import com.pict.gatesecurity.repository.WatchlistRepository;
@@ -43,6 +44,8 @@ class VisitorServiceImplTest {
     @Mock private VisitorMapper visitorMapper;
     @Mock private AuditLogService auditLogService;
     @Mock private FaceRecognitionService faceRecognitionService;
+    @Mock private NotificationRepository notificationRepository;
+    @Mock private com.pict.gatesecurity.repository.AuthorizedFacultyRepository authorizedFacultyRepository;
 
     private VisitorServiceImpl visitorService;
 
@@ -55,7 +58,7 @@ class VisitorServiceImplTest {
         visitorService = new VisitorServiceImpl(
                 visitorRepository, gateRepository, userRepository,
                 watchlistRepository, visitorMapper, auditLogService,
-                faceRecognitionService
+                faceRecognitionService, notificationRepository, authorizedFacultyRepository
         );
 
         testUser = User.builder().id(1L).username("guard1").fullName("Guard").role(UserRole.SECURITY_OFFICER).active(true).build();

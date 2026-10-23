@@ -1,0 +1,1472 @@
+[
+  {
+    "empNo": "46",
+    "staffType": "Non Teaching",
+    "fullName": "VIJAY ARUN MANMODE",
+    "department": "FE"
+  },
+  {
+    "empNo": "431",
+    "staffType": "Non Teaching",
+    "fullName": "SUVARNA ARUN IWARE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "492",
+    "staffType": "Non Teaching",
+    "fullName": "PRAJAKTA MANOJ GADE",
+    "department": "FE"
+  },
+  {
+    "empNo": "761",
+    "staffType": "Non Teaching",
+    "fullName": "DILIP PANDITRAO SONKAMBLE",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "858",
+    "staffType": "Non Teaching",
+    "fullName": "DHANANJAY MAHADEV SHEDGE",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "860",
+    "staffType": "Non Teaching",
+    "fullName": "ANUP DATTATRAY DOIPHODE",
+    "department": "SPORTS"
+  },
+  {
+    "empNo": "376",
+    "staffType": "Teaching",
+    "fullName": "RACHNA AMISH KARNAVAT",
+    "department": "IT"
+  },
+  {
+    "empNo": "510",
+    "staffType": "Teaching",
+    "fullName": "DIPALI DATTATRAY KADAM",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "576",
+    "staffType": "Teaching",
+    "fullName": "PALLAVI SANJAY JOSHI",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "840",
+    "staffType": "Teaching",
+    "fullName": "HRUCHA CHANDRASHEKHAR DESHMUKH",
+    "department": "IT"
+  },
+  {
+    "empNo": "884",
+    "staffType": "Teaching",
+    "fullName": "MANASI YOGESH GANDHI",
+    "department": "FE"
+  },
+  {
+    "empNo": "771",
+    "staffType": "Teaching",
+    "fullName": "PRIYANKA SATISH SHAHANE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "443",
+    "staffType": "Teaching",
+    "fullName": "MAKRAND DINANATH BANDKAR",
+    "department": "FE"
+  },
+  {
+    "empNo": "432",
+    "staffType": "Non Teaching",
+    "fullName": "ATUL NIVRUTTI PUJARI",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "121",
+    "staffType": "Non Teaching",
+    "fullName": "DNYANESHWAR MANIKRAO MANKAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "859",
+    "staffType": "Non Teaching",
+    "fullName": "AKSHAY RAMDAS BODAKE",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "507",
+    "staffType": "Teaching",
+    "fullName": "AMOL ASHOK CHAVAN",
+    "department": "FE"
+  },
+  {
+    "empNo": "20",
+    "staffType": "Teaching",
+    "fullName": "RAVINDER BHADRAIAH YERRAM",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "267",
+    "staffType": "Teaching",
+    "fullName": "ABHINAY GULABRAO DHAMANKAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "539",
+    "staffType": "Non Teaching",
+    "fullName": "ATUL SHANKAR SUTAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "513",
+    "staffType": "Non Teaching",
+    "fullName": "POONAM PARMATMA VERMA",
+    "department": "IT"
+  },
+  {
+    "empNo": "301",
+    "staffType": "Non Teaching",
+    "fullName": "DEEPAK DAWAL THIKEKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "499",
+    "staffType": "Teaching",
+    "fullName": "ABHISHEK MAKARAND KULKARNI",
+    "department": "FE"
+  },
+  {
+    "empNo": "495",
+    "staffType": "Non Teaching",
+    "fullName": "ABHIJIT BALASO WAGH",
+    "department": "PURCHASE"
+  },
+  {
+    "empNo": "15",
+    "staffType": "Teaching",
+    "fullName": "ASMITA AJAY JOSHI",
+    "department": "FE"
+  },
+  {
+    "empNo": "814",
+    "staffType": "Teaching",
+    "fullName": "AMEYA ANIL KADAM",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "559",
+    "staffType": "Teaching",
+    "fullName": "NILESH SURESH SHIRUDE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "21",
+    "staffType": "Teaching",
+    "fullName": "BHAVNA MUKESH VYAS",
+    "department": "FE"
+  },
+  {
+    "empNo": "312",
+    "staffType": "Teaching",
+    "fullName": "NITIN BARSU PATIL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "334",
+    "staffType": "Teaching",
+    "fullName": "MADHURI SACHIN WAKODE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "545",
+    "staffType": "Teaching",
+    "fullName": "SNEHAL PARAG SHINTRE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "874",
+    "staffType": "Teaching",
+    "fullName": "POOJA ATUL CHAVAN",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "826",
+    "staffType": "Teaching",
+    "fullName": "VAISHALI SANJAY KULKARNI",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "816",
+    "staffType": "Teaching",
+    "fullName": "ANJALI ANIL DESHPANDE",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "313",
+    "staffType": "Teaching",
+    "fullName": "PRANJALI PRASHANT JOSHI",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "381",
+    "staffType": "Non Teaching",
+    "fullName": "BABURAO SHANKAR JADHAV",
+    "department": "IT"
+  },
+  {
+    "empNo": "206",
+    "staffType": "Non Teaching",
+    "fullName": "HEMANT NIVRUTTI NIKALJE",
+    "department": "LIBRARY"
+  },
+  {
+    "empNo": "79",
+    "staffType": "Teaching",
+    "fullName": "SUNIL KANHOBA MOON",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "28",
+    "staffType": "Teaching",
+    "fullName": "MUKTA SUNIL TAKALIKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "184",
+    "staffType": "Teaching",
+    "fullName": "ARATI RAGHURAJ DESHPANDE",
+    "department": "ME COMPUTER"
+  },
+  {
+    "empNo": "484",
+    "staffType": "Teaching",
+    "fullName": "SHAHADEV DATTATRAYA HAKE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "636",
+    "staffType": "Teaching",
+    "fullName": "PRASHANT GANPAT UMAPE",
+    "department": "FE"
+  },
+  {
+    "empNo": "757",
+    "staffType": "Teaching",
+    "fullName": "SONALI VIJAY SHINKAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "823",
+    "staffType": "Teaching",
+    "fullName": "KUMARI DEEPIKA",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "746",
+    "staffType": "Teaching",
+    "fullName": "SWAPNAJA RAJESH HIRAY",
+    "department": "IT"
+  },
+  {
+    "empNo": "537",
+    "staffType": "Teaching",
+    "fullName": "SHRIKANT DINKAR HADE",
+    "department": "FE"
+  },
+  {
+    "empNo": "195",
+    "staffType": "Teaching",
+    "fullName": "SHWETA CHANDRASHEKHAR DHARMADHIKARI",
+    "department": "IT"
+  },
+  {
+    "empNo": "590",
+    "staffType": "Teaching",
+    "fullName": "VIVEK BANESHWAR PATOLE",
+    "department": "FE"
+  },
+  {
+    "empNo": "863",
+    "staffType": "Teaching",
+    "fullName": "BHAGYASHRI SARANG KULKARNI",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "872",
+    "staffType": "Teaching",
+    "fullName": "DNYANDEO JAGESHWAR PETE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "666",
+    "staffType": "Teaching",
+    "fullName": "ANKITA KETAN PATEL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "875",
+    "staffType": "Teaching",
+    "fullName": "JYOTI SUDHAKAR RAGHATWAN",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "382",
+    "staffType": "Teaching",
+    "fullName": "RAVINDRA BABURAO MURUMKAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "853",
+    "staffType": "Non Teaching",
+    "fullName": "NAWATHE PRACHI",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "641",
+    "staffType": "Teaching",
+    "fullName": "SHARADCHANDRA TUKARAM GAWHALE",
+    "department": "FE"
+  },
+  {
+    "empNo": "505",
+    "staffType": "Non Teaching",
+    "fullName": "ARCHANA VIRENDRA PATIL",
+    "department": "FE"
+  },
+  {
+    "empNo": "59",
+    "staffType": "Non Teaching",
+    "fullName": "RAJESH VISHWANATH SHELAR",
+    "department": "LIBRARY"
+  },
+  {
+    "empNo": "306",
+    "staffType": "Non Teaching",
+    "fullName": "BAKUL SANTOSH KATEWAL",
+    "department": "IT"
+  },
+  {
+    "empNo": "408",
+    "staffType": "Non Teaching",
+    "fullName": "AVINASH BHASKARRAO AMBHORE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "435",
+    "staffType": "Non Teaching",
+    "fullName": "OMESHKUMAR MANOHAR BODELE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "865",
+    "staffType": "Teaching",
+    "fullName": "SHAVETA THAKRAL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "852",
+    "staffType": "Non Teaching",
+    "fullName": "SMITA NILESH BANKAR",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "500",
+    "staffType": "Non Teaching",
+    "fullName": "MALHAR VINAYAK SHALIGRAM",
+    "department": "FE"
+  },
+  {
+    "empNo": "822",
+    "staffType": "Teaching",
+    "fullName": "ARTI GORAKHNATH GHULE",
+    "department": "IT"
+  },
+  {
+    "empNo": "66",
+    "staffType": "Teaching",
+    "fullName": "KALYANI CHETAN WAGHMARE",
+    "department": "ME DATA SCIENCE"
+  },
+  {
+    "empNo": "655",
+    "staffType": "Teaching",
+    "fullName": "ROHAN RAVINDRA VARDHAMAN",
+    "department": "FE"
+  },
+  {
+    "empNo": "398",
+    "staffType": "Non Teaching",
+    "fullName": "SHADRAK HANMANT KARSULKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "369",
+    "staffType": "Non Teaching",
+    "fullName": "ASHWINI MUKUND KULKARNI",
+    "department": "IT"
+  },
+  {
+    "empNo": "693",
+    "staffType": "Teaching",
+    "fullName": "KAUSTUBH DILIPRAO KULKARNI",
+    "department": "FE"
+  },
+  {
+    "empNo": "700",
+    "staffType": "Teaching",
+    "fullName": "HEMANTKUMAR BAPU MALI",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "337",
+    "staffType": "Teaching",
+    "fullName": "KIRTI YOGESH DIGHOLKAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "691",
+    "staffType": "Teaching",
+    "fullName": "MANDAR NITIN KAKADE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "319",
+    "staffType": "Non Teaching",
+    "fullName": "KIRANKUMAR BABANRAO KADAMBANDE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "856",
+    "staffType": "Non Teaching",
+    "fullName": "RAJESH HANUMANT RAO",
+    "department": "CENTRAL"
+  },
+  {
+    "empNo": "41",
+    "staffType": "Teaching",
+    "fullName": "LALIT PURUSHOTTAM PATIL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "851",
+    "staffType": "Teaching",
+    "fullName": "HEENA KAUSAR FEROZ KHAN",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "779",
+    "staffType": "Teaching",
+    "fullName": "SANJAY TRYMBAK GANDHE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "864",
+    "staffType": "Teaching",
+    "fullName": "TEJASWEENI GIRISH HAMPE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "799",
+    "staffType": "Teaching",
+    "fullName": "KANAKA KAUSHIK KOLHATKAR",
+    "department": "FE"
+  },
+  {
+    "empNo": "372",
+    "staffType": "Teaching",
+    "fullName": "EMANI MAHESWARA REDDY",
+    "department": "FE"
+  },
+  {
+    "empNo": "379",
+    "staffType": "Non Teaching",
+    "fullName": "MANGESH KRISHNARAO SHEGOKAR",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "593",
+    "staffType": "Non Teaching",
+    "fullName": "MILIND ASHOK PHADKE",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "849",
+    "staffType": "Non Teaching",
+    "fullName": "PIMPODKAR PRASHANT VINAYAK",
+    "department": "LIBRARY"
+  },
+  {
+    "empNo": "231",
+    "staffType": "Teaching",
+    "fullName": "EMMANUEL MARK",
+    "department": "IT"
+  },
+  {
+    "empNo": "731",
+    "staffType": "Teaching",
+    "fullName": "PRAGTEE BHAGVAN TATHE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "748",
+    "staffType": "Teaching",
+    "fullName": "PRANALI RAJENDRA NAVGHARE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "792",
+    "staffType": "Teaching",
+    "fullName": "DEEPALI PRASHANT SALAPURKAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "809",
+    "staffType": "Teaching",
+    "fullName": "SAYALI GAURAV GAIKWAD",
+    "department": "IT"
+  },
+  {
+    "empNo": "880",
+    "staffType": "Teaching",
+    "fullName": "POOJA DIPAK SUTAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "878",
+    "staffType": "Teaching",
+    "fullName": "NAVED RAZA QAISAR ALI",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "468",
+    "staffType": "Non Teaching",
+    "fullName": "RAKESH PRADEEP PATIL",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "755",
+    "staffType": "Teaching",
+    "fullName": "MANISHA JAYANT SAGADE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "84",
+    "staffType": "Teaching",
+    "fullName": "RUPESH CHANDRAKANT JAISWAL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "628",
+    "staffType": "Teaching",
+    "fullName": "NIKHIL VASANT SANGADE",
+    "department": "FE"
+  },
+  {
+    "empNo": "820",
+    "staffType": "Teaching",
+    "fullName": "TANISHA SANJAYKUMAR LONDHE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "189",
+    "staffType": "Teaching",
+    "fullName": "GEETANJALI VINAYAK KALE",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "211",
+    "staffType": "Teaching",
+    "fullName": "SHEETAL SAGAR SONAWANE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "427",
+    "staffType": "Teaching",
+    "fullName": "SUMIT SATISHRAO SHEVTEKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "867",
+    "staffType": "Non Teaching",
+    "fullName": "ANKUR VINAY NAVALE",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "403",
+    "staffType": "Teaching",
+    "fullName": "SANDEEP VINAYAK GAIKWAD",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "429",
+    "staffType": "Non Teaching",
+    "fullName": "SHITAL GAJENDRA PATIL",
+    "department": "IT"
+  },
+  {
+    "empNo": "470",
+    "staffType": "Non Teaching",
+    "fullName": "DINESH PRADEEP DABIR",
+    "department": "CENTRAL"
+  },
+  {
+    "empNo": "340",
+    "staffType": "Teaching",
+    "fullName": "PRAVIN RAMDAS PATIL",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "373",
+    "staffType": "Teaching",
+    "fullName": "SHITAL NAYAN GIRME",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "563",
+    "staffType": "Teaching",
+    "fullName": "PARAG JAYGOPAL JAMBHULKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "694",
+    "staffType": "Teaching",
+    "fullName": "BHAKTI DEEPAK KADAM",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "710",
+    "staffType": "Teaching",
+    "fullName": "MADHURI VIKAS MANE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "780",
+    "staffType": "Teaching",
+    "fullName": "VAISHALI RAMESH KANDEKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "841",
+    "staffType": "Teaching",
+    "fullName": "MANJUSHRI VILAS RAUT",
+    "department": "IT"
+  },
+  {
+    "empNo": "866",
+    "staffType": "Teaching",
+    "fullName": "BHAGYASHREE SWAPNIL KADAM",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "881",
+    "staffType": "Teaching",
+    "fullName": "SUCHITA DHARMENDRA GANAGE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "569",
+    "staffType": "Non Teaching",
+    "fullName": "SANDIP VILASRAO SHINDE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "388",
+    "staffType": "Teaching",
+    "fullName": "SUMITRA AMIT JAKHETE",
+    "department": "IT"
+  },
+  {
+    "empNo": "879",
+    "staffType": "Teaching",
+    "fullName": "SACHIN BHASKARRAO PAWAR",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "437",
+    "staffType": "Teaching",
+    "fullName": "SUNIL SHRIPAL KHOT",
+    "department": "ME E&C"
+  },
+  {
+    "empNo": "815",
+    "staffType": "Teaching",
+    "fullName": "SNEHA CHANDRAKANT NAHATKAR",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "257",
+    "staffType": "Non Teaching",
+    "fullName": "SANDEEP NAMDEO DEOKATE",
+    "department": "FE"
+  },
+  {
+    "empNo": "367",
+    "staffType": "Non Teaching",
+    "fullName": "ANKUSH VASANT SAPKAL",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "532",
+    "staffType": "Non Teaching",
+    "fullName": "KUNDLIK SAMPAT UGALE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "671",
+    "staffType": "Teaching",
+    "fullName": "PANKAJ SUMERSING PATIL",
+    "department": "FE"
+  },
+  {
+    "empNo": "692",
+    "staffType": "Teaching",
+    "fullName": "NADEEM ANWER NISAR AHMED",
+    "department": "FE"
+  },
+  {
+    "empNo": "736",
+    "staffType": "Teaching",
+    "fullName": "JYOTI HINDURAO JADHAV",
+    "department": "IT"
+  },
+  {
+    "empNo": "330",
+    "staffType": "Non Teaching",
+    "fullName": "MANEESHA HEMANT HASURKAR",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "438",
+    "staffType": "Teaching",
+    "fullName": "AMOL SUKHADEORAO INGOLE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "790",
+    "staffType": "Teaching",
+    "fullName": "JAYSHREE SACHIN MAHAJAN",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "631",
+    "staffType": "Teaching",
+    "fullName": "JAGDISH KASHINATH KAMBLE",
+    "department": "IT"
+  },
+  {
+    "empNo": "485",
+    "staffType": "Teaching",
+    "fullName": "VIRENDRA VISHNUDAS BAGADE",
+    "department": "ME COMPUTER"
+  },
+  {
+    "empNo": "610",
+    "staffType": "Teaching",
+    "fullName": "RUTUJA ABHIJIT KULKARNI",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "843",
+    "staffType": "Teaching",
+    "fullName": "ASHOK DNYANDEO VIDHATE",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "629",
+    "staffType": "Teaching",
+    "fullName": "SUMIT UTTAM BAGADE",
+    "department": "FE"
+  },
+  {
+    "empNo": "786",
+    "staffType": "Teaching",
+    "fullName": "MOHAN ANNA CHIMANNA",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "846",
+    "staffType": "Teaching",
+    "fullName": "ANJALI ABHIJIT YADAV",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "753",
+    "staffType": "Teaching",
+    "fullName": "SHRIDEVI SUKHADEO VASEKAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "763",
+    "staffType": "Teaching",
+    "fullName": "NILESH GEORGE NIRMAL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "551",
+    "staffType": "Teaching",
+    "fullName": "RISHIKESH JANARDAN SUTAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "838",
+    "staffType": "Teaching",
+    "fullName": "RUPALI ASHOK PATIL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "882",
+    "staffType": "Teaching",
+    "fullName": "DIPAK LAXMAN JARE",
+    "department": "FE"
+  },
+  {
+    "empNo": "440",
+    "staffType": "Non Teaching",
+    "fullName": "SUVIDYA RAMESH PAWAR",
+    "department": "ME E&C"
+  },
+  {
+    "empNo": "119",
+    "staffType": "Teaching",
+    "fullName": "ANANT MADHUKAR BAGADE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "65",
+    "staffType": "Teaching",
+    "fullName": "ANNAGHA ARVIND BIDKAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "857",
+    "staffType": "Non Teaching",
+    "fullName": "VILAS DNYANDEO GAWALI",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "615",
+    "staffType": "Teaching",
+    "fullName": "HRUSHIKESH SHIRISH KHATRI",
+    "department": "FE"
+  },
+  {
+    "empNo": "828",
+    "staffType": "Teaching",
+    "fullName": "NEHA NIVRUTTI JAMDAR",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "100",
+    "staffType": "Teaching",
+    "fullName": "ARUNDHATI ATUL CHANDORKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "742",
+    "staffType": "Teaching",
+    "fullName": "ASMA NASAR SAYYAD",
+    "department": "FE"
+  },
+  {
+    "empNo": "302",
+    "staffType": "Teaching",
+    "fullName": "MOUSAMI VAIBHAV MUNOT",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "811",
+    "staffType": "Teaching",
+    "fullName": "ASHWINI RAJARAM BANKAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "869",
+    "staffType": "Teaching",
+    "fullName": "HARSHA SURENDRA JAIN",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "669",
+    "staffType": "Teaching",
+    "fullName": "SIDDHESH NARENDRA UPASANI",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "47",
+    "staffType": "Non Teaching",
+    "fullName": "ANIL MARUTI CHAVAN",
+    "department": "CENTRAL"
+  },
+  {
+    "empNo": "407",
+    "staffType": "Non Teaching",
+    "fullName": "GAJANAN LALAPPA KIRWALE",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "452",
+    "staffType": "Teaching",
+    "fullName": "NITEEN PANDITRAO SAPKAL",
+    "department": "FE"
+  },
+  {
+    "empNo": "451",
+    "staffType": "Teaching",
+    "fullName": "SUJATA ASHOK BARDE",
+    "department": "FE"
+  },
+  {
+    "empNo": "766",
+    "staffType": "Teaching",
+    "fullName": "DIPIKA DILIP RAIGAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "234",
+    "staffType": "Teaching",
+    "fullName": "MANISH RAMBHAU KHODASKAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "844",
+    "staffType": "Teaching",
+    "fullName": "DIVYA DILIPKUMAR CHECHANI",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "13",
+    "staffType": "Teaching",
+    "fullName": "GIRISH PANDURANG POTDAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "203",
+    "staffType": "Teaching",
+    "fullName": "SACHIN SURESH PANDE",
+    "department": "IT"
+  },
+  {
+    "empNo": "727",
+    "staffType": "Teaching",
+    "fullName": "MANSINGH KUMAR KADAM",
+    "department": "FE"
+  },
+  {
+    "empNo": "626",
+    "staffType": "Teaching",
+    "fullName": "BHUMESH PURUSHOTTAM MASRAM",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "651",
+    "staffType": "Teaching",
+    "fullName": "ANIL SHRAWAN BODHE",
+    "department": "FE"
+  },
+  {
+    "empNo": "338",
+    "staffType": "Teaching",
+    "fullName": "SHIVAJI VITTHALRAO MUNDHE",
+    "department": "FE"
+  },
+  {
+    "empNo": "885",
+    "staffType": "Teaching",
+    "fullName": "SUSHILA ASURAM SUTHAR",
+    "department": "FE"
+  },
+  {
+    "empNo": "309",
+    "staffType": "Non Teaching",
+    "fullName": "AVINASH DATTA TORANE",
+    "department": "FE"
+  },
+  {
+    "empNo": "317",
+    "staffType": "Non Teaching",
+    "fullName": "NARAYAN BHAGWANRAO PAWAR",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "803",
+    "staffType": "Teaching",
+    "fullName": "HEMA SAGAR KUMBHAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "839",
+    "staffType": "Teaching",
+    "fullName": "DEEPA BAPOO MANE",
+    "department": "IT"
+  },
+  {
+    "empNo": "219",
+    "staffType": "Non Teaching",
+    "fullName": "SANDEEP BALASAHEB CHONDHE",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "315",
+    "staffType": "Non Teaching",
+    "fullName": "KAILAS BALKRISHNA BHOSALE",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "293",
+    "staffType": "Teaching",
+    "fullName": "HRUSHIKESH MADHUKAR HIWASE",
+    "department": "FE"
+  },
+  {
+    "empNo": "804",
+    "staffType": "Teaching",
+    "fullName": "MOHINI SADASHIV GHADAGE",
+    "department": "FE"
+  },
+  {
+    "empNo": "733",
+    "staffType": "Teaching",
+    "fullName": "SUJATA SHIVAPPA PATIL",
+    "department": "FE"
+  },
+  {
+    "empNo": "794",
+    "staffType": "Non Teaching",
+    "fullName": "SACHIN SUDHAKAR SHINDE",
+    "department": "SPORTS"
+  },
+  {
+    "empNo": "775",
+    "staffType": "Teaching",
+    "fullName": "KOMAL MAHADEO MASAL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "842",
+    "staffType": "Teaching",
+    "fullName": "TANUJA SAJID MULLA",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "871",
+    "staffType": "Teaching",
+    "fullName": "SULOCHANA BALWANT SONKAMBLE",
+    "department": "IT"
+  },
+  {
+    "empNo": "179",
+    "staffType": "Non Teaching",
+    "fullName": "KIRAN BABANRAO KALE",
+    "department": "LIBRARY"
+  },
+  {
+    "empNo": "276",
+    "staffType": "Non Teaching",
+    "fullName": "SURESH RAMCHANDRA SHELAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "762",
+    "staffType": "Non Teaching",
+    "fullName": "SIDDHESHWAR SUKDEO METAKARI",
+    "department": "CENTRAL"
+  },
+  {
+    "empNo": "389",
+    "staffType": "Non Teaching",
+    "fullName": "JAYASHREE NAMAN BURADKAR",
+    "department": "FE"
+  },
+  {
+    "empNo": "459",
+    "staffType": "Non Teaching",
+    "fullName": "RAVIKANT CHANDRAKANT BADEKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "480",
+    "staffType": "Non Teaching",
+    "fullName": "MILIND VIKAS KHILE",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "502",
+    "staffType": "Non Teaching",
+    "fullName": "NANDKISHOR SURESH MIRAJKAR",
+    "department": "FE"
+  },
+  {
+    "empNo": "501",
+    "staffType": "Non Teaching",
+    "fullName": "GAJENDRA SUDAMRAO KHAIRMODE",
+    "department": "FE"
+  },
+  {
+    "empNo": "503",
+    "staffType": "Non Teaching",
+    "fullName": "LAXMIKANT MAROTRAO GAVHANE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "568",
+    "staffType": "Non Teaching",
+    "fullName": "HRISHIKESH VILAS KASAR",
+    "department": "ME DATA SCIENCE"
+  },
+  {
+    "empNo": "571",
+    "staffType": "Non Teaching",
+    "fullName": "LAXMAN MARUTI PAWAL",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "854",
+    "staffType": "Non Teaching",
+    "fullName": "RAHUL SURESH SONDKAR",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "237",
+    "staffType": "Teaching",
+    "fullName": "PRADIP SHANKAR VARADE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "246",
+    "staffType": "Teaching",
+    "fullName": "RAJENDRA GANGARAM YELALWAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "245",
+    "staffType": "Teaching",
+    "fullName": "MAHESH ANANDRAO GANGARDE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "318",
+    "staffType": "Teaching",
+    "fullName": "PREETI ANAND JAIN",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "321",
+    "staffType": "Teaching",
+    "fullName": "TUSHAR ANANT RANE",
+    "department": "IT"
+  },
+  {
+    "empNo": "355",
+    "staffType": "Teaching",
+    "fullName": "VISHAL RAMESH JAISWAL",
+    "department": "IT"
+  },
+  {
+    "empNo": "390",
+    "staffType": "Teaching",
+    "fullName": "RATNAMALA KUMAR SUDHIR PASWAN",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "397",
+    "staffType": "Teaching",
+    "fullName": "NAMAN VIJAY BURADKAR",
+    "department": "IT"
+  },
+  {
+    "empNo": "401",
+    "staffType": "Teaching",
+    "fullName": "SACHIN DASHARATH SHELKE",
+    "department": "IT"
+  },
+  {
+    "empNo": "406",
+    "staffType": "Teaching",
+    "fullName": "SANDEEP RAMBHAU WARHADE",
+    "department": "IT"
+  },
+  {
+    "empNo": "490",
+    "staffType": "Teaching",
+    "fullName": "KRANTI RAMRAO JADHAV",
+    "department": "FE"
+  },
+  {
+    "empNo": "504",
+    "staffType": "Teaching",
+    "fullName": "MAYUR SUBHASH CHAVAN",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "558",
+    "staffType": "Teaching",
+    "fullName": "SAKSHI MAHESH HOSAMANI",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "630",
+    "staffType": "Teaching",
+    "fullName": "MANISH RAVINDRA JANSARI",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "712",
+    "staffType": "Teaching",
+    "fullName": "PRAJAKTA SUBHASH SHINDE",
+    "department": "IT"
+  },
+  {
+    "empNo": "740",
+    "staffType": "Teaching",
+    "fullName": "ROHIDAS TUKARAM MALI",
+    "department": "FE"
+  },
+  {
+    "empNo": "873",
+    "staffType": "Teaching",
+    "fullName": "SHWETA SHAH",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "776",
+    "staffType": "Teaching",
+    "fullName": "RAJANI RAJESH JADHAV",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "782",
+    "staffType": "Teaching",
+    "fullName": "AMRUTA ABHINANDAN PATIL",
+    "department": "IT"
+  },
+  {
+    "empNo": "785",
+    "staffType": "Teaching",
+    "fullName": "SAMADHAN WALU JADHAV",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "787",
+    "staffType": "Teaching",
+    "fullName": "KIRAN LALASO BHOITE",
+    "department": "FE"
+  },
+  {
+    "empNo": "806",
+    "staffType": "Teaching",
+    "fullName": "MADHURI SOMNATH PATIL",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "825",
+    "staffType": "Teaching",
+    "fullName": "PUNAM ASHISH SHINDE",
+    "department": "IT"
+  },
+  {
+    "empNo": "837",
+    "staffType": "Teaching",
+    "fullName": "SUDERSHAN PRAKASH DOLLI",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "862",
+    "staffType": "Teaching",
+    "fullName": "KANCHAN PRASAD JOSHI",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "877",
+    "staffType": "Teaching",
+    "fullName": "VARSHA BAPUSAHEB SAKNURE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "883",
+    "staffType": "Teaching",
+    "fullName": "DATTATRAYA NAVNATH GHAYATADAK",
+    "department": "FE"
+  },
+  {
+    "empNo": "30",
+    "staffType": "Teaching",
+    "fullName": "REKHA ANILKUMAR KULKARNI",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "12",
+    "staffType": "Teaching",
+    "fullName": "GIRISH SHRIKISAN MUNDADA",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "141",
+    "staffType": "Teaching",
+    "fullName": "AVINASH MADHUKARRAO DESHMUKH",
+    "department": "FE"
+  },
+  {
+    "empNo": "177",
+    "staffType": "Teaching",
+    "fullName": "MOUSAMI PRASHANT TURUK",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "185",
+    "staffType": "Teaching",
+    "fullName": "ANUPAMA GANESH PHAKATKAR",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "536",
+    "staffType": "Teaching",
+    "fullName": "PRASHANT DADASAHEB JADHAV",
+    "department": "FE"
+  },
+  {
+    "empNo": "63",
+    "staffType": "Teaching",
+    "fullName": "SHYAM BABASAHEB DESHMUKH",
+    "department": "ME COMPUTER"
+  },
+  {
+    "empNo": "392",
+    "staffType": "Teaching",
+    "fullName": "ASHWINI DIGAMBAR BUNDELE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "698",
+    "staffType": "Teaching",
+    "fullName": "KOPAL GANGRADE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "462",
+    "staffType": "Non Teaching",
+    "fullName": "SANDIP GORAKHNATH RENUSE",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "670",
+    "staffType": "Non Teaching",
+    "fullName": "SUNIL MANSING PAWAR",
+    "department": "CENTRAL"
+  },
+  {
+    "empNo": "870",
+    "staffType": "Teaching",
+    "fullName": "SAHIL HIRALAL PATIL",
+    "department": "E&CE"
+  },
+  {
+    "empNo": "342",
+    "staffType": "Non Teaching",
+    "fullName": "SNEHALATA LALITBHAIYA RANE",
+    "department": "AI&DS"
+  },
+  {
+    "empNo": "582",
+    "staffType": "Teaching",
+    "fullName": "URMILA SHRIKANT PAWAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "476",
+    "staffType": "Teaching",
+    "fullName": "YOGESH ASHOK HANDGE",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "264",
+    "staffType": "Non Teaching",
+    "fullName": "PRADEEP PURUSHOTTAM PARKHI",
+    "department": "CENTRAL"
+  },
+  {
+    "empNo": "743",
+    "staffType": "Non Teaching",
+    "fullName": "BHAKTI SHRIRAM YADAV",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "197",
+    "staffType": "Teaching",
+    "fullName": "DEEPAK MADANRAO SHINDE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "850",
+    "staffType": "Teaching",
+    "fullName": "BHIMASHANKAR PRAKASH KUMBHARE",
+    "department": "FE"
+  },
+  {
+    "empNo": "876",
+    "staffType": "Teaching",
+    "fullName": "SHRIDEVI BHIMASHANKAR KUMBHARE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "718",
+    "staffType": "Teaching",
+    "fullName": "ANAGHA VIJAYSINHA RAJPUT",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "329",
+    "staffType": "Non Teaching",
+    "fullName": "KAVITA KISHOR KULKARNI",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "555",
+    "staffType": "Teaching",
+    "fullName": "HARSH SHARADKUMAR THAKAR",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "345",
+    "staffType": "Teaching",
+    "fullName": "ARCHANA SANTOSH GHOTKAR",
+    "department": "COMPUTER"
+  },
+  {
+    "empNo": "27",
+    "staffType": "Teaching",
+    "fullName": "BALWANT AMBADAS SONKAMBLE",
+    "department": "ME DATA SCIENCE"
+  },
+  {
+    "empNo": "433",
+    "staffType": "Non Teaching",
+    "fullName": "SANJAY MARUTI SHINDE",
+    "department": "E&TC"
+  },
+  {
+    "empNo": "674",
+    "staffType": "Non Teaching",
+    "fullName": "GANESH DNYANESHWAR BANGAR",
+    "department": "OFFICE"
+  },
+  {
+    "empNo": "796",
+    "staffType": "Teaching",
+    "fullName": "SAGAR ARVIND KALE",
+    "department": "FE"
+  },
+  {
+    "empNo": "830",
+    "staffType": "Teaching",
+    "fullName": "JAYANT SUDHIR YADAV",
+    "department": "FE"
+  },
+  {
+    "empNo": "800",
+    "staffType": "Teaching",
+    "fullName": "MANDREKAR TANVESH SANDIP",
+    "department": "FE"
+  }
+]

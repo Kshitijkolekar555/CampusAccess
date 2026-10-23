@@ -46,4 +46,6 @@ public interface NotificationService {
     NotificationResponse resendNotification(Long id);
 
     void deleteNotification(Long id);
+
+    java.util.List<NotificationResponse> getMyNotifications(String username);
 }

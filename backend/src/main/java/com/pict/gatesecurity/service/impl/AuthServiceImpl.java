@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.*;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,6 +55,7 @@ public class AuthServiceImpl implements AuthService {
     private final com.pict.gatesecurity.repository.StudentGatePassRepository studentGatePassRepository;
     private final com.pict.gatesecurity.repository.HostelOutpassRepository hostelOutpassRepository;
     private final com.pict.gatesecurity.repository.StudentProfileRepository studentProfileRepository;
+    private final com.pict.gatesecurity.repository.AuthorizedStudentRepository authorizedStudentRepository;
 
     @Value("${app.jwt.refresh-token-expiry-ms}")
     private long refreshTokenExpiryMs;
@@ -72,23 +74,6 @@ public class AuthServiceImpl implements AuthService {
                     new UsernamePasswordAuthenticationToken(cleanUsername, cleanPassword)
             );
         } catch (BadCredentialsException e) {
-            // Check student default password or case mismatch fallback
-            Optional<User> studentOpt = userRepository.findFirstByUsernameIgnoreCase(cleanUsername)
-                    .or(() -> studentProfileRepository.findFirstByPrnIgnoreCase(cleanUsername).map(com.pict.gatesecurity.entity.StudentProfile::getUser));
-
-            if (studentOpt.isPresent() && studentOpt.get().getRole() == UserRole.STUDENT) {
-                User student = studentOpt.get();
-                // Check if password matches enrollment number / username / PRN ignoring case
-                if (cleanPassword.equalsIgnoreCase(student.getUsername()) ||
-                    cleanPassword.equalsIgnoreCase(cleanUsername)) {
-                    log.info("Student {} authenticated via default enrollment number password fallback", student.getUsername());
-                    // Sync password hash
-                    student.setPasswordHash(passwordEncoder.encode(cleanPassword));
-                    userRepository.save(student);
-                    return buildAuthResponse(student, request);
-                }
-            }
-
             log.warn("Login failed for user {}: bad credentials", request.getUsername());
             throw new BadCredentialsException("Invalid username or password");
         }
@@ -114,7 +99,9 @@ public class AuthServiceImpl implements AuthService {
                 || role == UserRole.SECURITY_GUARD
                 || role == UserRole.SECURITY_OFFICER
                 || role == UserRole.HOSTEL_WARDEN
-                || role == UserRole.ADMIN;
+                || role == UserRole.ADMIN
+                || role == UserRole.FACULTY
+                || role == UserRole.STAFF;
 
         if (!isAllowedRole) {
             log.warn("Blocked login attempt for unsupported role: {} (user={})", role, user.getUsername());
@@ -126,7 +113,8 @@ public class AuthServiceImpl implements AuthService {
             boolean roleMatches = user.getRole().name().equalsIgnoreCase(expRole)
                     || (user.getRole().name().contains("GUARD") && expRole.contains("GUARD"))
                     || (user.getRole() == UserRole.HOSTEL_WARDEN && (expRole.contains("WARDEN") || expRole.equalsIgnoreCase("HOSTEL_WARDEN")))
-                    || (user.getRole() == UserRole.ADMIN && expRole.equalsIgnoreCase("ADMIN"));
+                    || (user.getRole() == UserRole.ADMIN && expRole.equalsIgnoreCase("ADMIN"))
+                    || ((user.getRole() == UserRole.FACULTY || user.getRole() == UserRole.STAFF) && (expRole.equalsIgnoreCase("FACULTY") || expRole.equalsIgnoreCase("STAFF")));
             if (!roleMatches) {
                 throw new BadRequestException("Role Mismatch: Account '" + user.getUsername() + "' is registered as " + user.getRole().name() + ", not " + request.getExpectedRole());
             }
@@ -175,11 +163,15 @@ public class AuthServiceImpl implements AuthService {
         boolean isAllowedRole = role == UserRole.STUDENT
                 || role == UserRole.GUARD
                 || role == UserRole.SECURITY_GUARD
-                || role == UserRole.SECURITY_OFFICER;
+                || role == UserRole.SECURITY_OFFICER
+                || role == UserRole.HOSTEL_WARDEN
+                || role == UserRole.ADMIN
+                || role == UserRole.FACULTY
+                || role == UserRole.STAFF;
 
         if (!isAllowedRole) {
             log.warn("Blocked refresh token attempt for unsupported role: {} (user={})", role, user.getUsername());
-            throw new UnauthorizedException("Token refresh is restricted to Security Guard and Student accounts only.");
+            throw new UnauthorizedException("Token refresh is restricted to authorized accounts only.");
         }
 
         storedToken.setRevoked(true);
@@ -311,34 +303,52 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Registration is restricted to Student and Guard accounts only. Admin, Faculty, and Warden registration is not permitted.");
         }
 
+        com.pict.gatesecurity.entity.AuthorizedStudent authorizedStudent = null;
         if (regRole == UserRole.STUDENT) {
             String studentPrn = request.getUsername().trim().toUpperCase();
-            boolean existsInRoster = studentProfileRepository != null &&
-                    (studentProfileRepository.existsByPrn(studentPrn) ||
-                     studentProfileRepository.findByPrnIgnoreCase(studentPrn).isPresent() ||
-                     studentProfileRepository.findByRollNumber(studentPrn).isPresent());
+            authorizedStudent = authorizedStudentRepository != null ?
+                    authorizedStudentRepository.findAuthorizedByIdentifier(studentPrn).orElse(null) : null;
 
-            if (!existsInRoster) {
+            if (authorizedStudent == null) {
                 throw new com.pict.gatesecurity.exception.ForbiddenException(
-                        "PRN not found in college enrollment roster. Contact campus security or department office.");
+                        "Registration rejected: Student ID '" + studentPrn + "' is not present in the authorized student dataset. Only verified PICT students may register.");
+            }
+
+            // Prevent registration under another person's student ID
+            if (request.getFullName() != null && !request.getFullName().isBlank()) {
+                String cleanReqName = request.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
+                String cleanAuthName = authorizedStudent.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
+                Set<String> reqTokens = new HashSet<>(Arrays.asList(cleanReqName.split(" ")));
+                Set<String> authTokens = new HashSet<>(Arrays.asList(cleanAuthName.split(" ")));
+                boolean namesMatch = cleanReqName.equals(cleanAuthName) ||
+                        cleanReqName.contains(cleanAuthName) ||
+                        cleanAuthName.contains(cleanReqName) ||
+                        reqTokens.containsAll(authTokens) ||
+                        authTokens.containsAll(reqTokens);
+
+                if (!namesMatch) {
+                    throw new BadRequestException("The entered full name does not match the authorized institutional record for Student ID " + studentPrn);
+                }
             }
         }
 
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Username '" + request.getUsername() + "' is already taken");
+        if (userRepository.findFirstByUsernameIgnoreCase(request.getUsername().trim()).isPresent() ||
+            (regRole == UserRole.STUDENT && studentProfileRepository.findFirstByPrnIgnoreCase(request.getUsername().trim()).filter(sp -> sp.getUser() != null).isPresent())) {
+            throw new DuplicateResourceException("An account already exists for " + (regRole == UserRole.STUDENT ? "Student ID" : "Username") + " '" + request.getUsername().trim() + "'. Please sign in with your credentials.");
         }
 
-        String phone = (request.getPhone() != null && !request.getPhone().isBlank()) ? request.getPhone().trim() : null;
-        String email = (request.getEmail() != null && !request.getEmail().isBlank()) ? request.getEmail().trim().toLowerCase() : null;
+        String phone = (request.getPhone() != null && !request.getPhone().isBlank()) ? request.getPhone().trim() : (authorizedStudent != null ? authorizedStudent.getMobile() : null);
+        String email = (request.getEmail() != null && !request.getEmail().isBlank()) ? request.getEmail().trim().toLowerCase() : (authorizedStudent != null ? authorizedStudent.getEmail() : null);
 
         User user = User.builder()
                 .username(request.getUsername().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
-                .fullName(request.getFullName().trim())
+                .fullName(authorizedStudent != null ? authorizedStudent.getFullName() : request.getFullName().trim())
                 .phone(phone)
                 .email(email)
                 .active(true)
+                .isLateComerPermitted(true)
                 .build();
 
         User savedUser = userRepository.saveAndFlush(user);
@@ -350,13 +360,24 @@ public class AuthServiceImpl implements AuthService {
             if (existingProfileOpt.isPresent()) {
                 StudentProfile profile = existingProfileOpt.get();
                 profile.setUser(savedUser);
+                if (authorizedStudent != null) {
+                    profile.setDepartment(authorizedStudent.getDepartment());
+                    profile.setAcademicYear(authorizedStudent.getAcademicYear() != null ? authorizedStudent.getAcademicYear() : "TE");
+                    profile.setDivision(authorizedStudent.getDivision());
+                    if (authorizedStudent.getRollNumber() != null && !authorizedStudent.getRollNumber().isBlank()) {
+                        profile.setRollNumber(authorizedStudent.getRollNumber());
+                    }
+                }
+                profile.setActive(true);
                 studentProfileRepository.save(profile);
             } else if (studentProfileRepository.findByUserId(savedUser.getId()).isEmpty()) {
                 com.pict.gatesecurity.entity.StudentProfile profile = com.pict.gatesecurity.entity.StudentProfile.builder()
                         .user(savedUser)
                         .prn(prn)
-                        .department("General")
-                        .academicYear("FE")
+                        .rollNumber(authorizedStudent != null ? authorizedStudent.getRollNumber() : null)
+                        .department(authorizedStudent != null ? authorizedStudent.getDepartment() : "General")
+                        .academicYear(authorizedStudent != null && authorizedStudent.getAcademicYear() != null ? authorizedStudent.getAcademicYear() : "FE")
+                        .division(authorizedStudent != null ? authorizedStudent.getDivision() : null)
                         .active(true)
                         .build();
                 studentProfileRepository.save(profile);
@@ -419,10 +440,9 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Student account inactive");
         }
 
-        String accessToken = jwtUtil.generateAccessToken(studentUser.getUsername(), studentUser.getRole().name());
-        String refreshTokenStr = jwtUtil.generateRefreshToken(studentUser.getUsername());
-
-        persistRefreshToken(studentUser, refreshTokenStr);
+        // Do NOT issue access token or refresh token on plain PRN lookup. Login requires registered credentials.
+        String accessToken = null;
+        String refreshTokenStr = null;
 
         String branchYear = null;
         String hostelRoom = null;

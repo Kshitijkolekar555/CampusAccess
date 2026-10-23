@@ -61,7 +61,7 @@ public class VisitorController {
     }
 
     @GetMapping("/inside")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF', 'FACULTY')")
     @Operation(summary = "Active Visitors Inside", description = "Returns a list of all visitors currently on campus (not yet checked out)")
     public ResponseEntity<ApiResponse<List<VisitorResponse>>> getActiveVisitorsInside() {
         List<VisitorResponse> responses = visitorService.getActiveVisitorsInside();
@@ -139,8 +139,17 @@ public class VisitorController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/my-pending-requests")
+    @PreAuthorize("hasAnyRole('FACULTY', 'STAFF', 'ADMIN', 'SECURITY_GUARD', 'GUARD')")
+    @Operation(summary = "Get My Pending Visitor Requests", description = "Returns pending visitor requests addressed specifically to the authenticated faculty member")
+    public ResponseEntity<ApiResponse<List<VisitorResponse>>> getMyPendingRequests(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        List<VisitorResponse> responses = visitorService.getMyPendingRequests(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(responses));
+    }
+
     @GetMapping("/pending-tokens")
-    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'ADMIN', 'STAFF', 'FACULTY')")
     @Operation(summary = "Get Pending Digital Tokens", description = "Fetches all pending digital tokens awaiting guard approval")
     public ResponseEntity<ApiResponse<List<VisitorResponse>>> getPendingTokens() {
         List<VisitorResponse> responses = visitorService.getPendingTokens();

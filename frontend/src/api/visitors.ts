@@ -82,6 +82,11 @@ export const visitorApi = {
     return res.data.data;
   },
 
+  getMyPendingRequests: async () => {
+    const res = await api.get<ApiResponse<Visitor[]>>('/visitors/my-pending-requests');
+    return res.data.data;
+  },
+
   approveToken: async (id: number) => {
     const res = await api.put<ApiResponse<Visitor>>(`/visitors/${id}/approve`);
     return res.data.data;

@@ -137,9 +137,30 @@ export const VisitorPortal: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedVisitor, setSubmittedVisitor] = useState<any>(null);
 
-  // Filter real faculty records matching selected department
+  // Handler when user selects/types hostName
+  const handleHostNameChange = (val: string) => {
+    setHostName(val);
+    const trimmed = val.trim().toLowerCase();
+    if (!trimmed) return;
+    const matched = (facultiesData as any[]).find(
+      (f) => f.name.toLowerCase() === trimmed ||
+             trimmed.includes(f.name.toLowerCase()) ||
+             (f.empNo && trimmed.includes(String(f.empNo)))
+    );
+    if (matched) {
+      if (matched.department) {
+        setHostDept(matched.department);
+      }
+      setHostType('FACULTY');
+    }
+  };
+
+  // Full faculty list with current department prioritized
   const facultyOptions = React.useMemo(() => {
-    return facultiesData.filter(f => f.department === hostDept);
+    if (!hostDept) return facultiesData;
+    const sameDept = (facultiesData as any[]).filter(f => f.department === hostDept);
+    const otherDept = (facultiesData as any[]).filter(f => f.department !== hostDept);
+    return [...sameDept, ...otherDept];
   }, [hostDept]);
 
   /* ── camera recognition handlers (from shared VisitorWebcamModal) ────────── */
@@ -432,7 +453,7 @@ export const VisitorPortal: React.FC = () => {
                   <UInput
                     label="Host Name / Person being visited"
                     value={hostName}
-                    onChange={setHostName}
+                    onChange={handleHostNameChange}
                     placeholder="e.g. Prof. Sharma"
                     icon={<Shield size={14} />}
                     list="returning-faculty-list"
@@ -497,7 +518,7 @@ export const VisitorPortal: React.FC = () => {
                   <UInput
                     label="Host Name / Person being visited"
                     value={hostName}
-                    onChange={setHostName}
+                    onChange={handleHostNameChange}
                     placeholder="e.g. Prof. Sharma"
                     icon={<Shield size={14} />}
                     list="register-faculty-list"

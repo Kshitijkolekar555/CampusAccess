@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authApi } from '../api/auth';
+import { studentApi } from '../api/student';
 import {
   Eye, EyeOff, Lock, GraduationCap, Mail, Phone,
-  ArrowRight, ArrowLeft, Shield,
+  ArrowRight, ArrowLeft, Shield, CheckCircle2, Loader2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { StudentVerifyResponse } from '../types';
 import {
   validatePhone, validateEmail, validatePasswordStrength,
   validateName, normalizePhone, normalizeEmail, normalizeName,
@@ -28,15 +30,18 @@ interface UInputProps {
   type?: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   icon?: React.ReactNode;
   trailing?: React.ReactNode;
   required?: boolean;
+  disabled?: boolean;
   autoComplete?: string;
 }
+
 const UInput: React.FC<UInputProps> = ({
-  label, type = 'text', value, onChange, placeholder,
-  icon, trailing, required, autoComplete,
+  label, type = 'text', value, onChange, onBlur, placeholder,
+  icon, trailing, required, disabled, autoComplete,
 }) => {
   const [focused, setFocused] = useState(false);
   return (
@@ -48,14 +53,19 @@ const UInput: React.FC<UInputProps> = ({
       }}>{label}</label>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        borderBottom: `1px solid ${focused ? C.text : C.line}`,
+        borderBottom: `1px solid ${disabled ? C.line : focused ? C.text : C.line}`,
         paddingBottom: 8, transition: 'border-color 0.15s',
+        opacity: disabled ? 0.75 : 1,
       }}>
         {icon && <span style={{ color: focused ? C.text : C.mute, flexShrink: 0, display: 'flex', transition: 'color 0.15s' }}>{icon}</span>}
         <input
           type={type} value={value} onChange={e => onChange(e.target.value)}
-          placeholder={placeholder} required={required} autoComplete={autoComplete}
-          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          placeholder={placeholder} required={required} disabled={disabled} autoComplete={autoComplete}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            onBlur?.();
+          }}
           style={{
             flex: 1, background: 'transparent', border: 'none', outline: 'none',
             fontFamily: 'Inter,sans-serif', fontSize: 14, color: C.text,
@@ -100,6 +110,8 @@ export const StudentPortal: React.FC = () => {
   const [regEmail, setRegEmail]   = useState('');
   const [regPhone, setRegPhone]   = useState('');
   const [regPwd, setRegPwd]       = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifiedStudent, setVerifiedStudent] = useState<StudentVerifyResponse | null>(null);
 
   const { setAuth, isAuthenticated, user } = useAuthStore();
 
@@ -113,34 +125,84 @@ export const StudentPortal: React.FC = () => {
   /* ── login ────────────────────────────────────────────────────────────── */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password) { toast.error('Please fill all fields'); return; }
+    const u = username.trim();
+    if (!u || !password) {
+      toast.error('Please enter your PRN / Student ID and password');
+      return;
+    }
     setLoading(true);
     try {
-      const data = await authApi.login({ username: username.trim(), password, expectedRole: 'STUDENT' });
+      const data = await authApi.login({ username: u, password, expectedRole: 'STUDENT' });
       const role = data.user?.role;
       if (role !== 'STUDENT') {
-        toast.error(`This account is not a student account (role: ${role}). Use Guard Portal if you are security staff.`);
+        toast.error(`This account is not a student account (role: ${role}). Use the appropriate portal.`);
         return;
       }
       setAuth(data.user, data.accessToken, data.refreshToken);
       toast.success(`Welcome back, ${data.user.fullName}!`);
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Login failed. Check your credentials.');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── verify student ID against authorized dataset ──────────────────────── */
+  const handleVerifyStudentId = async (): Promise<StudentVerifyResponse | null> => {
+    const id = regUser.trim();
+    if (!id) {
+      toast.error('Please enter your Student ID or PRN to verify');
+      return null;
+    }
+    setIsVerifying(true);
+    try {
+      const res = await studentApi.verifyStudentId(id);
+      if (res && res.eligible) {
+        setVerifiedStudent(res);
+        setRegName(res.fullName);
+        if (res.email && !regEmail) {
+          setRegEmail(res.email);
+        } else if (!regEmail) {
+          setRegEmail(`${res.studentId.toLowerCase()}@pict.edu`);
+        }
+        if (res.mobile && !regPhone) {
+          setRegPhone(res.mobile);
+        }
+        toast.success(`Verified: ${res.fullName} (${res.department} • ${res.className || res.academicYear || 'TE'})`);
+        return res;
+      } else {
+        setVerifiedStudent(null);
+        toast.error(res?.message || 'Student ID not found in the authorized student dataset.');
+        return null;
+      }
+    } catch (err: any) {
+      setVerifiedStudent(null);
+      toast.error(err.response?.data?.message || 'Student ID verification failed. Please check your ID.');
+      return null;
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   /* ── register ─────────────────────────────────────────────────────────── */
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanName  = normalizeName(regName);
-    const cleanUser  = regUser.trim();
-    const cleanEmail = regEmail ? normalizeEmail(regEmail) : '';
-    const cleanPhone = regPhone ? normalizePhone(regPhone) : '';
+
+    let vs = verifiedStudent;
+    if (!vs) {
+      vs = await handleVerifyStudentId();
+      if (!vs) return;
+    }
+
+    const cleanName  = normalizeName(regName || vs.fullName);
+    const cleanUser  = vs.studentId || regUser.trim().toUpperCase();
+    const cleanEmail = regEmail ? normalizeEmail(regEmail) : (vs.email || `${cleanUser.toLowerCase()}@pict.edu`);
+    const cleanPhone = regPhone ? normalizePhone(regPhone) : (vs.mobile || '');
 
     const nameErr = validateName(cleanName, 'Full Name');
     if (nameErr) { toast.error(nameErr); return; }
-    if (!cleanUser) { toast.error('PRN / Username is required'); return; }
+    if (!cleanUser) { toast.error('Student ID / PRN is required'); return; }
     const passErr = validatePasswordStrength(regPwd);
     if (passErr) { toast.error(passErr); return; }
     if (cleanPhone) { const pe = validatePhone(cleanPhone); if (pe) { toast.error(pe); return; } }
@@ -148,16 +210,26 @@ export const StudentPortal: React.FC = () => {
 
     setLoading(true);
     try {
-      const newUser = await authApi.register({
-        fullName: cleanName, username: cleanUser,
-        email: cleanEmail || `${cleanUser.toLowerCase()}@pict.edu`,
+      const authData = await studentApi.register({
+        studentId: vs.studentId,
+        fullName: cleanName,
+        email: cleanEmail,
         phone: cleanPhone || undefined,
-        password: regPwd, role: 'STUDENT',
+        password: regPwd,
       });
-      toast.success(`Student account created for ${newUser?.fullName || regName}!`);
-      const data = await authApi.login({ username: regUser, password: regPwd, expectedRole: 'STUDENT' });
-      setAuth(data.user, data.accessToken, data.refreshToken);
-      navigate('/dashboard');
+
+      toast.success(`Student account created for ${authData.user?.fullName || cleanName}!`);
+      if (authData.accessToken && authData.user) {
+        setAuth(authData.user, authData.accessToken, authData.refreshToken);
+      } else {
+        const loginData = await authApi.login({
+          username: vs.studentId,
+          password: regPwd,
+          expectedRole: 'STUDENT',
+        });
+        setAuth(loginData.user, loginData.accessToken, loginData.refreshToken);
+      }
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
       const data = err.response?.data;
       if (data?.errors && typeof data.errors === 'object') {
@@ -168,7 +240,9 @@ export const StudentPortal: React.FC = () => {
       } else {
         toast.error(data?.message || err.message || 'Registration failed');
       }
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ── forgot password ──────────────────────────────────────────────────── */
@@ -248,94 +322,57 @@ export const StudentPortal: React.FC = () => {
             background: 'rgba(47,93,124,0.35)', border: '1px solid rgba(47,93,124,0.5)',
             borderRadius: 3, padding: '4px 12px', marginBottom: 20,
           }}>
-            <GraduationCap size={14} style={{ color: '#7dd3fc' }} />
-            <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#7dd3fc' }}>Student Portal</span>
+            <Shield size={12} color="#38bdf8" />
+            <span style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#e0f2fe', fontWeight: 600 }}>
+              Student Identity Portal
+            </span>
           </div>
           <h2 style={{
-            fontFamily: 'Inter,sans-serif', fontWeight: 700,
-            fontSize: 34, lineHeight: 1.22, color: '#f8fafc',
-            margin: '0 0 18px 0', letterSpacing: '-0.02em',
-            textShadow: '0 2px 10px rgba(0,0,0,0.6)',
+            fontFamily: 'Inter,sans-serif', fontSize: 34, fontWeight: 700,
+            lineHeight: 1.25, margin: '0 0 16px', color: '#fff', letterSpacing: '-0.02em',
           }}>
-            Student gate passes,<br/>hostel outpasses<br/>and more.
+            Automated campus access &amp; student movement.
           </h2>
-          <p style={{
-            fontFamily: 'Inter,sans-serif', fontSize: 14, lineHeight: 1.68,
-            color: '#cbd5e1', margin: 0, maxWidth: 440,
-            textShadow: '0 1px 4px rgba(0,0,0,0.5)',
-          }}>
-            Log in with your PRN to access gate passes, hostel outpasses, and campus notifications.
-            Student registration does not require a camera.
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 1.65, maxWidth: 440, margin: 0 }}>
+            PICT Gate Security System manages gate passes, hostel outpasses, and authorized entry logs.
           </p>
         </div>
 
-        <div style={{
-          position: 'relative', zIndex: 2,
-          fontFamily: 'JetBrains Mono,monospace', fontSize: 10.5,
-          letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', lineHeight: 1.8,
-        }}>
-          Pune Institute of Computer Technology<br/>Gate Security Terminal
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 28 }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gate Pass</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: 500, marginTop: 2 }}>Digital QR &amp; Approval</div>
+          </div>
+          <div style={{ width: 1, background: 'rgba(255,255,255,0.12)' }} />
+          <div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Outpass</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: 500, marginTop: 2 }}>Hostel &amp; College Hours</div>
+          </div>
         </div>
       </div>
 
       {/* ── RIGHT PANEL ────────────────────────────────────────────────────── */}
       <div className="login-right" style={{
-        flex: 1, background: C.paper,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '48px 48px',
+        flex: 1, background: C.paper, display: 'flex',
+        flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+        padding: '48px 40px', overflowY: 'auto',
       }}>
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          style={{ width: '100%', maxWidth: 460 }}
+          style={{ width: '100%', maxWidth: 380 }}
         >
-          {/* Back Button to Portal Selection */}
-          <div style={{ marginBottom: 20 }}>
-            <button
-              type="button"
-              onClick={() => navigate('/enter')}
-              aria-label="Back to portal selection"
-              style={{
-                background: '#ffffff',
-                border: `1px solid ${C.line}`,
-                borderRadius: 8,
-                padding: '8px 14px',
-                fontSize: 13,
-                fontWeight: 500,
-                color: C.text,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                transition: 'all 0.18s ease',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                fontFamily: 'Inter,sans-serif',
-                minHeight: 42,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = C.accent;
-                e.currentTarget.style.color = C.accent;
-                e.currentTarget.style.background = '#f8fafc';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = C.line;
-                e.currentTarget.style.color = C.text;
-                e.currentTarget.style.background = '#ffffff';
-              }}
-            >
-              <ArrowLeft size={16} />
-              <span>Back to Portal Selection</span>
-            </button>
-          </div>
-
-          {/* eyebrow */}
-          <div style={{ marginBottom: 12 }}>
+          {/* role badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <span style={{
-              fontFamily: 'JetBrains Mono,monospace', fontSize: 10.5,
-              letterSpacing: '0.1em', textTransform: 'uppercase', color: C.mute,
+              width: 7, height: 7, borderRadius: '50%', background: C.accent, display: 'inline-block',
+            }} />
+            <span style={{
+              fontFamily: 'Inter,sans-serif', fontSize: 11, fontWeight: 600,
+              letterSpacing: '0.08em', textTransform: 'uppercase', color: C.accent,
             }}>
-              Student Portal
+              Student Access
             </span>
           </div>
 
@@ -350,8 +387,8 @@ export const StudentPortal: React.FC = () => {
             {isForgot
               ? 'Enter your PRN or email to reset credentials.'
               : mode === 'LOGIN'
-              ? 'Enter your PRN or Enrollment No (e.g. S25ET034). Default password is your Enrollment No.'
-              : 'Fill in your student details to register.'}
+              ? 'Enter your PRN or Enrollment No and password to access your student portal.'
+              : 'Verify your student ID against the institutional dataset and create your account.'}
           </p>
 
           {/* ── FORGOT PASSWORD ─────────────────────────────────────────────── */}
@@ -373,7 +410,7 @@ export const StudentPortal: React.FC = () => {
           {!isForgot && mode === 'LOGIN' && (
             <form onSubmit={handleLogin}>
               <UInput label="PRN / Student Username" value={username} onChange={setUsername}
-                placeholder="e.g. F24IT32" icon={<GraduationCap size={15} />}
+                placeholder="e.g. S25ET043 or student1" icon={<GraduationCap size={15} />}
                 required autoComplete="username" />
               <UInput label="Password" type={showPwd ? 'text' : 'password'}
                 value={password} onChange={setPassword} placeholder="••••••••"
@@ -421,12 +458,75 @@ export const StudentPortal: React.FC = () => {
           {/* ── REGISTER FORM ───────────────────────────────────────────────── */}
           {!isForgot && mode === 'SIGNUP' && (
             <form onSubmit={handleRegister}>
-              <UInput label="Full Name" value={regName} onChange={setRegName}
-                placeholder="e.g. Siddharth Roy" icon={<GraduationCap size={15} />} required />
-              <UInput label="PRN / Student Username" value={regUser} onChange={setRegUser}
-                placeholder="e.g. F24IT32" icon={<Shield size={15} />} required />
+              <UInput
+                label="Student ID / Enrollment / PRN"
+                value={regUser}
+                onChange={(val) => {
+                  setRegUser(val);
+                  if (verifiedStudent && val.trim().toUpperCase() !== verifiedStudent.studentId.toUpperCase()) {
+                    setVerifiedStudent(null);
+                  }
+                }}
+                onBlur={() => {
+                  if (regUser.trim().length >= 3 && !verifiedStudent) {
+                    handleVerifyStudentId();
+                  }
+                }}
+                placeholder="e.g. S25ET043 or F24ET046"
+                icon={<Shield size={15} />}
+                required
+                trailing={
+                  <button
+                    type="button"
+                    onClick={() => handleVerifyStudentId()}
+                    disabled={isVerifying || !regUser.trim()}
+                    style={{
+                      background: verifiedStudent ? '#059669' : C.ink,
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 2,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      padding: '4px 10px',
+                      cursor: isVerifying || !regUser.trim() ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      opacity: !regUser.trim() ? 0.6 : 1,
+                    }}
+                  >
+                    {isVerifying ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : verifiedStudent ? (
+                      <CheckCircle2 size={12} />
+                    ) : null}
+                    {verifiedStudent ? 'Verified' : isVerifying ? 'Checking' : 'Verify'}
+                  </button>
+                }
+              />
+
+              {verifiedStudent && (
+                <div style={{
+                  padding: '8px 12px', background: 'rgba(5,150,105,0.08)',
+                  border: '1px solid rgba(5,150,105,0.25)', borderRadius: 3, marginBottom: 16,
+                  display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#047857'
+                }}>
+                  <CheckCircle2 size={14} />
+                  <span>Authorized Student Record Verified: <strong>{verifiedStudent.fullName}</strong> ({verifiedStudent.department} • {verifiedStudent.className || verifiedStudent.academicYear || 'TE'})</span>
+                </div>
+              )}
+
+              <UInput
+                label="Full Name"
+                value={regName}
+                onChange={setRegName}
+                placeholder="e.g. Laxman Basaveshwar Gaidhankar"
+                icon={<GraduationCap size={15} />}
+                required
+              />
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }} className="reg-grid">
-                <UInput label="Email" value={regEmail} onChange={setRegEmail}
+                <UInput label="College Email" value={regEmail} onChange={setRegEmail}
                   placeholder="you@pict.edu" icon={<Mail size={15} />} />
                 <UInput label="Mobile" value={regPhone} onChange={setRegPhone}
                   placeholder="9876543210" icon={<Phone size={15} />} />

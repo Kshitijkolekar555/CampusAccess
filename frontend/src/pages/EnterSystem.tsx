@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Users, ArrowRight, ArrowLeft, Shield } from 'lucide-react';
+import { GraduationCap, Users, Briefcase, ArrowRight, ArrowLeft, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const C = {
@@ -30,7 +30,7 @@ export const EnterSystem: React.FC = () => {
           background: #ffffff;
           border: 1px solid ${C.line};
           border-radius: 12px;
-          padding: 36px 32px;
+          padding: 32px 26px;
           cursor: pointer;
           transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
           position: relative;
@@ -69,6 +69,7 @@ export const EnterSystem: React.FC = () => {
           text-decoration: none;
           box-sizing: border-box;
           line-height: 1.4;
+          width: 100%;
         }
 
         .portal-card .action-btn.primary {
@@ -93,7 +94,7 @@ export const EnterSystem: React.FC = () => {
           background: #f8fafc;
         }
 
-        @media (max-width: 680px) {
+        @media (max-width: 900px) {
           .cards-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
           .enter-section { padding: 28px 16px !important; }
           .portal-card { padding: 24px 20px !important; }
@@ -112,7 +113,7 @@ export const EnterSystem: React.FC = () => {
         borderBottom: `1px solid ${C.line}`,
       }}>
         <div style={{
-          maxWidth: 960,
+          maxWidth: 1040,
           margin: '0 auto',
           padding: '0 16px',
           height: 58,
@@ -149,7 +150,6 @@ export const EnterSystem: React.FC = () => {
           <img src="/logo.png" alt="CampusAccess" style={{ height: 32, objectFit: 'contain' }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-
             <button
               onClick={() => navigate('/login')}
               aria-label="Guard Portal"
@@ -190,7 +190,7 @@ export const EnterSystem: React.FC = () => {
 
       {/* Main Content */}
       <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="enter-section" style={{ maxWidth: 880, width: '100%', margin: '0 auto', padding: '60px 24px' }}>
+        <div className="enter-section" style={{ maxWidth: 1040, width: '100%', margin: '0 auto', padding: '48px 24px' }}>
 
           {/* Eyebrow: Natural clean sans pill badge */}
           <div style={{ marginBottom: 16 }}>
@@ -212,7 +212,7 @@ export const EnterSystem: React.FC = () => {
           {/* Heading */}
           <h1 style={{
             fontWeight: 700,
-            fontSize: 'clamp(28px, 4vw, 38px)',
+            fontSize: 'clamp(26px, 3.8vw, 36px)',
             lineHeight: 1.2,
             color: C.text,
             letterSpacing: '-0.02em',
@@ -222,27 +222,27 @@ export const EnterSystem: React.FC = () => {
           </h1>
 
           <p style={{
-            fontSize: 15,
+            fontSize: 14.5,
             lineHeight: 1.6,
             color: C.mute,
-            margin: '0 0 40px',
-            maxWidth: 580,
+            margin: '0 0 36px',
+            maxWidth: 620,
           }}>
-            Select the option that best describes your reason for visiting PICT campus today.
+            Select your portal to log in, issue gate passes, or complete entry verification at PICT campus.
           </p>
 
-          {/* Portal Cards Grid */}
+          {/* Portal Cards Grid — 3 Cards: Visitor, Student, Faculty */}
           <div
             className="cards-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 24,
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 20,
               alignItems: 'stretch',
               marginBottom: 44,
             }}
           >
-            {/* Student Card */}
+            {/* 1. Visitor Login Card */}
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
@@ -251,92 +251,10 @@ export const EnterSystem: React.FC = () => {
             >
               <div
                 className="portal-card"
-                onClick={() => navigate('/student/login')}
-                role="button"
-                tabIndex={0}
-                aria-label="Student Portal"
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigate('/student/login'); }}
-              >
-                {/* Icon */}
-                <div style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 10,
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  border: '1px solid rgba(37, 99, 235, 0.16)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: C.accent,
-                  marginBottom: 20,
-                  flexShrink: 0,
-                }}>
-                  <GraduationCap size={24} />
-                </div>
-
-                {/* Sub-label: Standard clean font */}
-                <p style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: C.mute,
-                  margin: '0 0 6px',
-                  letterSpacing: 'normal',
-                }}>
-                  For enrolled students
-                </p>
-
-                {/* Title */}
-                <h2 style={{
-                  fontSize: 22,
-                  fontWeight: 700,
-                  color: C.text,
-                  margin: '0 0 10px',
-                  letterSpacing: '-0.015em',
-                }}>
-                  Student
-                </h2>
-
-                {/* Description */}
-                <p style={{
-                  fontSize: 13.5,
-                  lineHeight: 1.6,
-                  color: C.mute,
-                  margin: '0 0 32px',
-                  minHeight: 64,
-                }}>
-                  Access the student portal to log in, manage gate passes, and track hostel outpass status.
-                </p>
-
-                {/* Actions strictly pinned to bottom */}
-                <div style={{
-                  marginTop: 'auto',
-                  display: 'flex',
-                  gap: 10,
-                  alignItems: 'center',
-                }}>
-                  <button
-                    className="action-btn primary"
-                    onClick={e => { e.stopPropagation(); navigate('/student/login'); }}
-                  >
-                    Student Login <ArrowRight size={13} className="card-arrow" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Visitor Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, delay: 0.12 }}
-              style={{ display: 'flex', height: '100%' }}
-            >
-              <div
-                className="portal-card"
                 onClick={() => navigate('/visitor')}
                 role="button"
                 tabIndex={0}
-                aria-label="Campus Visitors"
+                aria-label="Visitor Login"
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigate('/visitor'); }}
               >
                 {/* Icon */}
@@ -350,13 +268,13 @@ export const EnterSystem: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: C.text,
-                  marginBottom: 20,
+                  marginBottom: 18,
                   flexShrink: 0,
                 }}>
-                  <Users size={24} />
+                  <Users size={22} />
                 </div>
 
-                {/* Sub-label: Standard clean font */}
+                {/* Sub-label */}
                 <p style={{
                   fontSize: 12,
                   fontWeight: 600,
@@ -369,13 +287,13 @@ export const EnterSystem: React.FC = () => {
 
                 {/* Title */}
                 <h2 style={{
-                  fontSize: 22,
+                  fontSize: 21,
                   fontWeight: 700,
                   color: C.text,
                   margin: '0 0 10px',
                   letterSpacing: '-0.015em',
                 }}>
-                  Campus Visitors
+                  Visitor Login
                 </h2>
 
                 {/* Description */}
@@ -383,24 +301,173 @@ export const EnterSystem: React.FC = () => {
                   fontSize: 13.5,
                   lineHeight: 1.6,
                   color: C.mute,
-                  margin: '0 0 32px',
+                  margin: '0 0 28px',
                   minHeight: 64,
                 }}>
-                  Pre-register your visit, verify using face recognition, and receive a digital pass for campus security gate clearance.
+                  Pre-register your visit, verify identity using camera recognition, and obtain a digital gate pass for security clearance.
                 </p>
 
                 {/* Actions strictly pinned to bottom */}
-                <div style={{
-                  marginTop: 'auto',
-                  display: 'flex',
-                  gap: 10,
-                  alignItems: 'center',
-                }}>
+                <div style={{ marginTop: 'auto' }}>
                   <button
                     className="action-btn primary"
                     onClick={e => { e.stopPropagation(); navigate('/visitor'); }}
                   >
-                    Visitor Check-In <ArrowRight size={13} className="card-arrow" />
+                    Visitor Login <ArrowRight size={13} className="card-arrow" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* 2. Student Login Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, delay: 0.10 }}
+              style={{ display: 'flex', height: '100%' }}
+            >
+              <div
+                className="portal-card"
+                onClick={() => navigate('/student/login')}
+                role="button"
+                tabIndex={0}
+                aria-label="Student Login"
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigate('/student/login'); }}
+              >
+                {/* Icon */}
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 10,
+                  background: 'rgba(37, 99, 235, 0.08)',
+                  border: '1px solid rgba(37, 99, 235, 0.16)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: C.accent,
+                  marginBottom: 18,
+                  flexShrink: 0,
+                }}>
+                  <GraduationCap size={22} />
+                </div>
+
+                {/* Sub-label */}
+                <p style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: C.mute,
+                  margin: '0 0 6px',
+                  letterSpacing: 'normal',
+                }}>
+                  For enrolled students
+                </p>
+
+                {/* Title */}
+                <h2 style={{
+                  fontSize: 21,
+                  fontWeight: 700,
+                  color: C.text,
+                  margin: '0 0 10px',
+                  letterSpacing: '-0.015em',
+                }}>
+                  Student Login
+                </h2>
+
+                {/* Description */}
+                <p style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.6,
+                  color: C.mute,
+                  margin: '0 0 28px',
+                  minHeight: 64,
+                }}>
+                  Access the student portal to log in, apply for gate passes, and track warden permissions and hostel outpass records.
+                </p>
+
+                {/* Actions strictly pinned to bottom */}
+                <div style={{ marginTop: 'auto' }}>
+                  <button
+                    className="action-btn primary"
+                    onClick={e => { e.stopPropagation(); navigate('/student/login'); }}
+                  >
+                    Student Login <ArrowRight size={13} className="card-arrow" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* 3. Faculty Login Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, delay: 0.15 }}
+              style={{ display: 'flex', height: '100%' }}
+            >
+              <div
+                className="portal-card"
+                onClick={() => navigate('/faculty/login')}
+                role="button"
+                tabIndex={0}
+                aria-label="Faculty Login"
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigate('/faculty/login'); }}
+              >
+                {/* Icon */}
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 10,
+                  background: 'rgba(37, 99, 235, 0.08)',
+                  border: '1px solid rgba(37, 99, 235, 0.16)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: C.accent,
+                  marginBottom: 18,
+                  flexShrink: 0,
+                }}>
+                  <Briefcase size={22} />
+                </div>
+
+                {/* Sub-label */}
+                <p style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: C.mute,
+                  margin: '0 0 6px',
+                  letterSpacing: 'normal',
+                }}>
+                  For faculty & staff
+                </p>
+
+                {/* Title */}
+                <h2 style={{
+                  fontSize: 21,
+                  fontWeight: 700,
+                  color: C.text,
+                  margin: '0 0 10px',
+                  letterSpacing: '-0.015em',
+                }}>
+                  Faculty Login
+                </h2>
+
+                {/* Description */}
+                <p style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.6,
+                  color: C.mute,
+                  margin: '0 0 28px',
+                  minHeight: 64,
+                }}>
+                  Dedicated faculty portal to generate instant out-passes without approval and view gate re-entry status records.
+                </p>
+
+                {/* Actions strictly pinned to bottom */}
+                <div style={{ marginTop: 'auto' }}>
+                  <button
+                    className="action-btn primary"
+                    onClick={e => { e.stopPropagation(); navigate('/faculty/login'); }}
+                  >
+                    Faculty Login <ArrowRight size={13} className="card-arrow" />
                   </button>
                 </div>
               </div>

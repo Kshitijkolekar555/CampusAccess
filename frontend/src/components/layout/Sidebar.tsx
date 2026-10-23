@@ -19,6 +19,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: 'Dashboard',        path: '/dashboard',       icon: <LayoutDashboard className="w-3.5 h-3.5" />, category: 'overview' },
   { title: 'Teacher Panel',    path: '/teacher',         icon: <UserCheck className="w-3.5 h-3.5" />,       roles: ['FACULTY', 'STAFF', 'ADMIN'], category: 'overview' },
+  { title: 'Faculty Out-Pass', path: '/faculty/dashboard', icon: <Ticket className="w-3.5 h-3.5" />,         roles: ['FACULTY', 'STAFF'], category: 'gate' },
   { title: 'Visitors',         path: '/visitors',        icon: <Users className="w-3.5 h-3.5" />,          roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
   { title: 'Student Passes',   path: '/student-passes',  icon: <GraduationCap className="w-3.5 h-3.5" />,  roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT','HOSTEL_WARDEN','ADMIN'], category: 'gate' },
   { title: 'Campus Outpasses', path: '/outpasses',       icon: <Home className="w-3.5 h-3.5" />,           roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT','HOSTEL_WARDEN','ADMIN'], category: 'gate' },

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
@@ -19,11 +20,14 @@ import {
   Send,
   X,
   UserCheck,
+  ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const TeacherDashboardView: React.FC = () => {
-  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
 
   const [filterPeriod, setFilterPeriod] = useState<'TODAY' | 'WEEK' | 'MONTH'>('TODAY');
@@ -48,60 +52,130 @@ export const TeacherDashboardView: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteMobile, setInviteMobile] = useState('');
-  const [inviteDate, setInviteDate] = useState(new Date().toISOString().slice(0, 10));
+  const [inviteDate, setInviteDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [invitePurpose, setInvitePurpose] = useState('');
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
 
-  // Real-time pending visitor requests awaiting approval (polling every 3s)
-  const { data: allPendingTokens = [], isLoading: isPendingLoading, refetch: refetchPending } = useQuery<Visitor[]>({
+  // Real-time pending visitor requests awaiting approval (polling every 5s)
+  const {
+    data: rawPendingTokens,
+    isLoading: isPendingLoading,
+    isRefetching: isPendingRefetching,
+    refetch: refetchPending,
+  } = useQuery<Visitor[]>({
     queryKey: ['teacher-pending-visitors'],
     queryFn: async () => {
       try {
-        return await visitorApi.getPendingTokens();
-      } catch {
-        return [];
-      }
-    },
-    refetchInterval: 3000,
-  });
-
-  // Filter pending tokens specifically for this faculty/staff or department
-  const facultyName = (user?.fullName || '').toLowerCase().trim();
-  const pendingVisitors = allPendingTokens.filter((v) => {
-    if (!v.hostName) return true;
-    const vHost = v.hostName.toLowerCase().trim();
-    return (
-      vHost === facultyName ||
-      facultyName.includes(vHost) ||
-      vHost.includes(facultyName) ||
-      vHost.includes(user?.username || '')
-    );
-  });
-
-  // Active visitors currently inside campus
-  const { data: activeInsideVisitors = [], isLoading: isActiveLoading } = useQuery<Visitor[]>({
-    queryKey: ['teacher-active-visitors'],
-    queryFn: async () => {
-      try {
-        return await visitorApi.getActiveInside();
-      } catch {
+        const res = await visitorApi.getPendingTokens();
+        return Array.isArray(res) ? res : [];
+      } catch (err) {
+        console.warn('Teacher panel pending tokens fetch warning:', err);
         return [];
       }
     },
     refetchInterval: 5000,
+    retry: 1,
   });
 
-  const myActiveInside = activeInsideVisitors.filter((v) => {
-    if (!v.hostName) return false;
-    const vHost = v.hostName.toLowerCase().trim();
-    return vHost === facultyName || facultyName.includes(vHost) || vHost.includes(facultyName);
+  // Coerce safely to array even if axios interceptor returned null
+  const allPendingTokens = useMemo(() => {
+    return Array.isArray(rawPendingTokens) ? rawPendingTokens : [];
+  }, [rawPendingTokens]);
+
+  // Filter pending tokens specifically for this faculty/staff or department
+  const facultyName = (user?.fullName || '').toLowerCase().trim();
+  const username = (user?.username || '').toLowerCase().trim();
+
+  const pendingVisitors = useMemo(() => {
+    return allPendingTokens.filter((v) => {
+      if (!v || !v.hostName) return false;
+      const vHost = v.hostName.toLowerCase().trim();
+      return (
+        (facultyName && vHost === facultyName) ||
+        (facultyName && (facultyName.includes(vHost) || vHost.includes(facultyName))) ||
+        (username && vHost.includes(username))
+      );
+    });
+  }, [allPendingTokens, facultyName, username]);
+
+  // Active visitors currently inside campus
+  const {
+    data: rawActiveInsideVisitors,
+    isLoading: isActiveLoading,
+    refetch: refetchActive,
+  } = useQuery<Visitor[]>({
+    queryKey: ['teacher-active-visitors'],
+    queryFn: async () => {
+      try {
+        const res = await visitorApi.getActiveInside();
+        return Array.isArray(res) ? res : [];
+      } catch (err) {
+        console.warn('Teacher panel active visitors fetch warning:', err);
+        return [];
+      }
+    },
+    refetchInterval: 5000,
+    retry: 1,
   });
+
+  const activeInsideVisitors = useMemo(() => {
+    return Array.isArray(rawActiveInsideVisitors) ? rawActiveInsideVisitors : [];
+  }, [rawActiveInsideVisitors]);
+
+  const myActiveInside = useMemo(() => {
+    return activeInsideVisitors.filter((v) => {
+      if (!v) return false;
+      if (!v.hostName) return false;
+      const vHost = v.hostName.toLowerCase().trim();
+      return (
+        vHost === facultyName ||
+        (facultyName && facultyName.includes(vHost)) ||
+        (vHost && vHost.includes(facultyName)) ||
+        (username && vHost.includes(username))
+      );
+    });
+  }, [activeInsideVisitors, facultyName, username]);
+
+  // Search filter on my visitors
+  const filteredActiveVisitors = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return myActiveInside;
+    return myActiveInside.filter((v) => {
+      if (!v) return false;
+      const name = (v.name || '').toLowerCase();
+      const mobile = (v.mobile || '').toLowerCase();
+      const purpose = (v.purpose || '').toLowerCase();
+      return name.includes(q) || mobile.includes(q) || purpose.includes(q);
+    });
+  }, [myActiveInside, searchQuery]);
+
+  // Safe time formatting helper
+  const formatTime = (timeVal?: string | Date | null) => {
+    if (!timeVal) return '—';
+    try {
+      const d = new Date(timeVal);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '—';
+    }
+  };
+
+  // Manual refresh all data
+  const handleRefreshAll = async () => {
+    try {
+      await Promise.all([refetchPending(), refetchActive()]);
+      toast.success('Live gate visitor requests refreshed');
+    } catch {
+      toast.error('Failed to refresh visitor requests');
+    }
+  };
 
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: (id: number) => visitorApi.approveToken(id),
     onSuccess: (data) => {
-      toast.success(`Entry approved for ${data.name}! Campus security gate notified.`);
+      toast.success(`Entry approved for ${data?.name || 'Visitor'}! Gate notified.`);
       queryClient.invalidateQueries({ queryKey: ['teacher-pending-visitors'] });
       queryClient.invalidateQueries({ queryKey: ['teacher-active-visitors'] });
       setClearanceModal({ isOpen: false, visitor: null, action: 'APPROVE', notes: '', roomNumber: '' });
@@ -115,7 +189,7 @@ export const TeacherDashboardView: React.FC = () => {
   const rejectMutation = useMutation({
     mutationFn: (id: number) => visitorApi.rejectToken(id),
     onSuccess: (data) => {
-      toast.info(`Access denied for ${data.name}. Security gate updated.`);
+      toast.info(`Access denied for ${data?.name || 'Visitor'}. Security gate updated.`);
       queryClient.invalidateQueries({ queryKey: ['teacher-pending-visitors'] });
       setClearanceModal({ isOpen: false, visitor: null, action: 'DENY', notes: '', roomNumber: '' });
     },
@@ -128,7 +202,7 @@ export const TeacherDashboardView: React.FC = () => {
   const handleCreateInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteName.trim() || !inviteMobile.trim() || !invitePurpose.trim()) {
-      toast.error('Please fill in visitor name, mobile, and purpose');
+      toast.error('Please fill visitor name, mobile, and purpose');
       return;
     }
 
@@ -156,43 +230,51 @@ export const TeacherDashboardView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto pb-12 font-sans px-2 sm:px-4">
-      {/* ── TOP HEADER & FACULTY PROFILE CARD ────────────────────────────── */}
-      <div className="bg-[#0f172a] text-white rounded-xl p-4 sm:p-6 shadow-sm border border-slate-800">
+    <div className="space-y-6">
+      {/* ── TOP HEADER & FACULTY PROFILE CARD (exact match with Student module) ── */}
+      <div style={{ background: 'var(--ink)', padding: '20px 24px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-400/30 rounded text-[11px] font-semibold text-blue-300 uppercase tracking-wider">
-                Staff & Faculty Portal
+              <span className="px-2.5 py-1 bg-emerald-500/15 border border-emerald-400/30 rounded-md text-xs font-medium text-emerald-300 flex items-center gap-1.5 font-sans">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Verified Faculty Terminal
               </span>
-              <span className="px-2.5 py-0.5 bg-emerald-500/15 border border-emerald-400/30 rounded text-[11px] font-medium text-emerald-400">
+              <span className="px-2.5 py-1 bg-slate-800/90 border border-slate-700/80 rounded-md text-xs font-normal text-slate-300 font-sans">
                 Live Gate Connection Active
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold mt-2 text-white">
+            <h1 className="text-xl sm:text-2xl font-bold mt-2.5 tracking-tight text-white font-sans">
               Welcome, {user?.fullName || 'Faculty Member'}
             </h1>
-            <p className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-3">
-              <span>Employee ID: <strong className="text-slate-200">#{user?.username}</strong></span>
-              <span>•</span>
-              <span>Role: <strong className="text-blue-300">{user?.role}</strong></span>
+            <p className="text-xs text-slate-400 mt-1.5 flex flex-wrap items-center gap-2.5 font-sans">
+              <span>Employee ID: <strong className="text-slate-200">#{user?.username || '—'}</strong></span>
+              <span className="text-slate-600">•</span>
+              <span>Role: <strong className="text-blue-300">{user?.role || 'FACULTY'}</strong></span>
             </p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={() => navigate('/faculty/dashboard')}
+              className="flex-1 sm:flex-none border border-white/20 text-white/80 hover:bg-white/10 text-xs px-3.5 py-2 rounded font-medium transition cursor-pointer"
+            >
+              Faculty Out-Pass
+            </button>
             <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-3.5 py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition shadow-sm"
+              className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-3.5 py-2 rounded flex items-center justify-center gap-1.5 transition shadow-sm cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Pre-Approve Guest</span>
             </button>
             <button
-              onClick={() => refetchPending()}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2.5 rounded-lg transition"
+              onClick={handleRefreshAll}
+              disabled={isPendingRefetching}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded transition cursor-pointer"
               title="Refresh requests"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${isPendingRefetching ? 'animate-spin text-blue-400' : ''}`} />
             </button>
           </div>
         </div>
@@ -246,10 +328,18 @@ export const TeacherDashboardView: React.FC = () => {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {pendingVisitors.length === 0 ? (
+          {isPendingLoading && allPendingTokens.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-2" />
+              Loading real-time gate requests…
+            </div>
+          ) : pendingVisitors.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
-              No visitors currently waiting at the gate for you. All clear!
+              <p className="font-medium text-slate-600 mb-1">No visitors currently waiting at the gate for you.</p>
+              <p className="text-slate-400 text-[11px]">
+                Gate security live connection is active. When a guest arrives, their clearance request will appear here instantly.
+              </p>
             </div>
           ) : (
             pendingVisitors.map((visitor) => (
@@ -264,10 +354,10 @@ export const TeacherDashboardView: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                     <span className="flex items-center gap-1">
                       <Phone className="w-3 h-3 text-slate-400" />
-                      {visitor.mobile}
+                      {visitor.mobile || '—'}
                     </span>
                     <span>•</span>
-                    <span className="text-slate-700 font-medium">Purpose: {visitor.purpose}</span>
+                    <span className="text-slate-700 font-medium">Purpose: {visitor.purpose || 'Campus Visit'}</span>
                     {visitor.vehicleNumber && (
                       <>
                         <span>•</span>
@@ -289,7 +379,7 @@ export const TeacherDashboardView: React.FC = () => {
                         roomNumber: '',
                       })
                     }
-                    className="flex-1 sm:flex-none px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-xs"
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Approve Entry
@@ -304,7 +394,7 @@ export const TeacherDashboardView: React.FC = () => {
                         roomNumber: '',
                       })
                     }
-                    className="flex-1 sm:flex-none px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+                    className="flex-1 sm:flex-none px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
                     <XCircle className="w-3.5 h-3.5" />
                     Deny Access
@@ -332,7 +422,7 @@ export const TeacherDashboardView: React.FC = () => {
               <button
                 key={period}
                 onClick={() => setFilterPeriod(period)}
-                className={`px-3 py-1 rounded text-xs font-medium transition ${
+                className={`px-3 py-1 rounded text-xs font-medium transition cursor-pointer ${
                   filterPeriod === period ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -356,16 +446,27 @@ export const TeacherDashboardView: React.FC = () => {
         </div>
 
         <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-          {myActiveInside.length === 0 ? (
+          {isActiveLoading && myActiveInside.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">
-              No active visitors currently in campus for your department under this filter.
+              <RefreshCw className="w-5 h-5 text-slate-300 animate-spin mx-auto mb-2" />
+              Checking active visitors…
+            </div>
+          ) : filteredActiveVisitors.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              {searchQuery.trim() ? (
+                <>No visitors matching &ldquo;{searchQuery}&rdquo; found.</>
+              ) : (
+                <>No active visitors currently in campus for your department under this filter.</>
+              )}
             </div>
           ) : (
-            myActiveInside.map((v) => (
+            filteredActiveVisitors.map((v) => (
               <div key={v.id} className="p-3.5 flex items-center justify-between text-xs">
                 <div>
-                  <h4 className="font-bold text-slate-900">{v.name}</h4>
-                  <p className="text-slate-500 font-mono mt-0.5">{v.mobile} • In: {new Date(v.timeIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  <h4 className="font-bold text-slate-900">{v.name || 'Visitor'}</h4>
+                  <p className="text-slate-500 font-mono mt-0.5">
+                    {v.mobile || '—'} • In: {formatTime(v.timeIn)}
+                  </p>
                 </div>
                 <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-semibold text-[10px]">
                   INSIDE CAMPUS
@@ -392,7 +493,7 @@ export const TeacherDashboardView: React.FC = () => {
                 </h3>
                 <button
                   onClick={() => setClearanceModal({ ...clearanceModal, isOpen: false })}
-                  className="text-white/80 hover:text-white"
+                  className="text-white/80 hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -401,8 +502,8 @@ export const TeacherDashboardView: React.FC = () => {
               <div className="p-5 space-y-4 text-xs">
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
                   <p className="font-bold text-slate-800 text-sm">{clearanceModal.visitor.name}</p>
-                  <p className="text-slate-500 font-mono">{clearanceModal.visitor.mobile}</p>
-                  <p className="text-slate-600">Purpose: {clearanceModal.visitor.purpose}</p>
+                  <p className="text-slate-500 font-mono">{clearanceModal.visitor.mobile || '—'}</p>
+                  <p className="text-slate-600">Purpose: {clearanceModal.visitor.purpose || 'Campus Visit'}</p>
                 </div>
 
                 {clearanceModal.action === 'APPROVE' && (
@@ -436,20 +537,21 @@ export const TeacherDashboardView: React.FC = () => {
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button
                     onClick={() => setClearanceModal({ ...clearanceModal, isOpen: false })}
-                    className="px-3.5 py-2 text-slate-600 font-medium hover:text-slate-900 transition"
+                    className="px-3.5 py-2 text-slate-600 font-medium hover:text-slate-900 transition cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => {
+                      if (!clearanceModal.visitor) return;
                       if (clearanceModal.action === 'APPROVE') {
-                        approveMutation.mutate(clearanceModal.visitor!.id);
+                        approveMutation.mutate(clearanceModal.visitor.id);
                       } else {
-                        rejectMutation.mutate(clearanceModal.visitor!.id);
+                        rejectMutation.mutate(clearanceModal.visitor.id);
                       }
                     }}
                     disabled={approveMutation.isPending || rejectMutation.isPending}
-                    className={`px-4 py-2 text-white font-semibold rounded-lg transition disabled:opacity-50 ${
+                    className={`px-4 py-2 text-white font-semibold rounded-lg transition disabled:opacity-50 cursor-pointer ${
                       clearanceModal.action === 'APPROVE' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
                     }`}
                   >
@@ -477,7 +579,7 @@ export const TeacherDashboardView: React.FC = () => {
                   <UserCheck className="w-5 h-5" />
                   <h3 className="font-bold text-sm">Pre-Approve Guest / Invite</h3>
                 </div>
-                <button onClick={() => setIsInviteModalOpen(false)} className="text-white/80 hover:text-white">
+                <button onClick={() => setIsInviteModalOpen(false)} className="text-white/80 hover:text-white cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -534,14 +636,14 @@ export const TeacherDashboardView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsInviteModalOpen(false)}
-                    className="px-3.5 py-2 text-slate-600 font-medium hover:text-slate-900 transition"
+                    className="px-3.5 py-2 text-slate-600 font-medium hover:text-slate-900 transition cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmittingInvite}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50 cursor-pointer"
                   >
                     {isSubmittingInvite ? 'Scheduling...' : 'Issue Pre-Approval'}
                   </button>

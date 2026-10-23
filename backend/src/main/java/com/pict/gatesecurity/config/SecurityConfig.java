@@ -45,6 +45,8 @@ public class SecurityConfig {
             "/api/v1/auth/refresh",
             "/api/v1/auth/register",
             "/api/v1/auth/verify-prn",
+            "/api/v1/auth/faculty/**",
+            "/api/v1/auth/student/**",
             "/uploads/**",
             "/api/visitors/recognize",
             "/api/v1/visitors/recognize",

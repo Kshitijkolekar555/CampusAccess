@@ -928,5 +928,1601 @@
     "name": "Vinit Tribhuvan",
     "email": "vrtribhuvan@pict.edu",
     "phone": ""
+  },
+  {
+    "department": "ADMIN",
+    "name": "VIJAY ARUN MANMODE",
+    "email": "vijay.arun.manmode@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "46"
+  },
+  {
+    "department": "CE",
+    "name": "SUVARNA ARUN IWARE",
+    "email": "suvarna.arun.iware@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "431"
+  },
+  {
+    "department": "ADMIN",
+    "name": "PRAJAKTA MANOJ GADE",
+    "email": "prajakta.manoj.gade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "492"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DILIP PANDITRAO SONKAMBLE",
+    "email": "dilip.panditrao.sonkamble@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "761"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DHANANJAY MAHADEV SHEDGE",
+    "email": "dhananjay.mahadev.shedge@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "858"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANUP DATTATRAY DOIPHODE",
+    "email": "anup.dattatray.doiphode@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "860"
+  },
+  {
+    "department": "IT",
+    "name": "RACHNA AMISH KARNAVAT",
+    "email": "rachna.amish.karnavat@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "376"
+  },
+  {
+    "department": "CE",
+    "name": "DIPALI DATTATRAY KADAM",
+    "email": "dipali.dattatray.kadam@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "510"
+  },
+  {
+    "department": "CE",
+    "name": "PALLAVI SANJAY JOSHI",
+    "email": "pallavi.sanjay.joshi@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "576"
+  },
+  {
+    "department": "IT",
+    "name": "HRUCHA CHANDRASHEKHAR DESHMUKH",
+    "email": "hrucha.chandrashekhar.deshmukh@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "840"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MANASI YOGESH GANDHI",
+    "email": "manasi.yogesh.gandhi@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "884"
+  },
+  {
+    "department": "CE",
+    "name": "PRIYANKA SATISH SHAHANE",
+    "email": "priyanka.satish.shahane@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "771"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MAKRAND DINANATH BANDKAR",
+    "email": "makrand.dinanath.bandkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "443"
+  },
+  {
+    "department": "CE",
+    "name": "ATUL NIVRUTTI PUJARI",
+    "email": "atul.nivrutti.pujari@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "432"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DNYANESHWAR MANIKRAO MANKAR",
+    "email": "dnyaneshwar.manikrao.mankar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "121"
+  },
+  {
+    "department": "ADMIN",
+    "name": "AKSHAY RAMDAS BODAKE",
+    "email": "akshay.ramdas.bodake@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "859"
+  },
+  {
+    "department": "ADMIN",
+    "name": "AMOL ASHOK CHAVAN",
+    "email": "amol.ashok.chavan@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "507"
+  },
+  {
+    "department": "ADMIN",
+    "name": "RAVINDER BHADRAIAH YERRAM",
+    "email": "ravinder.bhadraiah.yerram@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "20"
+  },
+  {
+    "department": "IT",
+    "name": "ABHINAY GULABRAO DHAMANKAR",
+    "email": "abhinay.gulabrao.dhamankar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "267"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ATUL SHANKAR SUTAR",
+    "email": "atul.shankar.sutar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "539"
+  },
+  {
+    "department": "IT",
+    "name": "POONAM PARMATMA VERMA",
+    "email": "poonam.parmatma.verma@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "513"
+  },
+  {
+    "department": "CE",
+    "name": "DEEPAK DAWAL THIKEKAR",
+    "email": "deepak.dawal.thikekar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "301"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ABHISHEK MAKARAND KULKARNI",
+    "email": "abhishek.makarand.kulkarni@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "499"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ABHIJIT BALASO WAGH",
+    "email": "abhijit.balaso.wagh@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "495"
+  },
+  {
+    "department": "ADMIN",
+    "name": "AMEYA ANIL KADAM",
+    "email": "ameya.anil.kadam@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "814"
+  },
+  {
+    "department": "ADMIN",
+    "name": "BHAVNA MUKESH VYAS",
+    "email": "bhavna.mukesh.vyas@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "21"
+  },
+  {
+    "department": "ADMIN",
+    "name": "NITIN BARSU PATIL",
+    "email": "nitin.barsu.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "312"
+  },
+  {
+    "department": "CE",
+    "name": "SNEHAL PARAG SHINTRE",
+    "email": "snehal.parag.shintre@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "545"
+  },
+  {
+    "department": "ADMIN",
+    "name": "POOJA ATUL CHAVAN",
+    "email": "pooja.atul.chavan@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "874"
+  },
+  {
+    "department": "ADMIN",
+    "name": "VAISHALI SANJAY KULKARNI",
+    "email": "vaishali.sanjay.kulkarni@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "826"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANJALI ANIL DESHPANDE",
+    "email": "anjali.anil.deshpande@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "816"
+  },
+  {
+    "department": "CE",
+    "name": "PRANJALI PRASHANT JOSHI",
+    "email": "pranjali.prashant.joshi@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "313"
+  },
+  {
+    "department": "IT",
+    "name": "BABURAO SHANKAR JADHAV",
+    "email": "baburao.shankar.jadhav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "381"
+  },
+  {
+    "department": "ADMIN",
+    "name": "HEMANT NIVRUTTI NIKALJE",
+    "email": "hemant.nivrutti.nikalje@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "206"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUNIL KANHOBA MOON",
+    "email": "sunil.kanhoba.moon@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "79"
+  },
+  {
+    "department": "CE",
+    "name": "MUKTA SUNIL TAKALIKAR",
+    "email": "mukta.sunil.takalikar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "28"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ARATI RAGHURAJ DESHPANDE",
+    "email": "arati.raghuraj.deshpande@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "184"
+  },
+  {
+    "department": "ADMIN",
+    "name": "PRASHANT GANPAT UMAPE",
+    "email": "prashant.ganpat.umape@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "636"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SONALI VIJAY SHINKAR",
+    "email": "sonali.vijay.shinkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "757"
+  },
+  {
+    "department": "IT",
+    "name": "SWAPNAJA RAJESH HIRAY",
+    "email": "swapnaja.rajesh.hiray@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "746"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SHRIKANT DINKAR HADE",
+    "email": "shrikant.dinkar.hade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "537"
+  },
+  {
+    "department": "IT",
+    "name": "SHWETA CHANDRASHEKHAR DHARMADHIKARI",
+    "email": "shweta.chandrashekhar.dharmadhikari@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "195"
+  },
+  {
+    "department": "ADMIN",
+    "name": "VIVEK BANESHWAR PATOLE",
+    "email": "vivek.baneshwar.patole@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "590"
+  },
+  {
+    "department": "CE",
+    "name": "BHAGYASHRI SARANG KULKARNI",
+    "email": "bhagyashri.sarang.kulkarni@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "863"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DNYANDEO JAGESHWAR PETE",
+    "email": "dnyandeo.jageshwar.pete@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "872"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANKITA KETAN PATEL",
+    "email": "ankita.ketan.patel@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "666"
+  },
+  {
+    "department": "CE",
+    "name": "JYOTI SUDHAKAR RAGHATWAN",
+    "email": "jyoti.sudhakar.raghatwan@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "875"
+  },
+  {
+    "department": "IT",
+    "name": "RAVINDRA BABURAO MURUMKAR",
+    "email": "ravindra.baburao.murumkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "382"
+  },
+  {
+    "department": "ADMIN",
+    "name": "NAWATHE PRACHI",
+    "email": "nawathe.prachi@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "853"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SHARADCHANDRA TUKARAM GAWHALE",
+    "email": "sharadchandra.tukaram.gawhale@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "641"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ARCHANA VIRENDRA PATIL",
+    "email": "archana.virendra.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "505"
+  },
+  {
+    "department": "ADMIN",
+    "name": "RAJESH VISHWANATH SHELAR",
+    "email": "rajesh.vishwanath.shelar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "59"
+  },
+  {
+    "department": "IT",
+    "name": "BAKUL SANTOSH KATEWAL",
+    "email": "bakul.santosh.katewal@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "306"
+  },
+  {
+    "department": "ADMIN",
+    "name": "AVINASH BHASKARRAO AMBHORE",
+    "email": "avinash.bhaskarrao.ambhore@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "408"
+  },
+  {
+    "department": "ADMIN",
+    "name": "OMESHKUMAR MANOHAR BODELE",
+    "email": "omeshkumar.manohar.bodele@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "435"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SHAVETA THAKRAL",
+    "email": "shaveta.thakral@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "865"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SMITA NILESH BANKAR",
+    "email": "smita.nilesh.bankar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "852"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MALHAR VINAYAK SHALIGRAM",
+    "email": "malhar.vinayak.shaligram@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "500"
+  },
+  {
+    "department": "IT",
+    "name": "ARTI GORAKHNATH GHULE",
+    "email": "arti.gorakhnath.ghule@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "822"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KALYANI CHETAN WAGHMARE",
+    "email": "kalyani.chetan.waghmare@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "66"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ROHAN RAVINDRA VARDHAMAN",
+    "email": "rohan.ravindra.vardhaman@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "655"
+  },
+  {
+    "department": "CE",
+    "name": "SHADRAK HANMANT KARSULKAR",
+    "email": "shadrak.hanmant.karsulkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "398"
+  },
+  {
+    "department": "IT",
+    "name": "ASHWINI MUKUND KULKARNI",
+    "email": "ashwini.mukund.kulkarni@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "369"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KAUSTUBH DILIPRAO KULKARNI",
+    "email": "kaustubh.diliprao.kulkarni@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "693"
+  },
+  {
+    "department": "ADMIN",
+    "name": "HEMANTKUMAR BAPU MALI",
+    "email": "hemantkumar.bapu.mali@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "700"
+  },
+  {
+    "department": "IT",
+    "name": "KIRTI YOGESH DIGHOLKAR",
+    "email": "kirti.yogesh.digholkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "337"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MANDAR NITIN KAKADE",
+    "email": "mandar.nitin.kakade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "691"
+  },
+  {
+    "department": "CE",
+    "name": "KIRANKUMAR BABANRAO KADAMBANDE",
+    "email": "kirankumar.babanrao.kadambande@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "319"
+  },
+  {
+    "department": "ADMIN",
+    "name": "RAJESH HANUMANT RAO",
+    "email": "rajesh.hanumant.rao@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "856"
+  },
+  {
+    "department": "ADMIN",
+    "name": "LALIT PURUSHOTTAM PATIL",
+    "email": "lalit.purushottam.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "41"
+  },
+  {
+    "department": "CE",
+    "name": "HEENA KAUSAR FEROZ KHAN",
+    "email": "heena.kausar.feroz.khan@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "851"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SANJAY TRYMBAK GANDHE",
+    "email": "sanjay.trymbak.gandhe@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "779"
+  },
+  {
+    "department": "ADMIN",
+    "name": "TEJASWEENI GIRISH HAMPE",
+    "email": "tejasweeni.girish.hampe@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "864"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KANAKA KAUSHIK KOLHATKAR",
+    "email": "kanaka.kaushik.kolhatkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "799"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MANGESH KRISHNARAO SHEGOKAR",
+    "email": "mangesh.krishnarao.shegokar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "379"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MILIND ASHOK PHADKE",
+    "email": "milind.ashok.phadke@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "593"
+  },
+  {
+    "department": "ADMIN",
+    "name": "PIMPODKAR PRASHANT VINAYAK",
+    "email": "pimpodkar.prashant.vinayak@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "849"
+  },
+  {
+    "department": "IT",
+    "name": "EMMANUEL MARK",
+    "email": "emmanuel.mark@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "231"
+  },
+  {
+    "department": "ADMIN",
+    "name": "PRAGTEE BHAGVAN TATHE",
+    "email": "pragtee.bhagvan.tathe@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "731"
+  },
+  {
+    "department": "CE",
+    "name": "PRANALI RAJENDRA NAVGHARE",
+    "email": "pranali.rajendra.navghare@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "748"
+  },
+  {
+    "department": "IT",
+    "name": "DEEPALI PRASHANT SALAPURKAR",
+    "email": "deepali.prashant.salapurkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "792"
+  },
+  {
+    "department": "IT",
+    "name": "SAYALI GAURAV GAIKWAD",
+    "email": "sayali.gaurav.gaikwad@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "809"
+  },
+  {
+    "department": "IT",
+    "name": "POOJA DIPAK SUTAR",
+    "email": "pooja.dipak.sutar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "880"
+  },
+  {
+    "department": "CE",
+    "name": "NAVED RAZA QAISAR ALI",
+    "email": "naved.raza.qaisar.ali@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "878"
+  },
+  {
+    "department": "ADMIN",
+    "name": "RAKESH PRADEEP PATIL",
+    "email": "rakesh.pradeep.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "468"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MANISHA JAYANT SAGADE",
+    "email": "manisha.jayant.sagade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "755"
+  },
+  {
+    "department": "ADMIN",
+    "name": "RUPESH CHANDRAKANT JAISWAL",
+    "email": "rupesh.chandrakant.jaiswal@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "84"
+  },
+  {
+    "department": "ADMIN",
+    "name": "TANISHA SANJAYKUMAR LONDHE",
+    "email": "tanisha.sanjaykumar.londhe@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "820"
+  },
+  {
+    "department": "ADMIN",
+    "name": "GEETANJALI VINAYAK KALE",
+    "email": "geetanjali.vinayak.kale@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "189"
+  },
+  {
+    "department": "CE",
+    "name": "SHEETAL SAGAR SONAWANE",
+    "email": "sheetal.sagar.sonawane@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "211"
+  },
+  {
+    "department": "CE",
+    "name": "SUMIT SATISHRAO SHEVTEKAR",
+    "email": "sumit.satishrao.shevtekar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "427"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANKUR VINAY NAVALE",
+    "email": "ankur.vinay.navale@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "867"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SANDEEP VINAYAK GAIKWAD",
+    "email": "sandeep.vinayak.gaikwad@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "403"
+  },
+  {
+    "department": "IT",
+    "name": "SHITAL GAJENDRA PATIL",
+    "email": "shital.gajendra.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "429"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DINESH PRADEEP DABIR",
+    "email": "dinesh.pradeep.dabir@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "470"
+  },
+  {
+    "department": "CE",
+    "name": "PRAVIN RAMDAS PATIL",
+    "email": "pravin.ramdas.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "340"
+  },
+  {
+    "department": "CE",
+    "name": "SHITAL NAYAN GIRME",
+    "email": "shital.nayan.girme@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "373"
+  },
+  {
+    "department": "CE",
+    "name": "PARAG JAYGOPAL JAMBHULKAR",
+    "email": "parag.jaygopal.jambhulkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "563"
+  },
+  {
+    "department": "ADMIN",
+    "name": "BHAKTI DEEPAK KADAM",
+    "email": "bhakti.deepak.kadam@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "694"
+  },
+  {
+    "department": "CE",
+    "name": "MADHURI VIKAS MANE",
+    "email": "madhuri.vikas.mane@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "710"
+  },
+  {
+    "department": "IT",
+    "name": "MANJUSHRI VILAS RAUT",
+    "email": "manjushri.vilas.raut@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "841"
+  },
+  {
+    "department": "ADMIN",
+    "name": "BHAGYASHREE SWAPNIL KADAM",
+    "email": "bhagyashree.swapnil.kadam@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "866"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUCHITA DHARMENDRA GANAGE",
+    "email": "suchita.dharmendra.ganage@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "881"
+  },
+  {
+    "department": "CE",
+    "name": "SANDIP VILASRAO SHINDE",
+    "email": "sandip.vilasrao.shinde@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "569"
+  },
+  {
+    "department": "IT",
+    "name": "SUMITRA AMIT JAKHETE",
+    "email": "sumitra.amit.jakhete@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "388"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SACHIN BHASKARRAO PAWAR",
+    "email": "sachin.bhaskarrao.pawar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "879"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUNIL SHRIPAL KHOT",
+    "email": "sunil.shripal.khot@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "437"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SNEHA CHANDRAKANT NAHATKAR",
+    "email": "sneha.chandrakant.nahatkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "815"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SANDEEP NAMDEO DEOKATE",
+    "email": "sandeep.namdeo.deokate@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "257"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANKUSH VASANT SAPKAL",
+    "email": "ankush.vasant.sapkal@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "367"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KUNDLIK SAMPAT UGALE",
+    "email": "kundlik.sampat.ugale@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "532"
+  },
+  {
+    "department": "ADMIN",
+    "name": "PANKAJ SUMERSING PATIL",
+    "email": "pankaj.sumersing.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "671"
+  },
+  {
+    "department": "ADMIN",
+    "name": "NADEEM ANWER NISAR AHMED",
+    "email": "nadeem.anwer.nisar.ahmed@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "692"
+  },
+  {
+    "department": "IT",
+    "name": "JYOTI HINDURAO JADHAV",
+    "email": "jyoti.hindurao.jadhav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "736"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MANEESHA HEMANT HASURKAR",
+    "email": "maneesha.hemant.hasurkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "330"
+  },
+  {
+    "department": "IT",
+    "name": "JAGDISH KASHINATH KAMBLE",
+    "email": "jagdish.kashinath.kamble@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "631"
+  },
+  {
+    "department": "ADMIN",
+    "name": "VIRENDRA VISHNUDAS BAGADE",
+    "email": "virendra.vishnudas.bagade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "485"
+  },
+  {
+    "department": "CE",
+    "name": "RUTUJA ABHIJIT KULKARNI",
+    "email": "rutuja.abhijit.kulkarni@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "610"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ASHOK DNYANDEO VIDHATE",
+    "email": "ashok.dnyandeo.vidhate@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "843"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUMIT UTTAM BAGADE",
+    "email": "sumit.uttam.bagade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "629"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MOHAN ANNA CHIMANNA",
+    "email": "mohan.anna.chimanna@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "786"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANJALI ABHIJIT YADAV",
+    "email": "anjali.abhijit.yadav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "846"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SHRIDEVI SUKHADEO VASEKAR",
+    "email": "shridevi.sukhadeo.vasekar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "753"
+  },
+  {
+    "department": "ADMIN",
+    "name": "NILESH GEORGE NIRMAL",
+    "email": "nilesh.george.nirmal@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "763"
+  },
+  {
+    "department": "ADMIN",
+    "name": "RUPALI ASHOK PATIL",
+    "email": "rupali.ashok.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "838"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DIPAK LAXMAN JARE",
+    "email": "dipak.laxman.jare@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "882"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUVIDYA RAMESH PAWAR",
+    "email": "suvidya.ramesh.pawar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "440"
+  },
+  {
+    "department": "CE",
+    "name": "ANANT MADHUKAR BAGADE",
+    "email": "anant.madhukar.bagade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "119"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANNAGHA ARVIND BIDKAR",
+    "email": "annagha.arvind.bidkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "65"
+  },
+  {
+    "department": "ADMIN",
+    "name": "VILAS DNYANDEO GAWALI",
+    "email": "vilas.dnyandeo.gawali@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "857"
+  },
+  {
+    "department": "ADMIN",
+    "name": "HRUSHIKESH SHIRISH KHATRI",
+    "email": "hrushikesh.shirish.khatri@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "615"
+  },
+  {
+    "department": "ADMIN",
+    "name": "NEHA NIVRUTTI JAMDAR",
+    "email": "neha.nivrutti.jamdar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "828"
+  },
+  {
+    "department": "CE",
+    "name": "ARUNDHATI ATUL CHANDORKAR",
+    "email": "arundhati.atul.chandorkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "100"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ASMA NASAR SAYYAD",
+    "email": "asma.nasar.sayyad@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "742"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MOUSAMI VAIBHAV MUNOT",
+    "email": "mousami.vaibhav.munot@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "302"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ASHWINI RAJARAM BANKAR",
+    "email": "ashwini.rajaram.bankar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "811"
+  },
+  {
+    "department": "ADMIN",
+    "name": "HARSHA SURENDRA JAIN",
+    "email": "harsha.surendra.jain@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "869"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SIDDHESH NARENDRA UPASANI",
+    "email": "siddhesh.narendra.upasani@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "669"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANIL MARUTI CHAVAN",
+    "email": "anil.maruti.chavan@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "47"
+  },
+  {
+    "department": "ADMIN",
+    "name": "GAJANAN LALAPPA KIRWALE",
+    "email": "gajanan.lalappa.kirwale@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "407"
+  },
+  {
+    "department": "ADMIN",
+    "name": "NITEEN PANDITRAO SAPKAL",
+    "email": "niteen.panditrao.sapkal@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "452"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUJATA ASHOK BARDE",
+    "email": "sujata.ashok.barde@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "451"
+  },
+  {
+    "department": "CE",
+    "name": "DIPIKA DILIP RAIGAR",
+    "email": "dipika.dilip.raigar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "766"
+  },
+  {
+    "department": "IT",
+    "name": "MANISH RAMBHAU KHODASKAR",
+    "email": "manish.rambhau.khodaskar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "234"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DIVYA DILIPKUMAR CHECHANI",
+    "email": "divya.dilipkumar.chechani@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "844"
+  },
+  {
+    "department": "IT",
+    "name": "GIRISH PANDURANG POTDAR",
+    "email": "girish.pandurang.potdar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "13"
+  },
+  {
+    "department": "IT",
+    "name": "SACHIN SURESH PANDE",
+    "email": "sachin.suresh.pande@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "203"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MANSINGH KUMAR KADAM",
+    "email": "mansingh.kumar.kadam@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "727"
+  },
+  {
+    "department": "CE",
+    "name": "BHUMESH PURUSHOTTAM MASRAM",
+    "email": "bhumesh.purushottam.masram@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "626"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANIL SHRAWAN BODHE",
+    "email": "anil.shrawan.bodhe@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "651"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SHIVAJI VITTHALRAO MUNDHE",
+    "email": "shivaji.vitthalrao.mundhe@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "338"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUSHILA ASURAM SUTHAR",
+    "email": "sushila.asuram.suthar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "885"
+  },
+  {
+    "department": "ADMIN",
+    "name": "AVINASH DATTA TORANE",
+    "email": "avinash.datta.torane@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "309"
+  },
+  {
+    "department": "ADMIN",
+    "name": "NARAYAN BHAGWANRAO PAWAR",
+    "email": "narayan.bhagwanrao.pawar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "317"
+  },
+  {
+    "department": "CE",
+    "name": "HEMA SAGAR KUMBHAR",
+    "email": "hema.sagar.kumbhar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "803"
+  },
+  {
+    "department": "IT",
+    "name": "DEEPA BAPOO MANE",
+    "email": "deepa.bapoo.mane@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "839"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SANDEEP BALASAHEB CHONDHE",
+    "email": "sandeep.balasaheb.chondhe@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "219"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KAILAS BALKRISHNA BHOSALE",
+    "email": "kailas.balkrishna.bhosale@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "315"
+  },
+  {
+    "department": "ADMIN",
+    "name": "HRUSHIKESH MADHUKAR HIWASE",
+    "email": "hrushikesh.madhukar.hiwase@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "293"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUJATA SHIVAPPA PATIL",
+    "email": "sujata.shivappa.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "733"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SACHIN SUDHAKAR SHINDE",
+    "email": "sachin.sudhakar.shinde@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "794"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KOMAL MAHADEO MASAL",
+    "email": "komal.mahadeo.masal@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "775"
+  },
+  {
+    "department": "ADMIN",
+    "name": "TANUJA SAJID MULLA",
+    "email": "tanuja.sajid.mulla@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "842"
+  },
+  {
+    "department": "IT",
+    "name": "SULOCHANA BALWANT SONKAMBLE",
+    "email": "sulochana.balwant.sonkamble@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "871"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KIRAN BABANRAO KALE",
+    "email": "kiran.babanrao.kale@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "179"
+  },
+  {
+    "department": "IT",
+    "name": "SURESH RAMCHANDRA SHELAR",
+    "email": "suresh.ramchandra.shelar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "276"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SIDDHESHWAR SUKDEO METAKARI",
+    "email": "siddheshwar.sukdeo.metakari@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "762"
+  },
+  {
+    "department": "ADMIN",
+    "name": "JAYASHREE NAMAN BURADKAR",
+    "email": "jayashree.naman.buradkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "389"
+  },
+  {
+    "department": "CE",
+    "name": "RAVIKANT CHANDRAKANT BADEKAR",
+    "email": "ravikant.chandrakant.badekar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "459"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MILIND VIKAS KHILE",
+    "email": "milind.vikas.khile@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "480"
+  },
+  {
+    "department": "ADMIN",
+    "name": "NANDKISHOR SURESH MIRAJKAR",
+    "email": "nandkishor.suresh.mirajkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "502"
+  },
+  {
+    "department": "ADMIN",
+    "name": "GAJENDRA SUDAMRAO KHAIRMODE",
+    "email": "gajendra.sudamrao.khairmode@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "501"
+  },
+  {
+    "department": "ADMIN",
+    "name": "LAXMIKANT MAROTRAO GAVHANE",
+    "email": "laxmikant.marotrao.gavhane@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "503"
+  },
+  {
+    "department": "ADMIN",
+    "name": "HRISHIKESH VILAS KASAR",
+    "email": "hrishikesh.vilas.kasar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "568"
+  },
+  {
+    "department": "ADMIN",
+    "name": "LAXMAN MARUTI PAWAL",
+    "email": "laxman.maruti.pawal@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "571"
+  },
+  {
+    "department": "ADMIN",
+    "name": "RAHUL SURESH SONDKAR",
+    "email": "rahul.suresh.sondkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "854"
+  },
+  {
+    "department": "ADMIN",
+    "name": "PRADIP SHANKAR VARADE",
+    "email": "pradip.shankar.varade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "237"
+  },
+  {
+    "department": "ADMIN",
+    "name": "RAJENDRA GANGARAM YELALWAR",
+    "email": "rajendra.gangaram.yelalwar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "246"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MAHESH ANANDRAO GANGARDE",
+    "email": "mahesh.anandrao.gangarde@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "245"
+  },
+  {
+    "department": "CE",
+    "name": "PREETI ANAND JAIN",
+    "email": "preeti.anand.jain@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "318"
+  },
+  {
+    "department": "IT",
+    "name": "TUSHAR ANANT RANE",
+    "email": "tushar.anant.rane@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "321"
+  },
+  {
+    "department": "IT",
+    "name": "VISHAL RAMESH JAISWAL",
+    "email": "vishal.ramesh.jaiswal@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "355"
+  },
+  {
+    "department": "CE",
+    "name": "RATNAMALA KUMAR SUDHIR PASWAN",
+    "email": "ratnamala.kumar.sudhir.paswan@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "390"
+  },
+  {
+    "department": "IT",
+    "name": "NAMAN VIJAY BURADKAR",
+    "email": "naman.vijay.buradkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "397"
+  },
+  {
+    "department": "IT",
+    "name": "SANDEEP RAMBHAU WARHADE",
+    "email": "sandeep.rambhau.warhade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "406"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KRANTI RAMRAO JADHAV",
+    "email": "kranti.ramrao.jadhav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "490"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SAKSHI MAHESH HOSAMANI",
+    "email": "sakshi.mahesh.hosamani@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "558"
+  },
+  {
+    "department": "IT",
+    "name": "PRAJAKTA SUBHASH SHINDE",
+    "email": "prajakta.subhash.shinde@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "712"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ROHIDAS TUKARAM MALI",
+    "email": "rohidas.tukaram.mali@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "740"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SHWETA SHAH",
+    "email": "shweta.shah@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "873"
+  },
+  {
+    "department": "CE",
+    "name": "RAJANI RAJESH JADHAV",
+    "email": "rajani.rajesh.jadhav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "776"
+  },
+  {
+    "department": "IT",
+    "name": "AMRUTA ABHINANDAN PATIL",
+    "email": "amruta.abhinandan.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "782"
+  },
+  {
+    "department": "CE",
+    "name": "SAMADHAN WALU JADHAV",
+    "email": "samadhan.walu.jadhav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "785"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KIRAN LALASO BHOITE",
+    "email": "kiran.lalaso.bhoite@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "787"
+  },
+  {
+    "department": "CE",
+    "name": "MADHURI SOMNATH PATIL",
+    "email": "madhuri.somnath.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "806"
+  },
+  {
+    "department": "IT",
+    "name": "PUNAM ASHISH SHINDE",
+    "email": "punam.ashish.shinde@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "825"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUDERSHAN PRAKASH DOLLI",
+    "email": "sudershan.prakash.dolli@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "837"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KANCHAN PRASAD JOSHI",
+    "email": "kanchan.prasad.joshi@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "862"
+  },
+  {
+    "department": "CE",
+    "name": "VARSHA BAPUSAHEB SAKNURE",
+    "email": "varsha.bapusaheb.saknure@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "877"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DATTATRAYA NAVNATH GHAYATADAK",
+    "email": "dattatraya.navnath.ghayatadak@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "883"
+  },
+  {
+    "department": "CE",
+    "name": "REKHA ANILKUMAR KULKARNI",
+    "email": "rekha.anilkumar.kulkarni@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "30"
+  },
+  {
+    "department": "ADMIN",
+    "name": "GIRISH SHRIKISAN MUNDADA",
+    "email": "girish.shrikisan.mundada@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "12"
+  },
+  {
+    "department": "ADMIN",
+    "name": "AVINASH MADHUKARRAO DESHMUKH",
+    "email": "avinash.madhukarrao.deshmukh@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "141"
+  },
+  {
+    "department": "ADMIN",
+    "name": "MOUSAMI PRASHANT TURUK",
+    "email": "mousami.prashant.turuk@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "177"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANUPAMA GANESH PHAKATKAR",
+    "email": "anupama.ganesh.phakatkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "185"
+  },
+  {
+    "department": "ADMIN",
+    "name": "PRASHANT DADASAHEB JADHAV",
+    "email": "prashant.dadasaheb.jadhav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "536"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SHYAM BABASAHEB DESHMUKH",
+    "email": "shyam.babasaheb.deshmukh@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "63"
+  },
+  {
+    "department": "CE",
+    "name": "ASHWINI DIGAMBAR BUNDELE",
+    "email": "ashwini.digambar.bundele@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "392"
+  },
+  {
+    "department": "CE",
+    "name": "KOPAL GANGRADE",
+    "email": "kopal.gangrade@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "698"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SANDIP GORAKHNATH RENUSE",
+    "email": "sandip.gorakhnath.renuse@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "462"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SUNIL MANSING PAWAR",
+    "email": "sunil.mansing.pawar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "670"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SAHIL HIRALAL PATIL",
+    "email": "sahil.hiralal.patil@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "870"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SNEHALATA LALITBHAIYA RANE",
+    "email": "snehalata.lalitbhaiya.rane@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "342"
+  },
+  {
+    "department": "CE",
+    "name": "YOGESH ASHOK HANDGE",
+    "email": "yogesh.ashok.handge@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "476"
+  },
+  {
+    "department": "ADMIN",
+    "name": "PRADEEP PURUSHOTTAM PARKHI",
+    "email": "pradeep.purushottam.parkhi@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "264"
+  },
+  {
+    "department": "ADMIN",
+    "name": "BHAKTI SHRIRAM YADAV",
+    "email": "bhakti.shriram.yadav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "743"
+  },
+  {
+    "department": "ADMIN",
+    "name": "DEEPAK MADANRAO SHINDE",
+    "email": "deepak.madanrao.shinde@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "197"
+  },
+  {
+    "department": "ADMIN",
+    "name": "BHIMASHANKAR PRAKASH KUMBHARE",
+    "email": "bhimashankar.prakash.kumbhare@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "850"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SHRIDEVI BHIMASHANKAR KUMBHARE",
+    "email": "shridevi.bhimashankar.kumbhare@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "876"
+  },
+  {
+    "department": "ADMIN",
+    "name": "ANAGHA VIJAYSINHA RAJPUT",
+    "email": "anagha.vijaysinha.rajput@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "718"
+  },
+  {
+    "department": "ADMIN",
+    "name": "KAVITA KISHOR KULKARNI",
+    "email": "kavita.kishor.kulkarni@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "329"
+  },
+  {
+    "department": "ADMIN",
+    "name": "HARSH SHARADKUMAR THAKAR",
+    "email": "harsh.sharadkumar.thakar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "555"
+  },
+  {
+    "department": "CE",
+    "name": "ARCHANA SANTOSH GHOTKAR",
+    "email": "archana.santosh.ghotkar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "345"
+  },
+  {
+    "department": "ADMIN",
+    "name": "BALWANT AMBADAS SONKAMBLE",
+    "email": "balwant.ambadas.sonkamble@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "27"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SANJAY MARUTI SHINDE",
+    "email": "sanjay.maruti.shinde@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "433"
+  },
+  {
+    "department": "ADMIN",
+    "name": "GANESH DNYANESHWAR BANGAR",
+    "email": "ganesh.dnyaneshwar.bangar@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "674"
+  },
+  {
+    "department": "ADMIN",
+    "name": "SAGAR ARVIND KALE",
+    "email": "sagar.arvind.kale@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "796"
+  },
+  {
+    "department": "ADMIN",
+    "name": "JAYANT SUDHIR YADAV",
+    "email": "jayant.sudhir.yadav@pict.edu",
+    "phone": "+91-9876543210",
+    "empNo": "830"
   }
 ]

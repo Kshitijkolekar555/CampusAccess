@@ -37,6 +37,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationMapper notificationMapper;
     private final EmailService emailService;
     private final TemplateEngine templateEngine;
+    private final com.pict.gatesecurity.repository.UserRepository userRepository;
 
     @Override
     @Transactional
@@ -332,6 +333,22 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void deleteNotification(Long id) {
         notificationRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<NotificationResponse> getMyNotifications(String username) {
+        if (!org.springframework.util.StringUtils.hasText(username)) {
+            return java.util.List.of();
+        }
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return java.util.List.of();
+        }
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
+                .stream()
+                .map(notificationMapper::toResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private Notification buildNotification(User user, String recipient,

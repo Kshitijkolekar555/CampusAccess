@@ -426,3 +426,74 @@ export interface StaffBreak {
   createdAt: string;
 }
 
+export type FacultyOutpassStatus = 'OUTPASS_GENERATED' | 'RETURNED_TO_CAMPUS';
+
+export interface FacultyOutpass {
+  id: number;
+  passNumber: string;
+  facultyUserId: number;
+  facultyEmpNo: string;
+  facultyName: string;
+  department: string;
+  reason: string;
+  explanation?: string;
+  status: FacultyOutpassStatus;
+  statusLabel: string;
+  generatedAt: string;
+  departureTime?: string | null;
+  actualReturnTime?: string | null;
+  confirmedByGuardId?: number | null;
+  confirmedByGuardName?: string | null;
+  guardNotes?: string | null;
+  gateId?: number | null;
+  gateName?: string | null;
+}
+
+export interface FacultyVerifyResponse {
+  eligible: boolean;
+  empNo: string;
+  fullName: string;
+  department: string;
+  staffType: string;
+  message: string;
+}
+
+export interface FacultyRegisterRequest {
+  empNo: string;
+  fullName: string;
+  email: string;
+  password: string;
+  phone?: string;
+}
+
+export interface FacultyOutpassRequest {
+  reason: string;
+  explanation?: string;
+}
+
+export interface StudentVerifyResponse {
+  eligible: boolean;
+  studentId: string;
+  enrollmentNo?: string;
+  prn?: string;
+  rollNumber?: string;
+  fullName: string;
+  department: string;
+  academicYear?: string;
+  className?: string;
+  division?: string;
+  email?: string;
+  mobile?: string;
+  message: string;
+}
+
+export interface StudentRegisterRequest {
+  studentId: string;
+  fullName: string;
+  email: string;
+  password: string;
+  phone?: string;
+}
+
+
+

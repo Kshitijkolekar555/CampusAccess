@@ -20,6 +20,8 @@ import { Gates } from '../pages/Gates';
 import { Notifications } from '../pages/Notifications';
 import { Profile } from '../pages/Profile';
 import { TeacherDashboardView } from '../pages/TeacherDashboardView';
+import { FacultyPortal } from '../pages/FacultyPortal';
+import { FacultyDashboard } from '../pages/FacultyDashboard';
 import type { UserRole } from '../types';
 
 // Protected Route Component with strict role checks
@@ -60,6 +62,11 @@ export const AppRoutes: React.FC = () => {
       <Route path="/student/login"    element={<StudentPortal />} />
       <Route path="/student/register" element={<StudentPortal />} />
 
+      {/* Faculty portal (faculty verification, registration & login) */}
+      <Route path="/faculty/login"    element={<FacultyPortal />} />
+      <Route path="/faculty/register" element={<FacultyPortal />} />
+      <Route path="/faculty"          element={<FacultyPortal />} />
+
       {/* Visitor self-registration portal */}
       <Route path="/visitor" element={<VisitorPortal />} />
 
@@ -88,8 +95,9 @@ export const AppRoutes: React.FC = () => {
         <Route path="/notifications"    element={<Navigate to="/dashboard" replace />} />
       </Route>
 
-      {/* ── Teacher / Staff Routes ────────────────────────────────────── */}
+      {/* ── Faculty / Staff Routes ────────────────────────────────────── */}
       <Route element={<ProtectedLayout allowedRoles={['FACULTY', 'STAFF', 'ADMIN']} />}>
+        <Route path="/faculty/dashboard" element={<FacultyDashboard />} />
         <Route path="/teacher" element={<TeacherDashboardView />} />
       </Route>
 

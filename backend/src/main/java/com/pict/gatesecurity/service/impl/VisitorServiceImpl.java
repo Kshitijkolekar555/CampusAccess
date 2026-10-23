@@ -48,6 +48,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.UUID;
 
+import com.pict.gatesecurity.entity.Notification;
+import com.pict.gatesecurity.entity.AuthorizedFaculty;
+import com.pict.gatesecurity.entity.enums.NotificationEventType;
+import com.pict.gatesecurity.entity.enums.NotificationStatus;
+import com.pict.gatesecurity.entity.enums.NotificationType;
+import com.pict.gatesecurity.repository.NotificationRepository;
+import com.pict.gatesecurity.repository.AuthorizedFacultyRepository;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -60,6 +68,8 @@ public class VisitorServiceImpl implements VisitorService {
     private final VisitorMapper visitorMapper;
     private final AuditLogService auditLogService;
     private final FaceRecognitionService faceRecognitionService;
+    private final NotificationRepository notificationRepository;
+    private final AuthorizedFacultyRepository authorizedFacultyRepository;
 
     @Override
     @Transactional
@@ -125,6 +135,7 @@ public class VisitorServiceImpl implements VisitorService {
                 .build();
 
         Visitor savedVisitor = visitorRepository.save(visitor);
+        createVisitorNotificationIfFacultyHost(savedVisitor);
 
         auditLogService.logAction(createdBy, "VISITOR_CHECK_IN", "Visitor", savedVisitor.getId(), null, Map.of(
                 "name", savedVisitor.getName(),
@@ -428,11 +439,13 @@ public class VisitorServiceImpl implements VisitorService {
                 .photoPath(photoPath != null ? photoPath : request.getPhotoUrl())
                 .faceId(faceId != null ? faceId : (StringUtils.hasText(request.getPhotoUrl()) ? visitorRepository.findFirstByMobileOrderByTimeInDesc(request.getMobile()).map(Visitor::getFaceId).orElse(null) : null))
                 .isBlacklistedMatch(isBlacklistedMatch)
+                .status(PassStatus.PENDING)
                 .notes(request.getNotes())
                 .createdBy(createdBy)
                 .build();
 
         Visitor savedVisitor = visitorRepository.save(visitor);
+        createVisitorNotificationIfFacultyHost(savedVisitor);
 
         auditLogService.logAction(createdBy, "VISITOR_CHECK_IN_WITH_FACE", "Visitor", savedVisitor.getId(), null, Map.of(
                 "name", savedVisitor.getName(),
@@ -577,6 +590,7 @@ public class VisitorServiceImpl implements VisitorService {
                 .build();
 
         Visitor savedVisitor = visitorRepository.save(visitor);
+        createVisitorNotificationIfFacultyHost(savedVisitor);
         auditLogService.logAction(createdBy, "DIGITAL_TOKEN_REQUESTED", "Visitor", savedVisitor.getId(), null, Map.of(
                 "name", savedVisitor.getName(),
                 "mobile", savedVisitor.getMobile(),
@@ -667,5 +681,122 @@ public class VisitorServiceImpl implements VisitorService {
         }
 
         return null;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VisitorResponse> getMyPendingRequests(String username) {
+        User user = userRepository.findByUsername(username).orElse(null);
+        String fullName = (user != null && user.getFullName() != null) ? user.getFullName().trim().toLowerCase() : "";
+        String uname = (username != null) ? username.trim().toLowerCase() : "";
+
+        return visitorRepository.findByStatusOrderByCreatedAtDesc(PassStatus.PENDING)
+                .stream()
+                .filter(v -> {
+                    if (!StringUtils.hasText(v.getHostName())) return false;
+                    String vHost = v.getHostName().trim().toLowerCase();
+                    return vHost.equals(fullName) ||
+                           (!fullName.isEmpty() && (vHost.contains(fullName) || fullName.contains(vHost))) ||
+                           (!uname.isEmpty() && vHost.contains(uname));
+                })
+                .map(visitorMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    private void createVisitorNotificationIfFacultyHost(Visitor visitor) {
+        try {
+            User facultyUser = resolveFacultyUser(visitor.getHostName(), visitor.getHostType());
+            if (facultyUser != null) {
+                String recipient = StringUtils.hasText(facultyUser.getEmail())
+                        ? facultyUser.getEmail()
+                        : (facultyUser.getUsername() + "@pict.edu");
+
+                Notification notification = Notification.builder()
+                        .user(facultyUser)
+                        .recipient(recipient)
+                        .type(NotificationType.EMAIL)
+                        .eventType(NotificationEventType.VISITOR_MEETING_REQUEST)
+                        .subject("Visitor Arrival Request: " + visitor.getName())
+                        .body("Visitor " + visitor.getName() + " (Mobile: " + visitor.getMobile()
+                                + ") has arrived and requested to meet you regarding: \"" + visitor.getPurpose()
+                                + "\". Please review this request in your Teacher Panel.")
+                        .status(NotificationStatus.PENDING)
+                        .retryCount(0)
+                        .maxRetries(3)
+                        .build();
+
+                notificationRepository.save(notification);
+                log.info("Created VISITOR_MEETING_REQUEST notification ID={} for faculty user ID={} ({})",
+                        notification.getId(), facultyUser.getId(), facultyUser.getFullName());
+            } else {
+                log.info("Host name '{}' did not resolve to an active faculty user; no direct faculty notification created", visitor.getHostName());
+            }
+        } catch (Exception e) {
+            log.error("Failed to create faculty visitor notification: {}", e.getMessage(), e);
+        }
+    }
+
+    private User resolveFacultyUser(String hostName, HostType hostType) {
+        if (!StringUtils.hasText(hostName)) {
+            return null;
+        }
+        String clean = hostName.trim();
+
+        // 1. Direct username / empNo match (e.g. "510" or "376")
+        Optional<User> byUsername = userRepository.findByUsername(clean);
+        if (byUsername.isPresent() && isFacultyRole(byUsername.get())) {
+            return byUsername.get();
+        }
+
+        // 2. Direct email match
+        Optional<User> byEmail = userRepository.findByEmail(clean);
+        if (byEmail.isPresent() && isFacultyRole(byEmail.get())) {
+            return byEmail.get();
+        }
+
+        // 3. If hostName contains employee ID, e.g. "DIPALI DATTATRAY KADAM (#510)" or "#510"
+        if (clean.contains("#") || clean.contains("(") || clean.contains(")")) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("#?([0-9]+)").matcher(clean);
+            if (m.find()) {
+                String extractedEmpNo = m.group(1);
+                Optional<User> empUser = userRepository.findByUsername(extractedEmpNo);
+                if (empUser.isPresent() && isFacultyRole(empUser.get())) {
+                    return empUser.get();
+                }
+            }
+        }
+
+        // 4. Match against authorized_faculty table
+        Optional<AuthorizedFaculty> authFaculty = authorizedFacultyRepository.findByFullName(clean);
+        if (authFaculty.isEmpty()) {
+            authFaculty = authorizedFacultyRepository.findFirstByFullNameIgnoreCase(clean);
+        }
+        if (authFaculty.isPresent()) {
+            Optional<User> u = userRepository.findByUsername(authFaculty.get().getEmpNo());
+            if (u.isPresent()) {
+                return u.get();
+            }
+        }
+
+        // 5. Match against registered faculty users (full name or substring match)
+        List<User> facultyUsers = userRepository.findAll().stream()
+                .filter(this::isFacultyRole)
+                .toList();
+
+        for (User u : facultyUsers) {
+            String uName = u.getFullName() != null ? u.getFullName().trim().toLowerCase() : "";
+            String target = clean.toLowerCase();
+            if (!uName.isEmpty() && (uName.equals(target) || uName.contains(target) || target.contains(uName))) {
+                return u;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isFacultyRole(User user) {
+        if (user == null || user.getRole() == null) return false;
+        String r = user.getRole().name().toUpperCase();
+        return r.contains("FACULTY");
     }
 }

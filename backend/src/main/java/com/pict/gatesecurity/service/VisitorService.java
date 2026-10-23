@@ -28,4 +28,5 @@ public interface VisitorService {
     VisitorResponse approveToken(Long id, String performingUsername);
     VisitorResponse rejectToken(Long id, String performingUsername);
     VisitorResponse getMyActiveToken(String performingUsername);
+    List<VisitorResponse> getMyPendingRequests(String username);
 }

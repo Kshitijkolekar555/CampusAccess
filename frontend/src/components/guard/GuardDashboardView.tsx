@@ -7,6 +7,7 @@ import { studentPassApi } from '../../api/studentPasses';
 import { userApi } from '../../api/users';
 import { gateApi } from '../../api/gates';
 import { studentApi } from '../../api/students';
+import { facultyApi } from '../../api/faculty';
 import { VisitorWebcamModal } from '../visitor/VisitorWebcamModal';
 import {
   Visitor,
@@ -15,7 +16,8 @@ import {
   StudentGatePass,
   HostelOutpass,
   User,
-  Gate
+  Gate,
+  FacultyOutpass,
 } from '../../types';
 import {
   ShieldCheck,
@@ -47,6 +49,8 @@ import {
   Users,
   LogOut,
   Upload,
+  Briefcase,
+  History,
 } from 'lucide-react';
 import { compressImageFile } from '../../utils/imageCompression';
 
@@ -115,8 +119,8 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
   const [liveTime, setLiveTime] = useState(new Date().toLocaleTimeString());
 
   // Gate Operations Primary Option:
-  // 1: FIND_STUDENT_PRN | 2: IDENTIFY_VISITOR_PHOTO | 3: FIND_VISITOR_MOBILE | 4: REGISTER_NEW_VISITOR
-  type GateOperationMode = 'FIND_STUDENT_PRN' | 'IDENTIFY_VISITOR_PHOTO' | 'FIND_VISITOR_MOBILE' | 'REGISTER_NEW_VISITOR';
+  // 1: FIND_STUDENT_PRN | 2: IDENTIFY_VISITOR_PHOTO | 3: FIND_VISITOR_MOBILE | 4: REGISTER_NEW_VISITOR | 5: FACULTY_OUTPASSES
+  type GateOperationMode = 'FIND_STUDENT_PRN' | 'IDENTIFY_VISITOR_PHOTO' | 'FIND_VISITOR_MOBILE' | 'REGISTER_NEW_VISITOR' | 'FACULTY_OUTPASSES';
   const [primaryMode, setPrimaryMode] = useState<GateOperationMode>('FIND_STUDENT_PRN');
 
   // Student Subcategory: 'OUTPASS' (PRN Lookup) vs 'REGULAR' (Gate Pass)
@@ -278,6 +282,67 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       }
     },
     refetchInterval: 3000,
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FACULTY OUT-PASS WORKFLOW STATES & QUERIES
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [facultySearch, setFacultySearch] = useState('');
+  const [facultyTab, setFacultyTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
+  const [confirmReturnModalPass, setConfirmReturnModalPass] = useState<FacultyOutpass | null>(null);
+  const [guardReturnNotes, setGuardReturnNotes] = useState('Verified re-entry by gate security');
+
+  // Real-time polling for active faculty out-passes (outside campus)
+  const {
+    data: activeFacultyOutpasses = [],
+    isLoading: isLoadingFacultyActive,
+    refetch: refetchFacultyActive,
+  } = useQuery<FacultyOutpass[]>({
+    queryKey: ['guard-faculty-active', facultySearch],
+    queryFn: async () => {
+      try {
+        return await facultyApi.getActiveOutpassesForGuards(facultySearch);
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 3000,
+  });
+
+  // Query for faculty out-pass history (returned to campus)
+  const {
+    data: facultyOutpassHistory = [],
+    isLoading: isLoadingFacultyHistory,
+    refetch: refetchFacultyHistory,
+  } = useQuery<FacultyOutpass[]>({
+    queryKey: ['guard-faculty-history', facultySearch],
+    queryFn: async () => {
+      try {
+        return await facultyApi.getOutpassHistoryForGuards(facultySearch);
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: primaryMode === 'FACULTY_OUTPASSES' && facultyTab === 'HISTORY' ? 4000 : false,
+  });
+
+  const confirmReturnMutation = useMutation({
+    mutationFn: async ({ passId, notes }: { passId: number; notes?: string }) => {
+      return facultyApi.confirmFacultyReturn(passId, {
+        guardNotes: notes || 'Verified re-entry by gate security',
+        gateId: currentGateId,
+      });
+    },
+    onSuccess: (updatedPass) => {
+      toast.success(`Faculty re-entry confirmed for ${updatedPass.facultyName} (${updatedPass.facultyEmpNo})`);
+      setConfirmReturnModalPass(null);
+      setGuardReturnNotes('Verified re-entry by gate security');
+      queryClient.invalidateQueries({ queryKey: ['guard-faculty-active'] });
+      queryClient.invalidateQueries({ queryKey: ['guard-faculty-history'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || err.message || 'Failed to confirm faculty re-entry');
+    },
   });
 
   // Approve Token Mutation
@@ -1055,10 +1120,90 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
         </div>
       )}
 
+      {/* 2C. ACTIVE FACULTY OUTPASSES (OUTSIDE CAMPUS) BANNER */}
+      {activeFacultyOutpasses && activeFacultyOutpasses.length > 0 && (
+        <div className="bg-amber-50/90 border border-amber-300 rounded-md p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                <Briefcase className="w-4 h-4 text-amber-600" />
+                Active Faculty Out-Passes — Outside Campus ({activeFacultyOutpasses.length})
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono text-amber-900 bg-amber-100/80 border border-amber-200 px-2 py-0.5 rounded font-semibold">
+                Re-Entry Confirmation Required
+              </span>
+              {primaryMode !== 'FACULTY_OUTPASSES' && (
+                <button
+                  onClick={() => setPrimaryMode('FACULTY_OUTPASSES')}
+                  className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold px-2.5 py-1 rounded transition cursor-pointer"
+                >
+                  Open Faculty Section →
+                </button>
+              )}
+            </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {activeFacultyOutpasses.map((pass) => (
+              <div
+                key={`active-fac-${pass.id}`}
+                className="bg-white border border-amber-200 rounded p-3.5 shadow-xs flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="text-xs font-bold text-slate-900">{pass.facultyName}</h3>
+                        <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
+                          {pass.department || 'Faculty'}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono font-medium text-amber-800 block mt-0.5">
+                        EMP ID: {pass.facultyEmpNo}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
+                      #{pass.passNumber || pass.id}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 text-xs space-y-1 bg-slate-50 p-2.5 rounded border border-slate-100">
+                    <p className="text-slate-700 font-medium truncate">
+                      <span className="text-slate-500 font-normal">Reason:</span> {pass.reason}
+                      {pass.explanation ? ` (${pass.explanation})` : ''}
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Generated: {new Date(pass.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <p className="text-[11px] text-amber-700 font-medium">
+                      Status: Outside Campus / Return Pending
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setConfirmReturnModalPass(pass);
+                      setGuardReturnNotes('Verified re-entry by gate security');
+                    }}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-1.5 rounded transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Confirm Faculty Re-Entry
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {/* 4. GATE OPERATIONS: FOUR PRIMARY OPTIONS */}
+      {/* 4. GATE OPERATIONS: PRIMARY TERMINAL OPTIONS */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-2">
@@ -1083,7 +1228,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
           {/* OPTION 1: Find Student by PRN */}
           <button
             onClick={() => {
@@ -1183,13 +1328,42 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
               <span className="block text-[11px] text-slate-500 truncate">New gate pass entry</span>
             </div>
           </button>
+
+          {/* OPTION 5: Faculty Out-Passes */}
+          <button
+            onClick={() => {
+              setPrimaryMode('FACULTY_OUTPASSES');
+            }}
+            className={`p-3 rounded-md border text-left transition flex items-center gap-3 min-h-[56px] relative ${
+              primaryMode === 'FACULTY_OUTPASSES'
+                ? 'bg-amber-50 border-amber-500 text-amber-950 shadow-xs ring-1 ring-amber-500'
+                : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/80 text-slate-700 hover:text-slate-900'
+            }`}
+          >
+            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${
+              primaryMode === 'FACULTY_OUTPASSES' ? 'bg-amber-600 text-white' : 'bg-white border border-slate-200 text-amber-600'
+            }`}>
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="block text-xs font-bold truncate">5. Faculty Out-Pass</span>
+                {activeFacultyOutpasses.length > 0 && (
+                  <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full animate-pulse">
+                    {activeFacultyOutpasses.length}
+                  </span>
+                )}
+              </div>
+              <span className="block text-[11px] text-slate-500 truncate">Out-passes & re-entry</span>
+            </div>
+          </button>
         </div>
       </div>
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {/* 4. VISITOR (CAMERA & ACTIVE GUEST DIRECTORY) WORKFLOW INTERFACE */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {primaryMode !== 'FIND_STUDENT_PRN' && (
+      {(['IDENTIFY_VISITOR_PHOTO', 'FIND_VISITOR_MOBILE', 'REGISTER_NEW_VISITOR'].includes(primaryMode)) && (
         <div className="space-y-5">
 
 
@@ -1689,6 +1863,264 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                       Done & Ready Next
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {/* 5B. FACULTY OUTPASS WORKFLOW INTERFACE */}
+      {/* ───────────────────────────────────────────────────────────────────────── */}
+      {primaryMode === 'FACULTY_OUTPASSES' && (
+        <div className="space-y-6">
+          {/* FACULTY SUBCATEGORY TOGGLE */}
+          <div className="flex border-b border-slate-200 bg-white rounded-t-md px-3 sm:px-4 pt-3 gap-3 sm:gap-6 overflow-x-auto justify-between items-center">
+            <div className="flex gap-3 sm:gap-6">
+              <button
+                onClick={() => setFacultyTab('ACTIVE')}
+                className={`pb-3 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 border-b-2 transition min-h-[44px] shrink-0 cursor-pointer ${
+                  facultyTab === 'ACTIVE'
+                    ? 'border-amber-600 text-amber-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Briefcase className="w-4 h-4" />
+                <span>Active Out-Passes (Outside Campus)</span>
+                <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1">
+                  {activeFacultyOutpasses.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setFacultyTab('HISTORY')}
+                className={`pb-3 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 border-b-2 transition min-h-[44px] shrink-0 cursor-pointer ${
+                  facultyTab === 'HISTORY'
+                    ? 'border-indigo-600 text-indigo-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <History className="w-4 h-4" />
+                <span>Faculty Out-Pass History</span>
+                <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1">
+                  {facultyOutpassHistory.length}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 pb-2">
+              <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live sync (3s)
+              </span>
+            </div>
+          </div>
+
+          {/* SEARCH AND FILTER BAR */}
+          <div className="bg-white border border-slate-200 rounded-md p-4 shadow-xs">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-600" />
+                  {facultyTab === 'ACTIVE'
+                    ? 'Active Faculty Out-Passes (Outside Campus)'
+                    : 'Returned Faculty Historical Logs'}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {facultyTab === 'ACTIVE'
+                    ? 'Faculty generate passes independently without approval. Guard confirmation is mandatory ONLY upon re-entry.'
+                    : 'Historical log of faculty passes with confirmed re-entry timestamps and verifying guard records.'}
+                </p>
+              </div>
+
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search by name, EMP ID, or pass #"
+                  value={facultySearch}
+                  onChange={(e) => setFacultySearch(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ACTIVE OUTPASSES TAB */}
+          {facultyTab === 'ACTIVE' && (
+            <div>
+              {activeFacultyOutpasses.length === 0 ? (
+                <div className="bg-white border border-slate-200 rounded-lg p-12 text-center shadow-xs">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mx-auto mb-3">
+                    <Briefcase className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-800">No Active Faculty Out-Passes</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    There are currently no faculty members outside campus with an active out-pass.
+                    When a faculty member generates an out-pass from their portal, it will immediately appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeFacultyOutpasses.map((pass) => (
+                    <div
+                      key={`faculty-active-${pass.id}`}
+                      className="bg-white border border-amber-200 hover:border-amber-400 rounded-xl p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2 pb-3 border-b border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-200 text-amber-800 font-bold flex items-center justify-center text-sm">
+                              {pass.facultyName?.charAt(0)?.toUpperCase() || 'F'}
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-slate-900">{pass.facultyName}</h4>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[11px] font-mono text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded font-semibold border border-amber-200">
+                                  EMP# {pass.facultyEmpNo}
+                                </span>
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  {pass.department}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                            #{pass.passNumber || pass.id}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 space-y-2 bg-slate-50/70 p-3 rounded-lg border border-slate-100 text-xs">
+                          <div>
+                            <span className="text-slate-500 text-[11px]">Reason for Leaving:</span>
+                            <p className="font-semibold text-slate-900">{pass.reason}</p>
+                            {pass.explanation && (
+                              <p className="text-slate-600 text-[11px] italic mt-0.5">"{pass.explanation}"</p>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
+                            <div>
+                              <span className="text-slate-500">Pass Generated:</span>
+                              <p className="font-mono text-slate-800 font-medium">
+                                {new Date(pass.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Departure Action:</span>
+                              <p className="text-emerald-700 font-medium">Independent (No Approval)</p>
+                            </div>
+                          </div>
+
+                          <div className="pt-1 border-t border-slate-200/60">
+                            <div className="flex items-center gap-1.5 text-[11px] text-amber-800 font-semibold bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <span>Status: Outside Campus (Return Pending)</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100">
+                        <button
+                          onClick={() => {
+                            setConfirmReturnModalPass(pass);
+                            setGuardReturnNotes('Verified re-entry by gate security');
+                          }}
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 px-3 rounded-lg transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          Confirm Faculty Re-Entry
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* HISTORICAL PASSES TAB */}
+          {facultyTab === 'HISTORY' && (
+            <div className="bg-white border border-slate-200 rounded-lg shadow-xs overflow-hidden">
+              {facultyOutpassHistory.length === 0 ? (
+                <div className="p-12 text-center">
+                  <History className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-xs font-semibold text-slate-700">No Historical Records Found</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Faculty passes with confirmed return will appear here.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-3">Pass ID</th>
+                        <th className="px-4 py-3">Faculty Member</th>
+                        <th className="px-4 py-3">Department</th>
+                        <th className="px-4 py-3">Reason</th>
+                        <th className="px-4 py-3">Generated Time</th>
+                        <th className="px-4 py-3">Actual Return</th>
+                        <th className="px-4 py-3">Confirmed By</th>
+                        <th className="px-4 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {facultyOutpassHistory.map((pass) => (
+                        <tr key={`fac-hist-${pass.id}`} className="hover:bg-slate-50/80 transition">
+                          <td className="px-4 py-3 font-mono font-medium text-slate-600">
+                            #{pass.passNumber || pass.id}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-bold text-slate-900">{pass.facultyName}</div>
+                            <div className="font-mono text-[11px] text-slate-500">EMP# {pass.facultyEmpNo}</div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 font-medium">
+                            {pass.department}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-800">{pass.reason}</div>
+                            {pass.explanation && (
+                              <div className="text-[11px] text-slate-500 truncate max-w-xs">
+                                {pass.explanation}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-slate-600">
+                            {new Date(pass.generatedAt).toLocaleString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="px-4 py-3 font-mono font-semibold text-emerald-700">
+                            {pass.actualReturnTime
+                              ? new Date(pass.actualReturnTime).toLocaleString([], {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {pass.confirmedByGuardName ? (
+                              <span className="font-medium text-slate-800">Guard: {pass.confirmedByGuardName}</span>
+                            ) : (
+                              <span className="text-slate-400">Gate Security</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Returned to Campus
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -2591,6 +3023,115 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CONFIRM FACULTY RE-ENTRY MODAL */}
+      <AnimatePresence>
+        {confirmReturnModalPass && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setConfirmReturnModalPass(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-md w-full bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative space-y-4"
+            >
+              <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900 leading-snug">
+                      Confirm Faculty Re-Entry
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Gate security return verification
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmReturnModalPass(null)}
+                  className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-700 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Faculty Summary Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-slate-900">{confirmReturnModalPass.facultyName}</h4>
+                  <span className="text-xs font-mono font-semibold text-amber-900 bg-amber-100 px-2 py-0.5 rounded">
+                    EMP# {confirmReturnModalPass.facultyEmpNo}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 font-medium">
+                  Dept: {confirmReturnModalPass.department}
+                </p>
+                <div className="pt-2 border-t border-slate-200/60 text-xs flex justify-between">
+                  <span className="text-slate-500">Pass #{confirmReturnModalPass.passNumber || confirmReturnModalPass.id}</span>
+                  <span className="font-semibold text-slate-800">{confirmReturnModalPass.reason}</span>
+                </div>
+                <div className="text-[11px] text-slate-500 flex justify-between">
+                  <span>Pass Generated:</span>
+                  <span className="font-mono">
+                    {new Date(confirmReturnModalPass.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Guard Verification Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={guardReturnNotes}
+                  onChange={(e) => setGuardReturnNotes(e.target.value)}
+                  placeholder="e.g. Identity verified at Gate 1"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
+                />
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-[11px] text-emerald-800 space-y-1">
+                <p className="font-semibold">Guard Confirmation Mandatory for Re-Entry</p>
+                <p className="text-emerald-700">
+                  Confirming this will record your guard credentials, log the actual re-entry timestamp, and transition the status to "Returned to Campus".
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmReturnModalPass(null)}
+                  className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={confirmReturnMutation.isPending}
+                  onClick={() =>
+                    confirmReturnMutation.mutate({
+                      passId: confirmReturnModalPass.id,
+                      notes: guardReturnNotes,
+                    })
+                  }
+                  className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{confirmReturnMutation.isPending ? 'Confirming...' : 'Confirm Faculty Re-Entry'}</span>
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

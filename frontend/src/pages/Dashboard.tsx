@@ -53,6 +53,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { GuardDashboardView } from '../components/guard/GuardDashboardView';
 import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
+import { FacultyDashboard } from './FacultyDashboard';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -67,13 +68,11 @@ export const Dashboard: React.FC = () => {
   const isWarden = role === 'HOSTEL_WARDEN';
   const isAdmin = role === 'ADMIN';
 
-  // Redirect unsupported roles or teacher/warden roles
+  // Redirect unsupported roles or warden role
   useEffect(() => {
-    if (isTeacher) {
-      navigate('/teacher', { replace: true });
-    } else if (isWarden) {
+    if (isWarden) {
       navigate('/outpasses', { replace: true });
-    } else if (!isGuard && !isStudent && !isAdmin) {
+    } else if (!isGuard && !isStudent && !isTeacher && !isAdmin) {
       navigate('/enter');
     }
   }, [isGuard, isStudent, isTeacher, isWarden, isAdmin, navigate]);
@@ -641,6 +640,11 @@ export const Dashboard: React.FC = () => {
     const studentName = user?.fullName || 'Shanaya';
 
     return <StudentDashboardView studentName={studentName} studentPrn={studentPrn} user={user} navigate={navigate} />;
+  }
+
+  // RENDER FACULTY DASHBOARD (Identical design to Student module)
+  if (isTeacher) {
+    return <FacultyDashboard />;
   }
 
   // RENDER GUARD DASHBOARD (Section F2 & F3: Dynamic Real-time Polling)
@@ -1285,7 +1289,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({ studentName
               variant="outline"
               onClick={() => setShowGuardModal(true)}
               leftIcon={<ShieldCheck className="w-4 h-4 text-emerald-300" />}
-            className="border-white/20 text-white/80 hover:bg-white/10"
+              className="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20"
             >
               Show Digital Pass
             </Button>

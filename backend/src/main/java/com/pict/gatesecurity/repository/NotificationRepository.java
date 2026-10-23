@@ -23,6 +23,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     Page<Notification> findByUserId(Long userId, Pageable pageable);
 
+    java.util.List<Notification> findByUserIdOrderByCreatedAtDesc(Long userId);
+
     Page<Notification> findByEventType(NotificationEventType eventType, Pageable pageable);
 
     Page<Notification> findByRecipientContainingIgnoreCase(String recipient, Pageable pageable);

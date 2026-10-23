@@ -23,11 +23,19 @@ import java.time.OffsetDateTime;
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'HOSTEL_WARDEN', 'STUDENT')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SECURITY_OFFICER', 'SECURITY_GUARD', 'GUARD', 'STAFF', 'HOSTEL_WARDEN', 'STUDENT', 'FACULTY')")
 @Tag(name = "Notification Management", description = "View and manage notification history across campus roles")
 public class NotificationController {
 
     private final NotificationService notificationService;
+
+    @GetMapping("/my")
+    @Operation(summary = "Get My Notifications", description = "Fetches recent in-app notifications for authenticated user")
+    public ResponseEntity<ApiResponse<java.util.List<NotificationResponse>>> getMyNotifications(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails) {
+        java.util.List<NotificationResponse> list = notificationService.getMyNotifications(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(list));
+    }
 
     @GetMapping
     @Operation(summary = "List Notifications", description = "Paginated list with filtering by recipient, event type, status, and date range")

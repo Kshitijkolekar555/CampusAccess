@@ -6,6 +6,7 @@ import com.pict.gatesecurity.entity.User;
 import com.pict.gatesecurity.entity.enums.*;
 import com.pict.gatesecurity.mapper.NotificationMapper;
 import com.pict.gatesecurity.repository.NotificationRepository;
+import com.pict.gatesecurity.repository.UserRepository;
 import com.pict.gatesecurity.service.impl.NotificationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ class NotificationServiceImplTest {
     @Mock private NotificationMapper notificationMapper;
     @Mock private EmailService emailService;
     @Mock private TemplateEngine templateEngine;
+    @Mock private UserRepository userRepository;
 
     @Captor private ArgumentCaptor<Notification> notificationCaptor;
 
@@ -44,7 +46,7 @@ class NotificationServiceImplTest {
     @BeforeEach
     void setUp() {
         notificationService = new NotificationServiceImpl(
-                notificationRepository, notificationMapper, emailService, templateEngine);
+                notificationRepository, notificationMapper, emailService, templateEngine, userRepository);
 
         testUser = User.builder()
                 .id(1L)

@@ -52,6 +52,7 @@ class AuthServiceImplTest {
     @Mock private com.pict.gatesecurity.repository.StudentGatePassRepository studentGatePassRepository;
     @Mock private com.pict.gatesecurity.repository.HostelOutpassRepository hostelOutpassRepository;
     @Mock private com.pict.gatesecurity.repository.StudentProfileRepository studentProfileRepository;
+    @Mock private com.pict.gatesecurity.repository.AuthorizedStudentRepository authorizedStudentRepository;
 
     private AuthServiceImpl authService;
 
@@ -64,7 +65,8 @@ class AuthServiceImplTest {
                 authenticationManager, userRepository, refreshTokenRepository,
                 passwordResetTokenRepository, jwtUtil, tokenBlacklist,
                 userMapper, passwordEncoder, auditLogService, notificationService,
-                studentGatePassRepository, hostelOutpassRepository, studentProfileRepository
+                studentGatePassRepository, hostelOutpassRepository, studentProfileRepository,
+                authorizedStudentRepository
         );
         ReflectionTestUtils.setField(authService, "refreshTokenExpiryMs", 604800000L);
         ReflectionTestUtils.setField(authService, "passwordResetTokenExpiryMs", 1800000L);
@@ -93,7 +95,7 @@ class AuthServiceImplTest {
     void login_shouldSucceed() {
         LoginRequest request = LoginRequest.builder().username("testuser").password("password123").build();
         when(authenticationManager.authenticate(any())).thenReturn(null);
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(userRepository.findFirstByUsernameIgnoreCase("testuser")).thenReturn(Optional.of(testUser));
         when(jwtUtil.generateAccessToken("testuser", "STUDENT")).thenReturn("access_token");
         when(jwtUtil.generateRefreshToken("testuser")).thenReturn("refresh_token");
         when(userMapper.toResponse(testUser)).thenReturn(testUserResponse);
@@ -121,7 +123,7 @@ class AuthServiceImplTest {
         testUser.setActive(false);
         LoginRequest request = LoginRequest.builder().username("testuser").password("password123").build();
         when(authenticationManager.authenticate(any())).thenReturn(null);
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(userRepository.findFirstByUsernameIgnoreCase("testuser")).thenReturn(Optional.of(testUser));
 
         assertThrows(com.pict.gatesecurity.exception.UnauthorizedException.class,
                 () -> authService.login(request));
@@ -206,9 +208,13 @@ class AuthServiceImplTest {
     void register_shouldSucceed() {
         UserCreateRequest request = new UserCreateRequest("newuser", "password123", UserRole.STUDENT, "New User", null, "new@example.com");
 
-        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(authorizedStudentRepository.findAuthorizedByIdentifier("NEWUSER"))
+                .thenReturn(Optional.of(com.pict.gatesecurity.entity.AuthorizedStudent.builder()
+                        .studentId("NEWUSER")
+                        .fullName("New User")
+                        .build()));
         when(passwordEncoder.encode("password123")).thenReturn("encoded");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
             User u = invocation.getArgument(0);
             return User.builder()
                     .id(2L)
@@ -228,7 +234,12 @@ class AuthServiceImplTest {
     @Test
     void register_shouldFailWhenUsernameTaken() {
         UserCreateRequest request = new UserCreateRequest("existing", "password123", UserRole.STUDENT, "Existing User", null, null);
-        when(userRepository.existsByUsername("existing")).thenReturn(true);
+        when(authorizedStudentRepository.findAuthorizedByIdentifier("EXISTING"))
+                .thenReturn(Optional.of(com.pict.gatesecurity.entity.AuthorizedStudent.builder()
+                        .studentId("EXISTING")
+                        .fullName("Existing User")
+                        .build()));
+        when(userRepository.findFirstByUsernameIgnoreCase("existing")).thenReturn(Optional.of(testUser));
 
         assertThrows(DuplicateResourceException.class, () -> authService.register(request));
     }

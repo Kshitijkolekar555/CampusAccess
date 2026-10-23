@@ -30,9 +30,7 @@ import java.util.zip.ZipFile;
 @Slf4j
 public class StudentExcelDataLoader implements CommandLineRunner {
 
-    private final UserRepository userRepository;
-    private final StudentProfileRepository studentProfileRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final com.pict.gatesecurity.repository.AuthorizedStudentRepository authorizedStudentRepository;
 
     @Override
     @Transactional
@@ -51,8 +49,8 @@ public class StudentExcelDataLoader implements CommandLineRunner {
                 return;
             }
 
-            int importedCount = 0;
-            int updatedCount = 0;
+            int addedCount = 0;
+            int existingCount = 0;
 
             for (StudentRow row : students) {
                 if (row.enrollment == null || row.enrollment.isBlank()) {
@@ -68,64 +66,29 @@ public class StudentExcelDataLoader implements CommandLineRunner {
                 String branch = row.branch != null && !row.branch.isBlank() ? row.branch.trim() : "E&TC";
                 String division = row.className != null && !row.className.isBlank() ? row.className.trim() : null;
 
-                Optional<User> existingUserOpt = userRepository.findByUsername(username);
-                User user;
-                if (existingUserOpt.isPresent()) {
-                    user = existingUserOpt.get();
-                    user.setFullName(name);
-                    user.setEmail(email);
-                    if (phone != null) user.setPhone(phone);
-                    user.setActive(true);
-                    // Do not override custom passwords already changed by the student
-                    if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
-                        user.setPasswordHash(passwordEncoder.encode(username));
-                    }
-                    user = userRepository.save(user);
-                    updatedCount++;
-                } else {
-                    // Default password matches username/enrollment (e.g. F24ET046)
-                    String encodedPassword = passwordEncoder.encode(username);
-                    user = User.builder()
-                            .username(username)
-                            .passwordHash(encodedPassword)
-                            .role(UserRole.STUDENT)
-                            .fullName(name)
-                            .email(email)
-                            .phone(phone)
-                            .active(true)
-                            .isLateComerPermitted(true)
-                            .build();
-                    user = userRepository.save(user);
-                    importedCount++;
-                }
-
-                // Ensure StudentProfile exists and is up to date
-                Optional<StudentProfile> existingProfileOpt = studentProfileRepository.findByUserId(user.getId());
-                StudentProfile profile;
-                if (existingProfileOpt.isPresent()) {
-                    profile = existingProfileOpt.get();
-                    profile.setPrn(prn);
-                    profile.setRollNumber(rollNo);
-                    profile.setDepartment(branch);
-                    profile.setAcademicYear("TE");
-                    profile.setDivision(division);
-                    profile.setActive(true);
-                } else {
-                    profile = StudentProfile.builder()
-                            .user(user)
+                if (!authorizedStudentRepository.existsByStudentIdIgnoreCase(username)) {
+                    com.pict.gatesecurity.entity.AuthorizedStudent as = com.pict.gatesecurity.entity.AuthorizedStudent.builder()
+                            .studentId(username)
+                            .enrollmentNo(username)
                             .prn(prn)
                             .rollNumber(rollNo)
+                            .fullName(name)
                             .department(branch)
                             .academicYear("TE")
+                            .className(division)
                             .division(division)
-                            .active(true)
+                            .email(email)
+                            .mobile(phone)
                             .build();
+                    authorizedStudentRepository.save(as);
+                    addedCount++;
+                } else {
+                    existingCount++;
                 }
-                studentProfileRepository.save(profile);
             }
 
-            log.info("Student data loader finished: {} imported, {} updated out of {} total records.",
-                    importedCount, updatedCount, students.size());
+            log.info("Student data loader finished: {} authorized student records newly seeded, {} already existed.",
+                    addedCount, existingCount);
 
         } catch (Exception ex) {
             log.error("Failed to load student Excel data: {}", ex.getMessage(), ex);
