@@ -98,21 +98,22 @@ public class FacultyOutpassServiceImpl implements FacultyOutpassService {
                         "Registration rejected: Faculty ID '" + cleanEmpNo + "' is not present in the authorized faculty dataset."));
 
         // Name verification against authorized record
-        if (request.getFullName() != null && !request.getFullName().isBlank()) {
-            String cleanReqName = request.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
-            String cleanAuthName = authorized.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
-            // Allow matching if exact match or all tokens of one name exist in the other
-            Set<String> reqTokens = new HashSet<>(Arrays.asList(cleanReqName.split(" ")));
-            Set<String> authTokens = new HashSet<>(Arrays.asList(cleanAuthName.split(" ")));
-            boolean namesMatch = cleanReqName.equals(cleanAuthName) ||
-                    cleanReqName.contains(cleanAuthName) ||
-                    cleanAuthName.contains(cleanReqName) ||
-                    reqTokens.containsAll(authTokens) ||
-                    authTokens.containsAll(reqTokens);
+        if (request.getFullName() == null || request.getFullName().isBlank()) {
+            throw new BadRequestException("Full Name is required");
+        }
+        String cleanReqName = request.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
+        String cleanAuthName = authorized.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
+        // Allow matching if exact match or all tokens of one name exist in the other
+        Set<String> reqTokens = new HashSet<>(Arrays.asList(cleanReqName.split(" ")));
+        Set<String> authTokens = new HashSet<>(Arrays.asList(cleanAuthName.split(" ")));
+        boolean namesMatch = cleanReqName.equals(cleanAuthName) ||
+                cleanReqName.contains(cleanAuthName) ||
+                cleanAuthName.contains(cleanReqName) ||
+                reqTokens.containsAll(authTokens) ||
+                authTokens.containsAll(reqTokens);
 
-            if (!namesMatch) {
-                throw new BadRequestException("The entered full name does not match the authorized institutional record for Faculty ID " + cleanEmpNo);
-            }
+        if (!namesMatch) {
+            throw new BadRequestException("The entered full name does not match the authorized institutional record for Faculty ID " + cleanEmpNo);
         }
 
         // Prevent duplicate registration

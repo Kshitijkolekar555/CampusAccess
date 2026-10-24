@@ -40,6 +40,7 @@ class DashboardServiceImplTest {
     @Mock private GateRepository gateRepository;
     @Mock private StudentGatePassRepository studentGatePassRepository;
     @Mock private HostelOutpassRepository hostelOutpassRepository;
+    @Mock private FacultyOutpassRepository facultyOutpassRepository;
     @Mock private NotificationRepository notificationRepository;
     @Mock private AuditLogRepository auditLogRepository;
     @Mock private CanteenEntryRepository canteenEntryRepository;
@@ -59,6 +60,7 @@ class DashboardServiceImplTest {
                 visitorRepository, vehicleLogRepository, vendorVisitRepository,
                 guardRepository, shiftRepository, shiftLogRepository,
                 gateRepository, studentGatePassRepository, hostelOutpassRepository,
+                facultyOutpassRepository,
                 notificationRepository, auditLogRepository, canteenEntryRepository,
                 canteenStaffRepository, userRepository
         );
@@ -100,7 +102,7 @@ class DashboardServiceImplTest {
     @Test
     void getAdminDashboard_shouldReturnAllCounts() {
         when(visitorRepository.countByTimeInBetween(any(), any())).thenReturn(25L);
-        when(visitorRepository.countByTimeOutIsNull()).thenReturn(10L);
+        when(visitorRepository.countActiveInsideCampus()).thenReturn(10L);
         when(vehicleLogRepository.countByEntryTimeBetween(any(), any())).thenReturn(15L);
         when(vehicleLogRepository.countByExitTimeIsNull()).thenReturn(5L);
         when(studentGatePassRepository.countByCreatedAtBetween(any(), any())).thenReturn(8L);
@@ -413,5 +415,27 @@ class DashboardServiceImplTest {
 
         assertNotNull(result);
         assertEquals(2, result.size());
+    }
+
+    @Test
+    void getSystemStatistics_shouldReturnFacultyOutpassesCount() {
+        when(visitorRepository.countTotalVisitorsBetween(any(), any())).thenReturn(10L);
+        when(visitorRepository.countApprovedBetween(any(), any(), any())).thenReturn(8L);
+        when(visitorRepository.countRejectedBetween(any(), any())).thenReturn(2L);
+        when(visitorRepository.countCompletedBetween(any(), any())).thenReturn(5L);
+        when(vehicleLogRepository.countByEntryTimeBetween(any(), any())).thenReturn(4L);
+        when(studentGatePassRepository.countByCreatedAtBetween(any(), any())).thenReturn(7L);
+        when(hostelOutpassRepository.countByCreatedAtBetween(any(), any())).thenReturn(3L);
+        when(facultyOutpassRepository.countByCreatedAtBetween(any(), any())).thenReturn(6L);
+        when(vendorVisitRepository.countByEntryTimeBetween(any(), any())).thenReturn(1L);
+        when(visitorRepository.countUniqueActiveInsideCampus()).thenReturn(2L);
+        when(visitorRepository.countByStatus(PassStatus.PENDING)).thenReturn(0L);
+
+        SystemStatisticsResponse stats = dashboardService.getSystemStatistics("TODAY", null, null, null, null, null);
+
+        assertNotNull(stats);
+        assertEquals(6L, stats.getTotalFacultyOutpasses());
+        assertEquals(7L, stats.getTotalStudentPasses());
+        assertEquals(3L, stats.getTotalHostelOutpasses());
     }
 }

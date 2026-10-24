@@ -107,20 +107,21 @@ public class StudentAuthServiceImpl implements StudentAuthService {
                         "Registration rejected: Student ID '" + cleanId + "' is not present in the authorized student dataset."));
 
         // Prevent registration under another person's student ID
-        if (request.getFullName() != null && !request.getFullName().isBlank()) {
-            String cleanReqName = request.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
-            String cleanAuthName = authorized.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
-            Set<String> reqTokens = new HashSet<>(Arrays.asList(cleanReqName.split(" ")));
-            Set<String> authTokens = new HashSet<>(Arrays.asList(cleanAuthName.split(" ")));
-            boolean namesMatch = cleanReqName.equals(cleanAuthName) ||
-                    cleanReqName.contains(cleanAuthName) ||
-                    cleanAuthName.contains(cleanReqName) ||
-                    reqTokens.containsAll(authTokens) ||
-                    authTokens.containsAll(reqTokens);
+        if (request.getFullName() == null || request.getFullName().isBlank()) {
+            throw new BadRequestException("Full Name is required");
+        }
+        String cleanReqName = request.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
+        String cleanAuthName = authorized.getFullName().trim().toLowerCase().replaceAll("\\s+", " ");
+        Set<String> reqTokens = new HashSet<>(Arrays.asList(cleanReqName.split(" ")));
+        Set<String> authTokens = new HashSet<>(Arrays.asList(cleanAuthName.split(" ")));
+        boolean namesMatch = cleanReqName.equals(cleanAuthName) ||
+                cleanReqName.contains(cleanAuthName) ||
+                cleanAuthName.contains(cleanReqName) ||
+                reqTokens.containsAll(authTokens) ||
+                authTokens.containsAll(reqTokens);
 
-            if (!namesMatch) {
-                throw new BadRequestException("The entered full name does not match the authorized institutional record for Student ID " + authorized.getStudentId());
-            }
+        if (!namesMatch) {
+            throw new BadRequestException("The entered full name does not match the authorized institutional record for Student ID " + authorized.getStudentId());
         }
 
         // Prevent duplicate registration

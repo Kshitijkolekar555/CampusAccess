@@ -33,6 +33,7 @@ public class GuardSelfDashboardResponse {
     private long vehiclesExitedToday;
     private long materialsProcessedToday;
     private long studentPassesProcessedToday;
+    private long facultyOutpassesProcessedToday;
     private long activeVisitorsInsideCampus;
 
     // Daily statistics below guard name

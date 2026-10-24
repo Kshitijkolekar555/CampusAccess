@@ -5,11 +5,10 @@ import { authApi } from '../api/auth';
 import { facultyApi } from '../api/faculty';
 import {
   Eye, EyeOff, Lock, Briefcase, Mail, Phone,
-  ArrowRight, ArrowLeft, Shield, CheckCircle2, User as UserIcon, Loader2
+  ArrowRight, ArrowLeft, Shield, User as UserIcon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { FacultyVerifyResponse } from '../types';
 import {
   validatePhone, validateEmail, validatePasswordStrength,
   normalizePhone, normalizeEmail, normalizeName, validateName
@@ -105,13 +104,11 @@ export const FacultyPortal: React.FC = () => {
   const [forgotId, setForgotId] = useState('');
 
   // Register fields (full upfront form matching StudentPortal)
-  const [regEmpNo, setRegEmpNo] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verifiedFaculty, setVerifiedFaculty] = useState<FacultyVerifyResponse | null>(null);
+  const [regEmpNo, setRegEmpNo]       = useState('');
   const [regFullName, setRegFullName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPhone, setRegPhone] = useState('');
-  const [regPwd, setRegPwd] = useState('');
+  const [regEmail, setRegEmail]       = useState('');
+  const [regPhone, setRegPhone]       = useState('');
+  const [regPwd, setRegPwd]           = useState('');
 
   const { setAuth, isAuthenticated, user } = useAuthStore();
 
@@ -152,51 +149,24 @@ export const FacultyPortal: React.FC = () => {
     }
   };
 
-  /* ── verify employee ID against authorized roster ──────────────────────── */
-  const handleVerifyEmpNo = async (): Promise<FacultyVerifyResponse | null> => {
-    const id = regEmpNo.trim();
-    if (!id) {
-      toast.error('Please enter your Employee ID to verify');
-      return null;
-    }
-    setIsVerifying(true);
-    try {
-      const res = await facultyApi.verifyEmpNo(id);
-      if (res && res.eligible) {
-        setVerifiedFaculty(res);
-        setRegFullName(res.fullName);
-        const autoEmail = `${res.fullName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@pict.edu`;
-        if (!regEmail) setRegEmail(autoEmail);
-        toast.success(`Verified: ${res.fullName} (${res.department} • ${res.staffType || 'Teaching'})`);
-        return res;
-      } else {
-        setVerifiedFaculty(null);
-        toast.error(res?.message || 'Employee ID not found in the authorized PICT faculty roster.');
-        return null;
-      }
-    } catch (err: any) {
-      setVerifiedFaculty(null);
-      toast.error(err.response?.data?.message || 'Employee ID verification failed. Please check the ID.');
-      return null;
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
   /* ── register ─────────────────────────────────────────────────────────── */
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let vf = verifiedFaculty;
-    if (!vf) {
-      vf = await handleVerifyEmpNo();
-      if (!vf) return;
-    }
-
-    const cleanName = regFullName.trim() || vf.fullName;
-    const cleanEmail = regEmail ? normalizeEmail(regEmail) : `${vf.empNo}@pict.edu`;
+    const cleanEmpNo = regEmpNo.trim();
+    const cleanName  = normalizeName(regFullName);
+    const cleanEmail = regEmail ? normalizeEmail(regEmail) : `${cleanEmpNo}@pict.edu`;
     const cleanPhone = regPhone ? normalizePhone(regPhone) : '';
 
+    if (!cleanEmpNo) {
+      toast.error('Employee ID / Faculty ID is required');
+      return;
+    }
+    const nameErr = validateName(cleanName, 'Full Name');
+    if (nameErr) {
+      toast.error(nameErr);
+      return;
+    }
     if (!cleanEmail) {
       toast.error('College email is required');
       return;
@@ -206,6 +176,11 @@ export const FacultyPortal: React.FC = () => {
       toast.error(ee);
       return;
     }
+    const passErr = validatePasswordStrength(regPwd);
+    if (passErr) {
+      toast.error(passErr);
+      return;
+    }
     if (cleanPhone) {
       const pe = validatePhone(cleanPhone);
       if (pe) {
@@ -213,16 +188,11 @@ export const FacultyPortal: React.FC = () => {
         return;
       }
     }
-    const passErr = validatePasswordStrength(regPwd);
-    if (passErr) {
-      toast.error(passErr);
-      return;
-    }
 
     setLoading(true);
     try {
       const data = await facultyApi.register({
-        empNo: vf.empNo,
+        empNo: cleanEmpNo,
         fullName: cleanName,
         email: cleanEmail,
         phone: cleanPhone || undefined,
@@ -234,7 +204,7 @@ export const FacultyPortal: React.FC = () => {
         setAuth(data.user, data.accessToken, data.refreshToken);
       } else {
         const loginData = await authApi.login({
-          username: vf.empNo,
+          username: cleanEmpNo,
           password: regPwd,
           expectedRole: 'FACULTY',
         });
@@ -334,26 +304,6 @@ export const FacultyPortal: React.FC = () => {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 2 }}>
           <img src="/logo.png" alt="CampusAccess" style={{ height: 38, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-          <button
-            type="button"
-            onClick={() => navigate('/enter')}
-            style={{
-              marginLeft: 'auto',
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(255,255,255,0.22)',
-              borderRadius: 4,
-              padding: '5px 12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              color: '#f1f5f9',
-              fontSize: 12.5,
-              fontWeight: 500,
-            }}
-          >
-            <ArrowLeft size={14} /> Back
-          </button>
         </div>
 
         <div style={{ position: 'relative', zIndex: 2, margin: '40px 0' }}>
@@ -520,7 +470,7 @@ export const FacultyPortal: React.FC = () => {
               ? 'Enter your Employee ID or email to reset credentials.'
               : mode === 'LOGIN'
               ? 'Enter your Employee ID (e.g. 510 or 376) and password to sign in.'
-              : 'Fill in your faculty details to register.'}
+              : 'Enter your faculty details to create your account.'}
           </p>
 
           {/* ── FORGOT PASSWORD ─────────────────────────────────────────────── */}
@@ -621,60 +571,20 @@ export const FacultyPortal: React.FC = () => {
           {!isForgot && mode === 'SIGNUP' && (
             <form onSubmit={handleRegister}>
               <UInput
+                label="Employee ID / Faculty Username"
+                value={regEmpNo}
+                onChange={setRegEmpNo}
+                placeholder="e.g. 510 or 376"
+                icon={<Briefcase size={15} />}
+                required
+              />
+              <UInput
                 label="Full Name"
                 value={regFullName}
                 onChange={setRegFullName}
                 placeholder="e.g. Rachna Karnavat"
                 icon={<UserIcon size={15} />}
                 required
-              />
-              <UInput
-                label="Employee ID / Faculty Username"
-                value={regEmpNo}
-                onChange={(val) => {
-                  setRegEmpNo(val);
-                  if (verifiedFaculty && val !== verifiedFaculty.empNo) {
-                    setVerifiedFaculty(null);
-                  }
-                }}
-                onBlur={() => {
-                  if (regEmpNo.trim().length >= 2 && !verifiedFaculty) {
-                    handleVerifyEmpNo();
-                  }
-                }}
-                placeholder="e.g. 510 or 376"
-                icon={<Briefcase size={15} />}
-                required
-                trailing={
-                  <button
-                    type="button"
-                    onClick={handleVerifyEmpNo}
-                    disabled={isVerifying || !regEmpNo.trim()}
-                    style={{
-                      background: verifiedFaculty ? '#059669' : C.ink,
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 3,
-                      padding: '4px 10px',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
-                    {isVerifying ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : verifiedFaculty ? (
-                      <>
-                        <CheckCircle2 size={12} /> Verified
-                      </>
-                    ) : (
-                      'Verify ID'
-                    )}
-                  </button>
-                }
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }} className="reg-grid">
                 <UInput
@@ -702,26 +612,6 @@ export const FacultyPortal: React.FC = () => {
                 required
               />
 
-              {verifiedFaculty && (
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    background: 'rgba(4,120,87,0.08)',
-                    border: '1px solid rgba(4,120,87,0.25)',
-                    borderRadius: 3,
-                    marginBottom: 16,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  <CheckCircle2 size={14} style={{ color: '#047857', flexShrink: 0 }} />
-                  <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 11.5, color: '#065f46', margin: 0 }}>
-                    <strong>{verifiedFaculty.fullName}</strong> — {verifiedFaculty.department} • {verifiedFaculty.staffType || 'Teaching Staff'} verified in PICT roster.
-                  </p>
-                </div>
-              )}
-
               <div
                 style={{
                   padding: '10px 12px',
@@ -732,11 +622,11 @@ export const FacultyPortal: React.FC = () => {
                 }}
               >
                 <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 11.5, color: C.mute, margin: 0, lineHeight: 1.5 }}>
-                  📷 No camera required. Faculty registration is verified against the official college dataset.
+                  📷 No camera required. Faculty registration is credential-only.
                 </p>
               </div>
 
-              <button type="submit" className="submit-btn" disabled={loading || isVerifying}>
+              <button type="submit" className="submit-btn" disabled={loading}>
                 {loading ? 'Creating account…' : 'Create Faculty Account'}
                 {!loading && <ArrowRight size={14} className="arrow" />}
               </button>

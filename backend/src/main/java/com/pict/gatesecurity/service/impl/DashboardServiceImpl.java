@@ -42,6 +42,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final GateRepository gateRepository;
     private final StudentGatePassRepository studentGatePassRepository;
     private final HostelOutpassRepository hostelOutpassRepository;
+    private final FacultyOutpassRepository facultyOutpassRepository;
     private final NotificationRepository notificationRepository;
     private final AuditLogRepository auditLogRepository;
     private final CanteenEntryRepository canteenEntryRepository;
@@ -155,6 +156,8 @@ public class DashboardServiceImpl implements DashboardService {
             activeVisitorsInsideCampus = visitorRepository.countActiveInsideCampus();
         }
 
+        long facultyOutpassesProcessedToday = facultyOutpassRepository != null ? facultyOutpassRepository.countByCreatedAtBetween(dayStart, dayEnd) : 0L;
+
         long shiftDurationMinutes = 0;
         OffsetDateTime shiftStart = null;
         OffsetDateTime shiftEnd = null;
@@ -222,6 +225,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .vehiclesExitedToday(vehiclesExitedToday)
                 .materialsProcessedToday(materialsProcessedToday)
                 .studentPassesProcessedToday(studentPassesProcessedToday)
+                .facultyOutpassesProcessedToday(facultyOutpassesProcessedToday)
                 .activeVisitorsInsideCampus(activeVisitorsInsideCampus)
                 .todayTotalVisitors(todayTotalVisitors)
                 .todayApprovedVisitors(todayApprovedVisitors)
@@ -310,6 +314,7 @@ public class DashboardServiceImpl implements DashboardService {
         long totalVehicles;
         long totalStudentPasses;
         long totalHostelOutpasses;
+        long totalFacultyOutpasses;
         long totalVendorVisits;
 
         if (start != null && end != null) {
@@ -322,6 +327,7 @@ public class DashboardServiceImpl implements DashboardService {
             totalVehicles = vehicleLogRepository.countByEntryTimeBetween(start, end);
             totalStudentPasses = studentGatePassRepository.countByCreatedAtBetween(start, end);
             totalHostelOutpasses = hostelOutpassRepository.countByCreatedAtBetween(start, end);
+            totalFacultyOutpasses = facultyOutpassRepository != null ? facultyOutpassRepository.countByCreatedAtBetween(start, end) : 0L;
             totalVendorVisits = vendorVisitRepository.countByEntryTimeBetween(start, end);
         } else {
             totalVisitors = visitorRepository.count();
@@ -333,6 +339,7 @@ public class DashboardServiceImpl implements DashboardService {
             totalVehicles = vehicleLogRepository.count();
             totalStudentPasses = studentGatePassRepository.count();
             totalHostelOutpasses = hostelOutpassRepository.count();
+            totalFacultyOutpasses = facultyOutpassRepository != null ? facultyOutpassRepository.count() : 0L;
             totalVendorVisits = vendorVisitRepository.count();
         }
 
@@ -373,6 +380,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .totalVehicles(totalVehicles)
                 .totalStudentPasses(totalStudentPasses)
                 .totalHostelOutpasses(totalHostelOutpasses)
+                .totalFacultyOutpasses(totalFacultyOutpasses)
                 .totalVendorVisits(totalVendorVisits)
                 .pendingTokens(pendingTokens)
                 .generatedAt(OffsetDateTime.now())

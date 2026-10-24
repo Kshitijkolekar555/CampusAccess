@@ -26,6 +26,7 @@ import {
   LogOut,
   CheckCircle,
   Package,
+  Briefcase,
   Play,
   History as HistoryIcon,
   MapPin,
@@ -48,17 +49,24 @@ import {
 } from 'lucide-react';
 import { hostelOutpassApi } from '../api/hostelOutpasses';
 import { studentPassApi } from '../api/studentPasses';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import { toast } from 'sonner';
 import { GuardDashboardView } from '../components/guard/GuardDashboardView';
 import { VisitorWebcamModal } from '../components/visitor/VisitorWebcamModal';
 import { FacultyDashboard } from './FacultyDashboard';
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  defaultMode?: 'FIND_STUDENT_PRN' | 'IDENTIFY_VISITOR_PHOTO' | 'FIND_VISITOR_MOBILE' | 'REGISTER_NEW_VISITOR' | 'FACULTY_OUTPASSES';
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ defaultMode }) => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
+
+  const isFacultyOutpassesRoute = location.pathname === '/faculty-outpasses' || defaultMode === 'FACULTY_OUTPASSES';
 
   // Role detection
   const role = user?.role || '';
@@ -649,13 +657,15 @@ export const Dashboard: React.FC = () => {
 
   // RENDER GUARD DASHBOARD (Section F2 & F3: Dynamic Real-time Polling)
   if (isGuard) {
-    if (isSimplifiedGuardView) {
+    if (isSimplifiedGuardView || isFacultyOutpassesRoute) {
       return (
         <GuardDashboardView
           user={user}
           guardSummary={guardData || null}
           activeVisitors={activeVisitorsList || []}
           onToggleDetailedView={() => setIsSimplifiedGuardView(false)}
+          defaultMode={isFacultyOutpassesRoute ? 'FACULTY_OUTPASSES' : defaultMode}
+          isDedicatedFacultyRoute={isFacultyOutpassesRoute}
         />
       );
     }
@@ -674,6 +684,7 @@ export const Dashboard: React.FC = () => {
       vehiclesExitedToday: 0,
       materialsProcessedToday: 0,
       studentPassesProcessedToday: 0,
+      facultyOutpassesProcessedToday: 0,
       activeVisitorsInsideCampus: 0,
       recentLogs: [],
     };
@@ -968,7 +979,7 @@ export const Dashboard: React.FC = () => {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {/* Vehicles Logged */}
             <StatsCard
               title="Vehicles Logged"
@@ -994,6 +1005,15 @@ export const Dashboard: React.FC = () => {
               icon={<GraduationCap className="w-6 h-6" />}
               colorTheme="amber"
               description={isLifetime ? "Total hostel outpasses" : "Processed in period"}
+            />
+
+            {/* Faculty Outpasses */}
+            <StatsCard
+              title="Faculty Outpasses"
+              value={isStatsLoading ? '...' : (systemStats?.totalFacultyOutpasses ?? (summary as any).facultyOutpassesProcessedToday ?? 0)}
+              icon={<Briefcase className="w-6 h-6" />}
+              colorTheme="purple"
+              description={isLifetime ? "Total faculty outpasses" : "Issued in period"}
             />
 
             {/* Vendor Visits */}

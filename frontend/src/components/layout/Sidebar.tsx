@@ -5,7 +5,7 @@ import { UserRole } from '../../types';
 import {
   LayoutDashboard, Users, Car, Truck, GraduationCap, Home,
   ShieldCheck, Clock, UserCheck, DoorClosed, Bell, User as UserIcon,
-  LogOut, X, Ticket
+  LogOut, X, Ticket, Briefcase
 } from 'lucide-react';
 
 interface MenuItem {
@@ -23,6 +23,7 @@ const menuItems: MenuItem[] = [
   { title: 'Visitors',         path: '/visitors',        icon: <Users className="w-3.5 h-3.5" />,          roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
   { title: 'Student Passes',   path: '/student-passes',  icon: <GraduationCap className="w-3.5 h-3.5" />,  roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT','HOSTEL_WARDEN','ADMIN'], category: 'gate' },
   { title: 'Campus Outpasses', path: '/outpasses',       icon: <Home className="w-3.5 h-3.5" />,           roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','STUDENT','HOSTEL_WARDEN','ADMIN'], category: 'gate' },
+  { title: 'Faculty Outpasses', path: '/faculty-outpasses', icon: <Briefcase className="w-3.5 h-3.5" />,   roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD','ADMIN'], category: 'gate' },
   { title: 'Vehicles',         path: '/vehicles',        icon: <Car className="w-3.5 h-3.5" />,            roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
   { title: 'Vendors',          path: '/vendors',         icon: <Truck className="w-3.5 h-3.5" />,          roles: ['SECURITY_OFFICER','SECURITY_GUARD','GUARD'], category: 'gate' },
   { title: 'Profile',          path: '/profile',         icon: <UserIcon className="w-3.5 h-3.5" />,       category: 'admin' },

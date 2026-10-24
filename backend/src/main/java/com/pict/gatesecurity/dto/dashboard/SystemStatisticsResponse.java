@@ -30,6 +30,7 @@ public class SystemStatisticsResponse {
     private long totalVehicles;
     private long totalStudentPasses;
     private long totalHostelOutpasses;
+    private long totalFacultyOutpasses;
     private long totalVendorVisits;
     private long pendingTokens;
 

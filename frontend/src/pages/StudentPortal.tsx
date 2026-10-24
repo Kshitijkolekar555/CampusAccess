@@ -5,11 +5,10 @@ import { authApi } from '../api/auth';
 import { studentApi } from '../api/student';
 import {
   Eye, EyeOff, Lock, GraduationCap, Mail, Phone,
-  ArrowRight, ArrowLeft, Shield, CheckCircle2, Loader2,
+  ArrowRight, ArrowLeft, Shield,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { StudentVerifyResponse } from '../types';
 import {
   validatePhone, validateEmail, validatePasswordStrength,
   validateName, normalizePhone, normalizeEmail, normalizeName,
@@ -110,8 +109,6 @@ export const StudentPortal: React.FC = () => {
   const [regEmail, setRegEmail]   = useState('');
   const [regPhone, setRegPhone]   = useState('');
   const [regPwd, setRegPwd]       = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verifiedStudent, setVerifiedStudent] = useState<StudentVerifyResponse | null>(null);
 
   const { setAuth, isAuthenticated, user } = useAuthStore();
 
@@ -148,70 +145,50 @@ export const StudentPortal: React.FC = () => {
     }
   };
 
-  /* ── verify student ID against authorized dataset ──────────────────────── */
-  const handleVerifyStudentId = async (): Promise<StudentVerifyResponse | null> => {
-    const id = regUser.trim();
-    if (!id) {
-      toast.error('Please enter your Student ID or PRN to verify');
-      return null;
-    }
-    setIsVerifying(true);
-    try {
-      const res = await studentApi.verifyStudentId(id);
-      if (res && res.eligible) {
-        setVerifiedStudent(res);
-        setRegName(res.fullName);
-        if (res.email && !regEmail) {
-          setRegEmail(res.email);
-        } else if (!regEmail) {
-          setRegEmail(`${res.studentId.toLowerCase()}@pict.edu`);
-        }
-        if (res.mobile && !regPhone) {
-          setRegPhone(res.mobile);
-        }
-        toast.success(`Verified: ${res.fullName} (${res.department} • ${res.className || res.academicYear || 'TE'})`);
-        return res;
-      } else {
-        setVerifiedStudent(null);
-        toast.error(res?.message || 'Student ID not found in the authorized student dataset.');
-        return null;
-      }
-    } catch (err: any) {
-      setVerifiedStudent(null);
-      toast.error(err.response?.data?.message || 'Student ID verification failed. Please check your ID.');
-      return null;
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
   /* ── register ─────────────────────────────────────────────────────────── */
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let vs = verifiedStudent;
-    if (!vs) {
-      vs = await handleVerifyStudentId();
-      if (!vs) return;
+    const cleanUser  = regUser.trim().toUpperCase();
+    const cleanName  = normalizeName(regName);
+    const cleanEmail = regEmail ? normalizeEmail(regEmail) : `${cleanUser.toLowerCase()}@pict.edu`;
+    const cleanPhone = regPhone ? normalizePhone(regPhone) : '';
+
+    if (!cleanUser) {
+      toast.error('Student ID / PRN is required');
+      return;
     }
-
-    const cleanName  = normalizeName(regName || vs.fullName);
-    const cleanUser  = vs.studentId || regUser.trim().toUpperCase();
-    const cleanEmail = regEmail ? normalizeEmail(regEmail) : (vs.email || `${cleanUser.toLowerCase()}@pict.edu`);
-    const cleanPhone = regPhone ? normalizePhone(regPhone) : (vs.mobile || '');
-
     const nameErr = validateName(cleanName, 'Full Name');
-    if (nameErr) { toast.error(nameErr); return; }
-    if (!cleanUser) { toast.error('Student ID / PRN is required'); return; }
+    if (nameErr) {
+      toast.error(nameErr);
+      return;
+    }
+    if (!cleanEmail) {
+      toast.error('College email is required');
+      return;
+    }
+    const ee = validateEmail(cleanEmail);
+    if (ee) {
+      toast.error(ee);
+      return;
+    }
     const passErr = validatePasswordStrength(regPwd);
-    if (passErr) { toast.error(passErr); return; }
-    if (cleanPhone) { const pe = validatePhone(cleanPhone); if (pe) { toast.error(pe); return; } }
-    if (cleanEmail) { const ee = validateEmail(cleanEmail); if (ee) { toast.error(ee); return; } }
+    if (passErr) {
+      toast.error(passErr);
+      return;
+    }
+    if (cleanPhone) {
+      const pe = validatePhone(cleanPhone);
+      if (pe) {
+        toast.error(pe);
+        return;
+      }
+    }
 
     setLoading(true);
     try {
       const authData = await studentApi.register({
-        studentId: vs.studentId,
+        studentId: cleanUser,
         fullName: cleanName,
         email: cleanEmail,
         phone: cleanPhone || undefined,
@@ -223,7 +200,7 @@ export const StudentPortal: React.FC = () => {
         setAuth(authData.user, authData.accessToken, authData.refreshToken);
       } else {
         const loginData = await authApi.login({
-          username: vs.studentId,
+          username: cleanUser,
           password: regPwd,
           expectedRole: 'STUDENT',
         });
@@ -388,7 +365,7 @@ export const StudentPortal: React.FC = () => {
               ? 'Enter your PRN or email to reset credentials.'
               : mode === 'LOGIN'
               ? 'Enter your PRN or Enrollment No and password to access your student portal.'
-              : 'Verify your student ID against the institutional dataset and create your account.'}
+              : 'Enter your student details to create your account.'}
           </p>
 
           {/* ── FORGOT PASSWORD ─────────────────────────────────────────────── */}
@@ -461,60 +438,11 @@ export const StudentPortal: React.FC = () => {
               <UInput
                 label="Student ID / Enrollment / PRN"
                 value={regUser}
-                onChange={(val) => {
-                  setRegUser(val);
-                  if (verifiedStudent && val.trim().toUpperCase() !== verifiedStudent.studentId.toUpperCase()) {
-                    setVerifiedStudent(null);
-                  }
-                }}
-                onBlur={() => {
-                  if (regUser.trim().length >= 3 && !verifiedStudent) {
-                    handleVerifyStudentId();
-                  }
-                }}
+                onChange={setRegUser}
                 placeholder="e.g. S25ET043 or F24ET046"
                 icon={<Shield size={15} />}
                 required
-                trailing={
-                  <button
-                    type="button"
-                    onClick={() => handleVerifyStudentId()}
-                    disabled={isVerifying || !regUser.trim()}
-                    style={{
-                      background: verifiedStudent ? '#059669' : C.ink,
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 2,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: '4px 10px',
-                      cursor: isVerifying || !regUser.trim() ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      opacity: !regUser.trim() ? 0.6 : 1,
-                    }}
-                  >
-                    {isVerifying ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : verifiedStudent ? (
-                      <CheckCircle2 size={12} />
-                    ) : null}
-                    {verifiedStudent ? 'Verified' : isVerifying ? 'Checking' : 'Verify'}
-                  </button>
-                }
               />
-
-              {verifiedStudent && (
-                <div style={{
-                  padding: '8px 12px', background: 'rgba(5,150,105,0.08)',
-                  border: '1px solid rgba(5,150,105,0.25)', borderRadius: 3, marginBottom: 16,
-                  display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#047857'
-                }}>
-                  <CheckCircle2 size={14} />
-                  <span>Authorized Student Record Verified: <strong>{verifiedStudent.fullName}</strong> ({verifiedStudent.department} • {verifiedStudent.className || verifiedStudent.academicYear || 'TE'})</span>
-                </div>
-              )}
 
               <UInput
                 label="Full Name"

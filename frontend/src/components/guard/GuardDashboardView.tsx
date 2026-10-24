@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { visitorApi } from '../../api/visitors';
@@ -61,6 +62,8 @@ interface GuardDashboardViewProps {
   guardSummary: GuardSelfDashboardResponse | null;
   activeVisitors: Visitor[];
   onToggleDetailedView?: () => void;
+  defaultMode?: 'FIND_STUDENT_PRN' | 'IDENTIFY_VISITOR_PHOTO' | 'FIND_VISITOR_MOBILE' | 'REGISTER_NEW_VISITOR' | 'FACULTY_OUTPASSES';
+  isDedicatedFacultyRoute?: boolean;
 }
 
 const VisitorAvatar: React.FC<{ photoUrl?: string; name: string }> = ({ photoUrl, name }) => {
@@ -113,15 +116,28 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
   user,
   guardSummary,
   activeVisitors,
-  onToggleDetailedView
+  onToggleDetailedView,
+  defaultMode,
+  isDedicatedFacultyRoute
 }) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isFacultyRoute = isDedicatedFacultyRoute || location.pathname === '/faculty-outpasses' || defaultMode === 'FACULTY_OUTPASSES';
   const [liveTime, setLiveTime] = useState(new Date().toLocaleTimeString());
 
   // Gate Operations Primary Option:
   // 1: FIND_STUDENT_PRN | 2: IDENTIFY_VISITOR_PHOTO | 3: FIND_VISITOR_MOBILE | 4: REGISTER_NEW_VISITOR | 5: FACULTY_OUTPASSES
   type GateOperationMode = 'FIND_STUDENT_PRN' | 'IDENTIFY_VISITOR_PHOTO' | 'FIND_VISITOR_MOBILE' | 'REGISTER_NEW_VISITOR' | 'FACULTY_OUTPASSES';
-  const [primaryMode, setPrimaryMode] = useState<GateOperationMode>('FIND_STUDENT_PRN');
+  const [primaryMode, setPrimaryMode] = useState<GateOperationMode>(
+    isFacultyRoute ? 'FACULTY_OUTPASSES' : (defaultMode || 'FIND_STUDENT_PRN')
+  );
+
+  useEffect(() => {
+    if (location.pathname === '/faculty-outpasses' || defaultMode === 'FACULTY_OUTPASSES') {
+      setPrimaryMode('FACULTY_OUTPASSES');
+    }
+  }, [location.pathname, defaultMode]);
 
   // Student Subcategory: 'OUTPASS' (PRN Lookup) vs 'REGULAR' (Gate Pass)
   const [studentMode, setStudentMode] = useState<'REGULAR' | 'OUTPASS'>('OUTPASS');
@@ -829,7 +845,8 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       </div>
 
       {/* 1.1 DAILY STATISTICS BELOW GUARD'S NAME */}
-      <div className="bg-[#0f172a] text-white rounded-lg p-3 sm:p-3.5 border border-slate-800 shadow-xs -mt-3">
+      {!isFacultyRoute && (
+        <div className="bg-[#0f172a] text-white rounded-lg p-3 sm:p-3.5 border border-slate-800 shadow-xs -mt-3">
         <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-1 mb-2.5 pb-2 border-b border-slate-800/80">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -937,6 +954,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* 2. PENDING DIGITAL TOKEN CLEARANCE BANNER */}
       {pendingTokens && pendingTokens.length > 0 && (
@@ -1121,7 +1139,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       )}
 
       {/* 2C. ACTIVE FACULTY OUTPASSES (OUTSIDE CAMPUS) BANNER */}
-      {activeFacultyOutpasses && activeFacultyOutpasses.length > 0 && (
+      {!isFacultyRoute && activeFacultyOutpasses && activeFacultyOutpasses.length > 0 && (
         <div className="bg-amber-50/90 border border-amber-300 rounded-md p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -1137,7 +1155,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
               </span>
               {primaryMode !== 'FACULTY_OUTPASSES' && (
                 <button
-                  onClick={() => setPrimaryMode('FACULTY_OUTPASSES')}
+                  onClick={() => navigate('/faculty-outpasses')}
                   className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold px-2.5 py-1 rounded transition cursor-pointer"
                 >
                   Open Faculty Section →
@@ -1205,6 +1223,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {/* 4. GATE OPERATIONS: PRIMARY TERMINAL OPTIONS */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
+      {!isFacultyRoute && (
       <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-2">
           <div className="flex items-center gap-2">
@@ -1228,7 +1247,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {/* OPTION 1: Find Student by PRN */}
           <button
             onClick={() => {
@@ -1328,42 +1347,14 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
               <span className="block text-[11px] text-slate-500 truncate">New gate pass entry</span>
             </div>
           </button>
-
-          {/* OPTION 5: Faculty Out-Passes */}
-          <button
-            onClick={() => {
-              setPrimaryMode('FACULTY_OUTPASSES');
-            }}
-            className={`p-3 rounded-md border text-left transition flex items-center gap-3 min-h-[56px] relative ${
-              primaryMode === 'FACULTY_OUTPASSES'
-                ? 'bg-amber-50 border-amber-500 text-amber-950 shadow-xs ring-1 ring-amber-500'
-                : 'bg-slate-50/70 border-slate-200 hover:bg-slate-100/80 text-slate-700 hover:text-slate-900'
-            }`}
-          >
-            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${
-              primaryMode === 'FACULTY_OUTPASSES' ? 'bg-amber-600 text-white' : 'bg-white border border-slate-200 text-amber-600'
-            }`}>
-              <Briefcase className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="block text-xs font-bold truncate">5. Faculty Out-Pass</span>
-                {activeFacultyOutpasses.length > 0 && (
-                  <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full animate-pulse">
-                    {activeFacultyOutpasses.length}
-                  </span>
-                )}
-              </div>
-              <span className="block text-[11px] text-slate-500 truncate">Out-passes & re-entry</span>
-            </div>
-          </button>
         </div>
       </div>
+      )}
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {/* 4. VISITOR (CAMERA & ACTIVE GUEST DIRECTORY) WORKFLOW INTERFACE */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {(['IDENTIFY_VISITOR_PHOTO', 'FIND_VISITOR_MOBILE', 'REGISTER_NEW_VISITOR'].includes(primaryMode)) && (
+      {!isFacultyRoute && (['IDENTIFY_VISITOR_PHOTO', 'FIND_VISITOR_MOBILE', 'REGISTER_NEW_VISITOR'].includes(primaryMode)) && (
         <div className="space-y-5">
 
 
@@ -1463,7 +1454,7 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {/* 5. STUDENT WORKFLOW INTERFACE (REGULAR STUDENT vs OUTPASS STUDENT) */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {primaryMode === 'FIND_STUDENT_PRN' && (
+      {!isFacultyRoute && primaryMode === 'FIND_STUDENT_PRN' && (
         <div className="space-y-6">
           {/* STUDENT SUBCATEGORY TOGGLE */}
           <div className="flex border-b border-slate-200 bg-white rounded-t-md px-3 sm:px-4 pt-3 gap-3 sm:gap-6 overflow-x-auto">
@@ -1873,8 +1864,20 @@ export const GuardDashboardView: React.FC<GuardDashboardViewProps> = ({
       {/* ───────────────────────────────────────────────────────────────────────── */}
       {/* 5B. FACULTY OUTPASS WORKFLOW INTERFACE */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
-      {primaryMode === 'FACULTY_OUTPASSES' && (
+      {(primaryMode === 'FACULTY_OUTPASSES' || isFacultyRoute) && (
         <div className="space-y-6">
+          {isFacultyRoute && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+              <div>
+                <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 20, color: 'var(--text)', margin: '0 0 4px 0', letterSpacing: '-0.01em' }}>
+                  Faculty Outpasses
+                </h2>
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--mute)', margin: 0 }}>
+                  Gate security clearance, active out-pass tracking, and verified re-entry management.
+                </p>
+              </div>
+            </div>
+          )}
           {/* FACULTY SUBCATEGORY TOGGLE */}
           <div className="flex border-b border-slate-200 bg-white rounded-t-md px-3 sm:px-4 pt-3 gap-3 sm:gap-6 overflow-x-auto justify-between items-center">
             <div className="flex gap-3 sm:gap-6">

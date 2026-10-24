@@ -92,6 +92,7 @@ export const AppRoutes: React.FC = () => {
       <Route element={<ProtectedLayout allowedRoles={['SECURITY_GUARD', 'GUARD', 'SECURITY_OFFICER', 'STUDENT', 'HOSTEL_WARDEN', 'ADMIN']} />}>
         <Route path="/student-passes"   element={<StudentPasses />} />
         <Route path="/outpasses"        element={<HostelOutpasses />} />
+        <Route path="/faculty-outpasses" element={<Dashboard defaultMode="FACULTY_OUTPASSES" />} />
         <Route path="/notifications"    element={<Navigate to="/dashboard" replace />} />
       </Route>
 

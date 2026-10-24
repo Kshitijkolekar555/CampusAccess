@@ -373,6 +373,7 @@ export interface GuardSelfDashboardResponse {
   materialsProcessedToday: number;
   studentPassesProcessedToday?: number;
   hostelVerifications?: number;
+  facultyOutpassesProcessedToday?: number;
   activeVisitorsInsideCampus: number;
   todayTotalVisitors?: number;
   todayApprovedVisitors?: number;
@@ -395,6 +396,7 @@ export interface SystemStatisticsResponse {
   totalVehicles: number;
   totalStudentPasses: number;
   totalHostelOutpasses: number;
+  totalFacultyOutpasses?: number;
   totalVendorVisits: number;
   pendingTokens: number;
   generatedAt: string;
